@@ -1,12 +1,12 @@
 import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-export default function ProfileScreen() {
+export default function LoginScreen() {
   const navigation = useNavigation();
 
   return (
     <View className="flex-1 items-center justify-center">
-      <Text className="mb-4 text-xl">Profile Screen</Text>
+      <Text className="mb-4 text-xl">Login Screen</Text>
       <Pressable onPress={() => navigation.goBack()} className="rounded-lg bg-gray-500 px-6 py-3">
         <Text className="font-bold text-black">Go Back</Text>
       </Pressable>
