@@ -29,6 +29,13 @@ export default function HomeScreen() {
         className="rounded-lg bg-green-500 px-6 py-3">
         <Text className="font-bold text-white">Workout</Text>
       </Pressable>
+      <Pressable
+        onPress={() => navigation.navigate('Payment')}
+        className="rounded-lg bg-green-500 px-6 py-3">
+        <Text className="font-bold text-white">Payment</Text>
+      </Pressable>
+        
+
     </View>
   );
 }
