@@ -14,12 +14,24 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Set = {
   id: string;
   weight: string;
   reps: string;
   completed: boolean;
+};
+
+type BodyPart = 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core';
+
+type ExerciseOption = {
+  id: string;
+  name: string;
+  bodyPart: BodyPart;
+  description: string;
+  muscleGroups: string[];
+  instructions: string[];
 };
 
 type ExerciseDetails = {
@@ -29,6 +41,10 @@ type ExerciseDetails = {
   instructions: string[];
 };
 
+type ExpandedSections = {
+  [key: string]: boolean;
+};
+
 type Exercise = {
   id: string;
   name: string;
@@ -36,9 +52,57 @@ type Exercise = {
   previousWeight?: string;
   previousReps?: string;
 };
+const EXERCISES_DB: ExerciseOption[] = [
+  // Chest exercises
+  {
+    id: '1',
+    name: 'Barbell Bench Press',
+    bodyPart: 'Chest',
+    description: 'A compound exercise that primarily targets the chest muscles.',
+    muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
+    instructions: ['...'],
+  },
+  {
+    id: '2',
+    name: 'Dumbbell Flyes',
+    bodyPart: 'Chest',
+    description: 'An isolation exercise for chest development.',
+    muscleGroups: ['Chest'],
+    instructions: ['...'],
+  },
+  // Back exercises
+  {
+    id: '3',
+    name: 'Barbell Row',
+    bodyPart: 'Back',
+    description: 'A compound pulling exercise for back development.',
+    muscleGroups: ['Back', 'Biceps'],
+    instructions: ['...'],
+  },
+  // Legs exercises
+  {
+    id: '4',
+    name: 'Squat (Barbell)',
+    bodyPart: 'Legs',
+    description: 'A compound exercise for lower body.',
+    muscleGroups: ['Quadriceps', 'Hamstrings', 'Glutes'],
+    instructions: ['...'],
+  },
+  // Miscellaneous
+  {
+    id: '5',
+    name: 'Plank',
+    bodyPart: 'Miscellaneous',
+    description: 'Core stabilization exercise.',
+    muscleGroups: ['Core', 'Shoulders'],
+    instructions: ['...'],
+  },
+];
 
 export default function WorkoutScreen() {
   const navigation = useNavigation();
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date>(new Date());
   const [workoutEndTime, setWorkoutEndTime] = useState<Date | null>(null);
   const [showStartPicker, setShowStartPicker] = useState(false);
@@ -48,6 +112,15 @@ export default function WorkoutScreen() {
   const [workoutNote, setWorkoutNote] = useState('');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
+    Chest: false,
+    Back: false,
+    Legs: false,
+    Shoulders: false,
+    Arms: false,
+    Core: false,
+    Miscellaneous: false,
+  });
   const [exercises, setExercises] = useState<Exercise[]>([
     {
       id: '1',
@@ -199,12 +272,12 @@ export default function WorkoutScreen() {
     );
   };
 
-  const addExercise = () => {
+  const addExercise = (exercise: ExerciseOption) => {
     setExercises([
       ...exercises,
       {
         id: Date.now().toString(),
-        name: 'New Exercise',
+        name: exercise.name,
         sets: [
           {
             id: Date.now().toString(),
@@ -215,6 +288,7 @@ export default function WorkoutScreen() {
         ],
       },
     ]);
+    setShowExerciseModal(false);
   };
 
   const toggleSetCompletion = (exerciseId: string, setId: string) => {
@@ -233,13 +307,77 @@ export default function WorkoutScreen() {
     );
   };
 
+  const exerciseSelectionModal = (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showExerciseModal}
+      onRequestClose={() => setShowExerciseModal(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <Pressable style={styles.modalCloseButton} onPress={() => setShowExerciseModal(false)}>
+            <Ionicons name="close" size={24} color={isDark ? '#ffffff' : '#000000'} />
+          </Pressable>
+
+          <ScrollView>
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>Select Exercise</Text>
+
+            {(
+              ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Miscellaneous'] as (
+                | BodyPart
+                | 'Miscellaneous'
+              )[]
+            ).map((bodyPart) => (
+              <View key={bodyPart} style={styles.categoryContainer}>
+                <Pressable
+                  style={styles.categoryHeader}
+                  onPress={() => {
+                    setExpandedSections((prev) => ({
+                      ...prev,
+                      [bodyPart]: !prev[bodyPart],
+                    }));
+                  }}>
+                  <Text style={[styles.categoryTitle, isDark && styles.textDark]}>{bodyPart}</Text>
+                  <Ionicons
+                    name={expandedSections[bodyPart] ? 'chevron-up' : 'chevron-down'}
+                    size={24}
+                    color={isDark ? '#ffffff' : '#000000'}
+                  />
+                </Pressable>
+
+                {expandedSections[bodyPart] && (
+                  <View style={styles.exerciseList}>
+                    {EXERCISES_DB.filter((exercise) => exercise.bodyPart === bodyPart).map(
+                      (exercise) => (
+                        <Pressable
+                          key={exercise.id}
+                          style={[styles.exerciseOption, isDark && styles.exerciseOptionDark]}
+                          onPress={() => addExercise(exercise)}>
+                          <Text style={[styles.exerciseOptionText, isDark && styles.textDark]}>
+                            {exercise.name}
+                          </Text>
+                        </Pressable>
+                      )
+                    )}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       <View style={[styles.header, isDark && styles.headerDark]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="arrow-back" size={24} color={isDark ? '#ffffff' : '#000000'} />
         </Pressable>
+
         <Text style={[styles.headerTitle, isDark && styles.textDark]}>Log Workout</Text>
+
         <Pressable style={styles.finishButton}>
           <Text style={styles.finishButtonText}>Finish</Text>
         </Pressable>
@@ -264,6 +402,7 @@ export default function WorkoutScreen() {
         />
 
         {timePickerSection}
+        {exerciseSelectionModal}
         {exerciseModal}
 
         {exercises.map((exercise) => (
@@ -328,15 +467,54 @@ export default function WorkoutScreen() {
           </View>
         ))}
 
-        <Pressable onPress={addExercise} style={styles.addExerciseButton}>
+        <Pressable onPress={() => setShowExerciseModal(true)} style={styles.addExerciseButton}>
           <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  categoryContainer: {
+    marginBottom: 8,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+  },
+  categoryHeaderDark: {
+    backgroundColor: '#374151',
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  exerciseList: {
+    paddingLeft: 16,
+    marginTop: 8,
+  },
+  exerciseOption: {
+    padding: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  exerciseOptionDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+  exerciseOptionText: {
+    fontSize: 16,
+    color: '#000000',
+  },
   timeSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -421,13 +599,23 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    width: '100%',
   },
   headerDark: {
     borderBottomColor: '#374151',
+    backgroundColor: '#111827',
+  },
+  headerButton: {
+    padding: 8,
+    marginRight: 8,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    color: '#000000',
   },
   cancelButton: {
     padding: 8,
