@@ -6,7 +6,7 @@ export default function PaymentScreen() {
 
   return (
     <View className="flex-1 items-center justify-center">
-      <Text className="mb-4 text-xl">Payment Screen</Text>
+      <Text className="mb-4 text-xl">Payment Screen - TO BE ADDED</Text>
       <Pressable onPress={() => navigation.goBack()} className="rounded-lg bg-gray-500 px-6 py-3">
         <Text className="font-bold text-black">Go Back</Text>
       </Pressable>
