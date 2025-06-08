@@ -419,8 +419,17 @@ export default function WorkoutScreen() {
             </View>
 
             {exercise.sets.map((set, index) => (
-              <View key={set.id} style={styles.setRow}>
-                <Text style={[styles.setNumber, isDark && styles.textDark]}>#{index + 1}</Text>
+              <View key={set.id} style={[styles.setRow, set.completed && styles.completedSetRow]}>
+                <View style={styles.setNumberContainer}>
+                  <Text style={[styles.setNumber, isDark && styles.textDark]}>
+                    {/* <Ionicons
+                      name="barbell-outline"
+                      size={14}
+                      color={isDark ? '#9ca3af' : '#6b7280'}
+                    />{' '} */}
+                    #{index + 1}
+                  </Text>
+                </View>
                 <TextInput
                   value={set.weight}
                   onChangeText={(value) => {
@@ -530,10 +539,6 @@ const styles = StyleSheet.create({
   },
   timeButtonDark: {
     backgroundColor: '#374151',
-  },
-  timeButtonText: {
-    fontSize: 16,
-    color: '#4b5563',
   },
   modalOverlay: {
     flex: 1,
@@ -688,10 +693,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  setNumber: {
-    flex: 1,
-    color: '#4b5563',
-  },
+
   input: {
     flex: 1,
     backgroundColor: '#f3f4f6',
@@ -747,5 +749,59 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  exerciseName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#3b82f6', // Bluish color for clickable appearance
+  },
+
+  timeButton: {
+    flex: 1,
+    backgroundColor: '#fff3e0', // Light orangish background
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+
+  timeButtonDark: {
+    backgroundColor: '#422006', // Darker orange for dark mode
+  },
+
+  setRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 4,
+    borderRadius: 6,
+  },
+
+  completedSetRow: {
+    backgroundColor: '#dcfce7', // Light greenish background for completed sets
+  },
+
+  setNumberContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  setNumber: {
+    color: '#4b5563',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  // Update timeButtonText color for better contrast on orange background
+  timeButtonText: {
+    fontSize: 16,
+    color: '#783c04', // Darker text for contrast on orange
+  },
+
+  // For dark mode, add these styles
+  completedSetRowDark: {
+    backgroundColor: '#065f46', // Darker green for dark mode
   },
 });
