@@ -1,57 +1,107 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
+  const navigation = useNavigation();
 
-  const handleLogin = () => {
-    Alert.alert('Login Pressed', `Email: ${email}`);
-  };
+  const handleSubmit = () => {
+    // Basic validation
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-  const handleSignup = () => {
-    Alert.alert('Signup Pressed', `Email: ${email}`);
+    if (isSignup) {
+      // Handle signup
+      Alert.alert('Sign Up', `Creating account for:\nEmail: ${email}`);
+    } else {
+      // Handle login
+      Alert.alert('Login', `Logging in with:\nEmail: ${email}`);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../assets/placeholder/login.png')}
-        style={styles.logo}
-      />
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Login to continue</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Image source={require('../assets/placeholder/login.png')} style={styles.logo} />
+        <Text style={styles.title}>{isSignup ? 'Create Account' : 'Welcome Back'}</Text>
+        <Text style={styles.subtitle}>
+          {isSignup ? 'Sign up to get started' : 'Login to continue'}
+        </Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#999"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#999"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#999"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <TouchableOpacity style={styles.buttonPrimary} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.buttonPrimary} onPress={handleSubmit}>
+          <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.buttonSecondary} onPress={handleSignup}>
-        <Text style={styles.buttonSecondaryText}>Sign Up</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={styles.buttonSecondary} onPress={() => setIsSignup(!isSignup)}>
+          <Text style={styles.buttonSecondaryText}>
+            {isSignup ? 'Already have an account? Login' : 'Need an account? Sign Up'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 25,
+    position: 'relative', // Add this for absolute positioning of back button
+  },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    padding: 8,
+    zIndex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
