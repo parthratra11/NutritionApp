@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Modal,
   Image,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
@@ -15,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 type Set = {
   id: string;
@@ -370,121 +372,156 @@ export default function WorkoutScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-      <View style={[styles.header, isDark && styles.headerDark]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={isDark ? '#ffffff' : '#000000'} />
-        </Pressable>
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+        <View style={[styles.header, isDark && styles.headerDark]}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color={isDark ? '#ffffff' : '#000000'} />
+          </Pressable>
 
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>Log Workout</Text>
+          <Text style={[styles.headerTitle, isDark && styles.textDark]}>Log Workout</Text>
 
-        <Pressable style={styles.finishButton}>
-          <Text style={styles.finishButtonText}>Finish</Text>
-        </Pressable>
-      </View>
+          <Pressable style={styles.finishButton}>
+            <Text style={styles.finishButtonText}>Finish</Text>
+          </Pressable>
+        </View>
 
-      <ScrollView style={styles.scrollView}>
-        <TextInput
-          value={workoutName}
-          onChangeText={setWorkoutName}
-          style={[styles.workoutNameInput, isDark && styles.inputDark]}
-          placeholder="Workout Name"
-          placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
-        />
+        <ScrollView style={styles.scrollView}>
+          <TextInput
+            value={workoutName}
+            onChangeText={setWorkoutName}
+            style={[styles.workoutNameInput, isDark && styles.inputDark]}
+            placeholder="Workout Name"
+            placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
+          />
 
-        <TextInput
-          value={workoutNote}
-          onChangeText={setWorkoutNote}
-          style={[styles.workoutNoteInput, isDark && styles.inputDark]}
-          placeholder="Workout note"
-          placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
-          multiline
-        />
+          <TextInput
+            value={workoutNote}
+            onChangeText={setWorkoutNote}
+            style={[styles.workoutNoteInput, isDark && styles.inputDark]}
+            placeholder="Workout note"
+            placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
+            multiline
+          />
 
-        {timePickerSection}
-        {exerciseSelectionModal}
-        {exerciseModal}
+          {timePickerSection}
+          {exerciseSelectionModal}
+          {exerciseModal}
 
-        {exercises.map((exercise) => (
-          <View key={exercise.id} style={[styles.exerciseCard, isDark && styles.exerciseCardDark]}>
-            <Pressable onPress={() => handleExercisePress(exercise)}>
-              <Text style={[styles.exerciseName, isDark && styles.textDark]}>{exercise.name}</Text>
-            </Pressable>
+          {exercises.map((exercise) => (
+            <View
+              key={exercise.id}
+              style={[styles.exerciseCard, isDark && styles.exerciseCardDark]}>
+              <Pressable onPress={() => handleExercisePress(exercise)}>
+                <Text style={[styles.exerciseName, isDark && styles.textDark]}>
+                  {exercise.name}
+                </Text>
+              </Pressable>
 
-            <View style={styles.setHeader}>
-              <Text style={styles.setHeaderText}>Set</Text>
-              <Text style={styles.setHeaderText}>kg</Text>
-              <Text style={styles.setHeaderText}>Reps</Text>
-              <View style={styles.setHeaderSpacer} />
-            </View>
+              <View style={styles.setHeader}>
+                <Text style={styles.setHeaderText}>Set</Text>
+                <Text style={styles.setHeaderText}>kg</Text>
+                <Text style={styles.setHeaderText}>Reps</Text>
+                <View style={styles.setHeaderSpacer} />
+              </View>
 
-            {exercise.sets.map((set, index) => (
-              <View key={set.id} style={[styles.setRow, set.completed && styles.completedSetRow]}>
-                <View style={styles.setNumberContainer}>
-                  <Text style={[styles.setNumber, isDark && styles.textDark]}>
-                    {/* <Ionicons
+              {exercise.sets.map((set, index) => (
+                <View
+                  key={set.id}
+                  style={[
+                    styles.setRow,
+                    set.completed && styles.completedSetRow,
+                    set.completed && isDark && styles.completedSetRowDark,
+                  ]}>
+                  <View style={styles.setNumberContainer}>
+                    <Text style={[styles.setNumber, isDark && styles.textDark]}>
+                      {/* <Ionicons
                       name="barbell-outline"
                       size={14}
                       color={isDark ? '#9ca3af' : '#6b7280'}
                     />{' '} */}
-                    #{index + 1}
-                  </Text>
-                </View>
-                <TextInput
-                  value={set.weight}
-                  onChangeText={(value) => {
-                    /* Handle weight change */
-                  }}
-                  style={[styles.input, isDark && styles.inputDark]}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  value={set.reps}
-                  onChangeText={(value) => {
-                    /* Handle reps change */
-                  }}
-                  style={[styles.input, isDark && styles.inputDark]}
-                  keyboardType="numeric"
-                />
-                <Pressable
-                  onPress={() => toggleSetCompletion(exercise.id, set.id)}
-                  style={styles.checkButton}>
-                  <Ionicons
-                    name={set.completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                    size={24}
-                    color={set.completed ? '#22c55e' : '#9ca3af'}
+                      #{index + 1}
+                    </Text>
+                  </View>
+                  <TextInput
+                    value={set.weight}
+                    onChangeText={(value) => {
+                      /* Handle weight change */
+                    }}
+                    style={[styles.input, isDark && styles.inputDark]}
+                    keyboardType="numeric"
                   />
+                  <TextInput
+                    value={set.reps}
+                    onChangeText={(value) => {
+                      /* Handle reps change */
+                    }}
+                    style={[styles.input, isDark && styles.inputDark]}
+                    keyboardType="numeric"
+                  />
+                  <Pressable
+                    onPress={() => toggleSetCompletion(exercise.id, set.id)}
+                    style={styles.checkButton}>
+                    <Ionicons
+                      name={set.completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                      size={24}
+                      color={set.completed ? '#22c55e' : '#9ca3af'}
+                    />
+                  </Pressable>
+                </View>
+              ))}
+
+              <View style={styles.exerciseActions}>
+                <Pressable
+                  onPress={() => addSet(exercise.id)}
+                  style={[styles.addSetButton, isDark && styles.addSetButtonDark]}>
+                  <Text style={[styles.addSetButtonText, isDark && styles.textDark]}>Add Set</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    /* Handle delete exercise */
+                  }}
+                  style={styles.deleteButton}>
+                  <Ionicons name="trash-outline" size={20} color="#ef4444" />
                 </Pressable>
               </View>
-            ))}
-
-            <View style={styles.exerciseActions}>
-              <Pressable
-                onPress={() => addSet(exercise.id)}
-                style={[styles.addSetButton, isDark && styles.addSetButtonDark]}>
-                <Text style={[styles.addSetButtonText, isDark && styles.textDark]}>Add Set</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  /* Handle delete exercise */
-                }}
-                style={styles.deleteButton}>
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
-              </Pressable>
             </View>
-          </View>
-        ))}
+          ))}
 
-        <Pressable onPress={() => setShowExerciseModal(true)} style={styles.addExerciseButton}>
-          <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          <Pressable onPress={() => setShowExerciseModal(true)} style={styles.addExerciseButton}>
+            <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  containerDark: {
+    backgroundColor: '#111827',
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    paddingTop: Platform.OS === 'android' ? 40 : 8, // Add more padding for notch
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  headerDark: {
+    backgroundColor: '#111827',
+    borderBottomColor: '#374151',
+  },
   categoryContainer: {
     marginBottom: 8,
   },
@@ -692,18 +729,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    padding: 4,
+    borderRadius: 6,
   },
-
   input: {
     flex: 1,
     backgroundColor: '#f3f4f6',
     padding: 8,
     borderRadius: 8,
     marginHorizontal: 4,
+    color: '#000000', // Explicit text color for light mode
   },
   inputDark: {
     backgroundColor: '#374151',
-    color: '#ffffff',
+    color: '#ffffff', // Explicit text color for dark mode
   },
   textDark: {
     color: '#ffffff',
@@ -779,7 +818,10 @@ const styles = StyleSheet.create({
   },
 
   completedSetRow: {
-    backgroundColor: '#dcfce7', // Light greenish background for completed sets
+    backgroundColor: '#dcfce7', // Light green for light mode
+  },
+  completedSetRowDark: {
+    backgroundColor: '#064e3b', // Darker green for dark mode
   },
 
   setNumberContainer: {
@@ -798,10 +840,5 @@ const styles = StyleSheet.create({
   timeButtonText: {
     fontSize: 16,
     color: '#783c04', // Darker text for contrast on orange
-  },
-
-  // For dark mode, add these styles
-  completedSetRowDark: {
-    backgroundColor: '#065f46', // Darker green for dark mode
   },
 });

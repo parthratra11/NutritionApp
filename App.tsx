@@ -8,30 +8,37 @@ import FormScreen from './screens/FormScreen';
 import LoginScreen from './screens/LoginScreen';
 import WorkoutScreen from './screens/WorkoutScreen';
 import PaymentScreen from './screens/PaymentScreen';
+import { ThemeProvider } from './context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
-          <Stack.Screen name="Form" component={FormScreen} options={{ title: 'Form' }} />
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ title: 'Login', headerShown: false }}
-          />
-          <Stack.Screen
-            name="Workout"
-            component={WorkoutScreen}
-            options={{ title: 'Workout', headerShown: false }}
-          />
-          <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Payment' }} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{ title: 'Home', headerShown: false }}
+            />
+            <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+            <Stack.Screen name="Form" component={FormScreen} options={{ title: 'Form' }} />
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{ title: 'Login', headerShown: false }}
+            />
+            <Stack.Screen
+              name="Workout"
+              component={WorkoutScreen}
+              options={{ title: 'Workout', headerShown: false }}
+            />
+            <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Payment' }} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
