@@ -10,9 +10,13 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { auth } from '../firebaseConfig.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,63 +24,88 @@ export default function LoginScreen() {
   const [isSignup, setIsSignup] = useState(false);
   const navigation = useNavigation();
 
-  const handleSubmit = () => {
-    // Basic validation
+  const handleSubmit = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    if (isSignup) {
-      // Handle signup
-      Alert.alert('Sign Up', `Creating account for:\nEmail: ${email}`);
-    } else {
-      // Handle login
-      Alert.alert('Login', `Logging in with:\nEmail: ${email}`);
+    try {
+      if (isSignup) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        Alert.alert('Success', 'Account created successfully');
+        navigation.navigate('Home');
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        Alert.alert('Success', 'Logged in successfully');
+        navigation.navigate('Home');
+      }
+    } catch (error: any) {
+      if (isSignup && error.code === 'auth/email-already-in-use') {
+        Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
+      } else if (
+        !isSignup &&
+        (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password')
+      ) {
+        Alert.alert('Login Failed', 'Incorrect email or password.');
+      } else {
+        Alert.alert('Enter Valid Credentials');
+      }
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Image source={require('../assets/placeholder/login.png')} style={styles.logo} />
-        <Text style={styles.title}>{isSignup ? 'Create Account' : 'Welcome Back'}</Text>
-        <Text style={styles.subtitle}>
-          {isSignup ? 'Sign up to get started' : 'Login to continue'}
-        </Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.container}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
+            </TouchableOpacity>
+            <Image source={require('../assets/placeholder/login.png')} style={styles.logo} />
+            <Text style={styles.title}>{isSignup ? 'Create Account' : 'Welcome Back'}</Text>
+            <Text style={styles.subtitle}>
+              {isSignup ? 'Sign up to get started' : 'Login to continue'}
+            </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
 
-        <TouchableOpacity style={styles.buttonPrimary} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.buttonPrimary} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.buttonSecondary} onPress={() => setIsSignup(!isSignup)}>
-          <Text style={styles.buttonSecondaryText}>
-            {isSignup ? 'Already have an account? Login' : 'Need an account? Sign Up'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity style={styles.buttonSecondary} onPress={() => setIsSignup(!isSignup)}>
+              <Text style={styles.buttonSecondaryText}>
+                {isSignup ? 'Already have an account? Login' : 'Need an account? Sign Up'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -101,13 +130,6 @@ const styles = StyleSheet.create({
     left: 20,
     padding: 8,
     zIndex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 25,
   },
   logo: {
     width: 80,
