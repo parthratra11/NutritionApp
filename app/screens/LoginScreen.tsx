@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import {
   View,
   Text,
@@ -19,6 +20,7 @@ import { auth } from '../firebaseConfig.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginScreen() {
+  const { isDarkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
@@ -49,36 +51,42 @@ export default function LoginScreen() {
       ) {
         Alert.alert('Login Failed', 'Incorrect email or password.');
       } else {
-        Alert.alert('Enter Valid Credentials');
+        Alert.alert('Error', 'Please enter valid credentials');
       }
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.safeAreaDark]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.container}>
+          keyboardShouldPersistTaps="handled">
+          <View style={[styles.container, isDarkMode && styles.containerDark]}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
+              <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#000'} />
             </TouchableOpacity>
-            <Image source={require('../assets/placeholder/login.png')} style={styles.logo} />
-            <Text style={styles.title}>{isSignup ? 'Create Account' : 'Welcome Back'}</Text>
-            <Text style={styles.subtitle}>
+
+            <Image
+              source={require('../assets/placeholder/login.png')}
+              style={[styles.logo, isDarkMode && styles.logoDark]}
+            />
+
+            <Text style={[styles.title, isDarkMode && styles.textDark]}>
+              {isSignup ? 'Create Account' : 'Welcome Back'}
+            </Text>
+
+            <Text style={[styles.subtitle, isDarkMode && styles.textDark]}>
               {isSignup ? 'Sign up to get started' : 'Login to continue'}
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && styles.inputDark]}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={isDarkMode ? '#666' : '#999'}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -86,20 +94,24 @@ export default function LoginScreen() {
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && styles.inputDark]}
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={isDarkMode ? '#666' : '#999'}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
 
-            <TouchableOpacity style={styles.buttonPrimary} onPress={handleSubmit}>
+            <TouchableOpacity
+              style={[styles.buttonPrimary, isDarkMode && styles.buttonPrimaryDark]}
+              onPress={handleSubmit}>
               <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.buttonSecondary} onPress={() => setIsSignup(!isSignup)}>
-              <Text style={styles.buttonSecondaryText}>
+            <TouchableOpacity
+              style={[styles.buttonSecondary, isDarkMode && styles.buttonSecondaryDark]}
+              onPress={() => setIsSignup(!isSignup)}>
+              <Text style={[styles.buttonSecondaryText, isDarkMode && styles.textDark]}>
                 {isSignup ? 'Already have an account? Login' : 'Need an account? Sign Up'}
               </Text>
             </TouchableOpacity>
@@ -116,13 +128,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  safeAreaDark: {
+    backgroundColor: '#111827',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 25,
-    position: 'relative', // Add this for absolute positioning of back button
+    position: 'relative',
+  },
+  containerDark: {
+    backgroundColor: '#111827',
   },
   backButton: {
     position: 'absolute',
@@ -137,6 +155,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     tintColor: '#333',
   },
+  logoDark: {
+    tintColor: '#fff',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -147,6 +168,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555',
     marginBottom: 25,
+  },
+  textDark: {
+    color: '#fff',
   },
   input: {
     width: '100%',
@@ -164,6 +188,11 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  inputDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+    color: '#fff',
+  },
   buttonPrimary: {
     width: '100%',
     height: 50,
@@ -174,6 +203,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     elevation: 2,
   },
+  buttonPrimaryDark: {
+    backgroundColor: '#4338ca',
+  },
   buttonSecondary: {
     width: '100%',
     height: 50,
@@ -182,6 +214,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  buttonSecondaryDark: {
+    backgroundColor: '#374151',
   },
   buttonText: {
     color: '#fff',

@@ -1,15 +1,52 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const { isDarkMode } = useTheme();
 
   return (
-    <View className="flex-1 items-center justify-center">
-      <Text className="mb-4 text-xl">Profile Screen</Text>
-      <Pressable onPress={() => navigation.goBack()} className="rounded-lg bg-gray-500 px-6 py-3">
-        <Text className="font-bold text-black">Go Back</Text>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
+      <Text style={[styles.title, isDarkMode && styles.textDark]}>Profile Screen</Text>
+      <Pressable
+        style={[styles.button, isDarkMode && styles.buttonDark]}
+        onPress={() => navigation.goBack()}>
+        <Text style={[styles.buttonText, isDarkMode && styles.textDark]}>Go Back</Text>
       </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  containerDark: {
+    backgroundColor: '#111827',
+  },
+  title: {
+    marginBottom: 16,
+    fontSize: 24,
+    color: '#000000',
+  },
+  textDark: {
+    color: '#ffffff',
+  },
+  button: {
+    backgroundColor: '#e5e7eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  buttonDark: {
+    backgroundColor: '#374151',
+  },
+  buttonText: {
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+});

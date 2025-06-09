@@ -17,6 +17,7 @@ import { useColorScheme } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../context/ThemeContext';
 
 type Set = {
   id: string;
@@ -103,6 +104,7 @@ const EXERCISES_DB: ExerciseOption[] = [
 
 export default function WorkoutScreen() {
   const navigation = useNavigation();
+  const { isDarkMode } = useTheme();
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date>(new Date());
@@ -112,8 +114,6 @@ export default function WorkoutScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
   const [workoutNote, setWorkoutNote] = useState('');
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
     Chest: false,
     Back: false,
@@ -160,16 +160,16 @@ export default function WorkoutScreen() {
   const timePickerSection = (
     <View style={styles.timeSection}>
       <Pressable
-        style={[styles.timeButton, isDark && styles.timeButtonDark]}
+        style={[styles.timeButton, isDarkMode && styles.timeButtonDark]}
         onPress={() => setShowStartPicker(true)}>
-        <Text style={[styles.timeButtonText, isDark && styles.textDark]}>
+        <Text style={[styles.timeButtonText, isDarkMode && styles.textDark]}>
           Start: {workoutStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </Pressable>
       <Pressable
-        style={[styles.timeButton, isDark && styles.timeButtonDark]}
+        style={[styles.timeButton, isDarkMode && styles.timeButtonDark]}
         onPress={() => setShowEndPicker(true)}>
-        <Text style={[styles.timeButtonText, isDark && styles.textDark]}>
+        <Text style={[styles.timeButtonText, isDarkMode && styles.textDark]}>
           End:{' '}
           {workoutEndTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ||
             '--:--'}
@@ -210,14 +210,14 @@ export default function WorkoutScreen() {
       visible={modalVisible}
       onRequestClose={() => setModalVisible(false)}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+        <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
           <Pressable style={styles.modalCloseButton} onPress={() => setModalVisible(false)}>
-            <Ionicons name="close" size={24} color={isDark ? '#ffffff' : '#000000'} />
+            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
           </Pressable>
 
           {selectedExercise && (
             <ScrollView>
-              <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
                 {selectedExercise.name}
               </Text>
 
@@ -227,21 +227,25 @@ export default function WorkoutScreen() {
                 resizeMode="cover"
               />
 
-              <Text style={[styles.modalSubtitle, isDark && styles.textDark]}>Description</Text>
-              <Text style={[styles.modalText, isDark && styles.textDark]}>
+              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>Description</Text>
+              <Text style={[styles.modalText, isDarkMode && styles.textDark]}>
                 {selectedExercise.description}
               </Text>
 
-              <Text style={[styles.modalSubtitle, isDark && styles.textDark]}>Muscle Groups</Text>
+              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>
+                Muscle Groups
+              </Text>
               {selectedExercise.muscleGroups.map((muscle, index) => (
-                <Text key={index} style={[styles.modalText, isDark && styles.textDark]}>
+                <Text key={index} style={[styles.modalText, isDarkMode && styles.textDark]}>
                   • {muscle}
                 </Text>
               ))}
 
-              <Text style={[styles.modalSubtitle, isDark && styles.textDark]}>Instructions</Text>
+              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>
+                Instructions
+              </Text>
               {selectedExercise.instructions.map((instruction, index) => (
-                <Text key={index} style={[styles.modalText, isDark && styles.textDark]}>
+                <Text key={index} style={[styles.modalText, isDarkMode && styles.textDark]}>
                   {index + 1}. {instruction}
                 </Text>
               ))}
@@ -316,13 +320,13 @@ export default function WorkoutScreen() {
       visible={showExerciseModal}
       onRequestClose={() => setShowExerciseModal(false)}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+        <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
           <Pressable style={styles.modalCloseButton} onPress={() => setShowExerciseModal(false)}>
-            <Ionicons name="close" size={24} color={isDark ? '#ffffff' : '#000000'} />
+            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
           </Pressable>
 
           <ScrollView>
-            <Text style={[styles.modalTitle, isDark && styles.textDark]}>Select Exercise</Text>
+            <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>Select Exercise</Text>
 
             {(
               ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Miscellaneous'] as (
@@ -339,11 +343,13 @@ export default function WorkoutScreen() {
                       [bodyPart]: !prev[bodyPart],
                     }));
                   }}>
-                  <Text style={[styles.categoryTitle, isDark && styles.textDark]}>{bodyPart}</Text>
+                  <Text style={[styles.categoryTitle, isDarkMode && styles.textDark]}>
+                    {bodyPart}
+                  </Text>
                   <Ionicons
                     name={expandedSections[bodyPart] ? 'chevron-up' : 'chevron-down'}
                     size={24}
-                    color={isDark ? '#ffffff' : '#000000'}
+                    color={isDarkMode ? '#ffffff' : '#000000'}
                   />
                 </Pressable>
 
@@ -353,9 +359,9 @@ export default function WorkoutScreen() {
                       (exercise) => (
                         <Pressable
                           key={exercise.id}
-                          style={[styles.exerciseOption, isDark && styles.exerciseOptionDark]}
+                          style={[styles.exerciseOption, isDarkMode && styles.exerciseOptionDark]}
                           onPress={() => addExercise(exercise)}>
-                          <Text style={[styles.exerciseOptionText, isDark && styles.textDark]}>
+                          <Text style={[styles.exerciseOptionText, isDarkMode && styles.textDark]}>
                             {exercise.name}
                           </Text>
                         </Pressable>
@@ -373,14 +379,14 @@ export default function WorkoutScreen() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-        <View style={[styles.header, isDark && styles.headerDark]}>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+      <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+        <View style={[styles.header, isDarkMode && styles.headerDark]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={isDark ? '#ffffff' : '#000000'} />
+            <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
           </Pressable>
 
-          <Text style={[styles.headerTitle, isDark && styles.textDark]}>Log Workout</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Log Workout</Text>
 
           <Pressable style={styles.finishButton}>
             <Text style={styles.finishButtonText}>Finish</Text>
@@ -391,17 +397,17 @@ export default function WorkoutScreen() {
           <TextInput
             value={workoutName}
             onChangeText={setWorkoutName}
-            style={[styles.workoutNameInput, isDark && styles.inputDark]}
+            style={[styles.workoutNameInput, isDarkMode && styles.inputDark]}
             placeholder="Workout Name"
-            placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
+            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
           />
 
           <TextInput
             value={workoutNote}
             onChangeText={setWorkoutNote}
-            style={[styles.workoutNoteInput, isDark && styles.inputDark]}
+            style={[styles.workoutNoteInput, isDarkMode && styles.inputDark]}
             placeholder="Workout note"
-            placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
+            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
             multiline
           />
 
@@ -412,9 +418,9 @@ export default function WorkoutScreen() {
           {exercises.map((exercise) => (
             <View
               key={exercise.id}
-              style={[styles.exerciseCard, isDark && styles.exerciseCardDark]}>
+              style={[styles.exerciseCard, isDarkMode && styles.exerciseCardDark]}>
               <Pressable onPress={() => handleExercisePress(exercise)}>
-                <Text style={[styles.exerciseName, isDark && styles.textDark]}>
+                <Text style={[styles.exerciseName, isDarkMode && styles.textDark]}>
                   {exercise.name}
                 </Text>
               </Pressable>
@@ -432,14 +438,14 @@ export default function WorkoutScreen() {
                   style={[
                     styles.setRow,
                     set.completed && styles.completedSetRow,
-                    set.completed && isDark && styles.completedSetRowDark,
+                    set.completed && isDarkMode && styles.completedSetRowDark,
                   ]}>
                   <View style={styles.setNumberContainer}>
-                    <Text style={[styles.setNumber, isDark && styles.textDark]}>
+                    <Text style={[styles.setNumber, isDarkMode && styles.textDark]}>
                       {/* <Ionicons
                       name="barbell-outline"
                       size={14}
-                      color={isDark ? '#9ca3af' : '#6b7280'}
+                      color={isDarkMode ? '#9ca3af' : '#6b7280'}
                     />{' '} */}
                       #{index + 1}
                     </Text>
@@ -449,7 +455,7 @@ export default function WorkoutScreen() {
                     onChangeText={(value) => {
                       /* Handle weight change */
                     }}
-                    style={[styles.input, isDark && styles.inputDark]}
+                    style={[styles.input, isDarkMode && styles.inputDark]}
                     keyboardType="numeric"
                   />
                   <TextInput
@@ -457,7 +463,7 @@ export default function WorkoutScreen() {
                     onChangeText={(value) => {
                       /* Handle reps change */
                     }}
-                    style={[styles.input, isDark && styles.inputDark]}
+                    style={[styles.input, isDarkMode && styles.inputDark]}
                     keyboardType="numeric"
                   />
                   <Pressable
@@ -475,8 +481,10 @@ export default function WorkoutScreen() {
               <View style={styles.exerciseActions}>
                 <Pressable
                   onPress={() => addSet(exercise.id)}
-                  style={[styles.addSetButton, isDark && styles.addSetButtonDark]}>
-                  <Text style={[styles.addSetButtonText, isDark && styles.textDark]}>Add Set</Text>
+                  style={[styles.addSetButton, isDarkMode && styles.addSetButtonDark]}>
+                  <Text style={[styles.addSetButtonText, isDarkMode && styles.textDark]}>
+                    Add Set
+                  </Text>
                 </Pressable>
 
                 <Pressable
