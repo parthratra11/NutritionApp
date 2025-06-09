@@ -1,5 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from '@firebase/app';
+import { getFirestore } from '@firebase/firestore';
+import { getAuth } from '@firebase/auth'; // <-- Add this
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
@@ -10,10 +11,8 @@ const firebaseConfig = {
   appId: process.env.FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Cloud Firestore
 const db = getFirestore(app);
+const auth = getAuth(app); // <-- Add this
 
-export { db };
+export { db, auth }; // <-- Export auth
