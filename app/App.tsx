@@ -9,6 +9,7 @@ import LoginScreen from './screens/LoginScreen';
 import WorkoutScreen from './screens/WorkoutScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import { ThemeProvider } from './context/ThemeContext';
+import WeeklyCheckInForm from './screens/WeeklyForm';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +37,11 @@ export default function App() {
               options={{ title: 'Workout', headerShown: false }}
             />
             <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Payment' }} />
+            <Stack.Screen
+              name="WeeklyForm"
+              component={WeeklyCheckInForm}
+              options={{ title: 'Weekly form', headerShown: false }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

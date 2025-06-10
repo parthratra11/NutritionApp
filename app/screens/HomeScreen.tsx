@@ -54,6 +54,9 @@ export default function HomeScreen() {
       <Pressable onPress={() => navigation.navigate('Payment')} style={buttonStyle()}>
         <Text style={buttonTextStyle}>Payment</Text>
       </Pressable>
+      <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Weekly Form</Text>
+      </Pressable>
     </View>
   );
 }
