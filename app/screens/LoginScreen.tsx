@@ -27,6 +27,7 @@ export default function LoginScreen() {
   const [isSignup, setIsSignup] = useState(false);
   const navigation = useNavigation();
   const { setUser } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -35,15 +36,8 @@ export default function LoginScreen() {
     }
 
     try {
-      if (isSignup) {
-        const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        setUser(user);
-        Alert.alert('Success', 'Account created successfully');
-      } else {
-        const { user } = await signInWithEmailAndPassword(auth, email, password);
-        setUser(user);
-        Alert.alert('Success', 'Logged in successfully');
-      }
+      await login(email, password);
+      Alert.alert('Success', 'Logged in successfully');
     } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {
         Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');

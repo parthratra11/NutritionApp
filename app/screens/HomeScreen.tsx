@@ -3,10 +3,12 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { logout } = useAuth();
 
   const buttonStyle = () => [
     styles.button,
@@ -19,6 +21,14 @@ export default function HomeScreen() {
   ];
 
   const themeToggleTextStyle = [styles.buttonText, { color: isDarkMode ? '#ffffff' : '#000000' }];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? '#111827' : '#ffffff' }]}>
@@ -43,10 +53,6 @@ export default function HomeScreen() {
         <Text style={buttonTextStyle}>Form</Text>
       </Pressable>
 
-      <Pressable onPress={() => navigation.navigate('Login')} style={buttonStyle()}>
-        <Text style={buttonTextStyle}>Login</Text>
-      </Pressable>
-
       <Pressable onPress={() => navigation.navigate('Workout')} style={buttonStyle()}>
         <Text style={buttonTextStyle}>Workout</Text>
       </Pressable>
@@ -54,8 +60,19 @@ export default function HomeScreen() {
       <Pressable onPress={() => navigation.navigate('Payment')} style={buttonStyle()}>
         <Text style={buttonTextStyle}>Payment</Text>
       </Pressable>
+
+      <Pressable onPress={() => navigation.navigate('Reports')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Reports</Text>
+      </Pressable>
+
       <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={buttonStyle()}>
         <Text style={buttonTextStyle}>Weekly Form</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={handleLogout}
+        style={[buttonStyle(), { backgroundColor: isDarkMode ? '#991b1b' : '#dc2626' }]}>
+        <Text style={buttonTextStyle}>Logout</Text>
       </Pressable>
     </View>
   );
