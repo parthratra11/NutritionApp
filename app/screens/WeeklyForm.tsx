@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  SafeAreaView,
+  Pressable,
+  Platform,
+} from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 // Firestore imports
 import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 const metrics = ['Sleep Quality', 'Mood', 'Hunger Level'];
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -15,7 +28,7 @@ const getYesterday = () => {
 };
 
 // Helper to get color tag for a value
-const getTag = value => {
+const getTag = (value) => {
   if (value === null) return null;
   if (value <= 2) return 'red';
   if (value === 3) return 'amber';
@@ -30,12 +43,13 @@ const DailyCheckInForm = () => {
   const [weight, setWeight] = useState('');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const { isDarkMode } = useTheme();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const yesterday = getYesterday();
     setDay(yesterday);
     const initialData = {};
-    metrics.forEach(metric => {
+    metrics.forEach((metric) => {
       initialData[metric] = null;
     });
     setFormData(initialData);
@@ -54,7 +68,7 @@ const DailyCheckInForm = () => {
 
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
-        const weekKeys = Object.keys(data).filter(k => k.startsWith('week'));
+        const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
         for (const weekKey of weekKeys) {
           if (data[weekKey] && data[weekKey][day]) {
             setAlreadySubmitted(true);
@@ -69,9 +83,9 @@ const DailyCheckInForm = () => {
   }, [email, day]);
 
   const handleSelect = (metric, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [metric]: value
+      [metric]: value,
     }));
   };
 
@@ -97,12 +111,15 @@ const DailyCheckInForm = () => {
     if (userDocSnap.exists()) {
       data = userDocSnap.data();
       // Find the latest week number
-      const weekKeys = Object.keys(data).filter(k => k.startsWith('week'));
+      const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
       if (weekKeys.length > 0) {
-        weekNum = Math.max(...weekKeys.map(k => parseInt(k.replace('week', ''))));
+        weekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
         weekKey = `week${weekNum}`;
         // If this week already has 7 days, start a new week
-        if (Object.keys(data[weekKey] || {}).length >= 7 && !(data[weekKey] && data[weekKey][day])) {
+        if (
+          Object.keys(data[weekKey] || {}).length >= 7 &&
+          !(data[weekKey] && data[weekKey][day])
+        ) {
           weekNum += 1;
           weekKey = `week${weekNum}`;
         }
@@ -117,10 +134,10 @@ const DailyCheckInForm = () => {
 
     // Prepare the object to save: value + color tag for each metric
     const metricsWithTags = {};
-    Object.keys(formData).forEach(metric => {
+    Object.keys(formData).forEach((metric) => {
       metricsWithTags[metric] = {
         value: formData[metric],
-        color: getTag(formData[metric])
+        color: getTag(formData[metric]),
       };
     });
 
@@ -151,92 +168,77 @@ const DailyCheckInForm = () => {
   };
 
   return (
-    <View style={[
-      styles.container,
-      isDarkMode && styles.containerDark
-    ]}>
-      <Text style={[
-        styles.heading,
-        isDarkMode && styles.textDark
-      ]}>
-        Daily Check-in: {day}
-      </Text>
-      <TextInput
-        style={[
-          styles.input,
-          isDarkMode && styles.inputDark
-        ]}
-        placeholder="Enter your email"
-        placeholderTextColor={isDarkMode ? "#aaa" : "#888"}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!alreadySubmitted}
-      />
-      <Text style={[
-        styles.label,
-        isDarkMode && styles.textDark
-      ]}>
-        Weight
-      </Text>
-      <TextInput
-        style={[
-          styles.input,
-          isDarkMode && styles.inputDark
-        ]}
-        placeholder="Enter your weight"
-        placeholderTextColor={isDarkMode ? "#aaa" : "#888"}
-        value={weight}
-        onChangeText={setWeight}
-        keyboardType="numeric"
-        editable={!alreadySubmitted}
-      />
-      {metrics.map(metric => (
-        <View key={metric} style={styles.inputGroup}>
-          <Text style={[
-            styles.label,
-            isDarkMode && styles.textDark
-          ]}>
-            {metric}
-          </Text>
-          <View style={styles.checkboxRow}>
-            {[1, 2, 3, 4, 5].map(num => (
-              <TouchableOpacity
-                key={num}
-                style={[
-                  styles.checkbox,
-                  formData[metric] === num && styles.checkboxSelected,
-                  isDarkMode && styles.checkboxDark,
-                  isDarkMode && formData[metric] === num && styles.checkboxSelectedDark
-                ]}
-                onPress={() => !alreadySubmitted && handleSelect(metric, num)}
-                disabled={alreadySubmitted}
-              >
-                <Text style={[
-                  styles.checkboxText,
-                  formData[metric] === num && styles.checkboxTextSelected,
-                  isDarkMode && styles.textDark,
-                  isDarkMode && formData[metric] === num && styles.checkboxTextSelectedDark
-                ]}>
-                  {num}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      ))}
-      <Button
-        title={alreadySubmitted ? "Already Submitted" : "Submit Check-in"}
-        onPress={handleSubmit}
-        disabled={alreadySubmitted}
-      />
-      {alreadySubmitted && (
-        <Text style={{ color: 'red', marginTop: 10 }}>
-          You have already submitted for {day}.
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
+        </Pressable>
+        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>
+          Daily Check-in: {day}
         </Text>
-      )}
-    </View>
+        <View style={styles.headerButton} /> {/* Empty view for spacing */}
+      </View>
+
+      <View style={[styles.container, isDarkMode && styles.containerDark]}>
+        <TextInput
+          style={[styles.input, isDarkMode && styles.inputDark]}
+          placeholder="Enter your email"
+          placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={!alreadySubmitted}
+        />
+        <Text style={[styles.label, isDarkMode && styles.textDark]}>Weight</Text>
+        <TextInput
+          style={[styles.input, isDarkMode && styles.inputDark]}
+          placeholder="Enter your weight"
+          placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+          value={weight}
+          onChangeText={setWeight}
+          keyboardType="numeric"
+          editable={!alreadySubmitted}
+        />
+        {metrics.map((metric) => (
+          <View key={metric} style={styles.inputGroup}>
+            <Text style={[styles.label, isDarkMode && styles.textDark]}>{metric}</Text>
+            <View style={styles.checkboxRow}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.checkbox,
+                    formData[metric] === num && styles.checkboxSelected,
+                    isDarkMode && styles.checkboxDark,
+                    isDarkMode && formData[metric] === num && styles.checkboxSelectedDark,
+                  ]}
+                  onPress={() => !alreadySubmitted && handleSelect(metric, num)}
+                  disabled={alreadySubmitted}>
+                  <Text
+                    style={[
+                      styles.checkboxText,
+                      formData[metric] === num && styles.checkboxTextSelected,
+                      isDarkMode && styles.textDark,
+                      isDarkMode && formData[metric] === num && styles.checkboxTextSelectedDark,
+                    ]}>
+                    {num}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
+        <Button
+          title={alreadySubmitted ? 'Already Submitted' : 'Submit Check-in'}
+          onPress={handleSubmit}
+          disabled={alreadySubmitted}
+        />
+        {alreadySubmitted && (
+          <Text style={{ color: 'red', marginTop: 10 }}>You have already submitted for {day}.</Text>
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -244,16 +246,42 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     flex: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
   containerDark: {
     backgroundColor: '#111827',
   },
   heading: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
-    marginTop: 20
+    marginTop: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    paddingTop: Platform.OS === 'android' ? 40 : 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    width: '100%',
+  },
+  headerDark: {
+    borderBottomColor: '#374151',
+    backgroundColor: '#111827',
+  },
+  headerButton: {
+    padding: 8,
+    width: 40,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    color: '#000000',
   },
   input: {
     height: 48,
@@ -271,11 +299,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   inputGroup: {
-    marginBottom: 20
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    marginBottom: 8
+    marginBottom: 8,
   },
   textDark: {
     color: '#fff',
@@ -318,7 +346,7 @@ const styles = StyleSheet.create({
   },
   checkboxTextSelectedDark: {
     color: '#fff',
-  }
+  },
 });
 
 export default DailyCheckInForm;
