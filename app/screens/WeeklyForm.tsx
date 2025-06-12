@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   View,
   Text,
@@ -39,11 +40,11 @@ const getTag = (value) => {
 const DailyCheckInForm = () => {
   const [day, setDay] = useState('');
   const [formData, setFormData] = useState({});
-  const [email, setEmail] = useState('');
   const [weight, setWeight] = useState('');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
+  const { user } = useAuth();
 
   useEffect(() => {
     const yesterday = getYesterday();
@@ -59,11 +60,11 @@ const DailyCheckInForm = () => {
   // Check if already submitted for yesterday when email changes
   useEffect(() => {
     const checkAlreadySubmitted = async () => {
-      if (!email) {
+      if (!user?.email) {
         setAlreadySubmitted(false);
         return;
       }
-      const userDocRef = doc(db, 'weeklyForms', email.toLowerCase());
+      const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
@@ -80,7 +81,7 @@ const DailyCheckInForm = () => {
     };
 
     checkAlreadySubmitted();
-  }, [email, day]);
+  }, [user?.email, day]);
 
   const handleSelect = (metric, value) => {
     setFormData((prev) => ({
@@ -91,8 +92,8 @@ const DailyCheckInForm = () => {
 
   // Firestore save logic
   const saveWeeklyForm = async () => {
-    if (!email) {
-      alert('Please enter your email');
+    if (!user?.email) {
+      alert('Please login first');
       return;
     }
 
@@ -101,7 +102,7 @@ const DailyCheckInForm = () => {
       return;
     }
 
-    const userDocRef = doc(db, 'weeklyForms', email.toLowerCase());
+    const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
     const userDocSnap = await getDoc(userDocRef);
 
     let weekNum = 1;
@@ -147,7 +148,7 @@ const DailyCheckInForm = () => {
         [day]: {
           ...metricsWithTags,
           weight,
-          email,
+          email: user.email,
           timestamp: new Date().toISOString(),
         },
       },
@@ -180,16 +181,6 @@ const DailyCheckInForm = () => {
       </View>
 
       <View style={[styles.container, isDarkMode && styles.containerDark]}>
-        <TextInput
-          style={[styles.input, isDarkMode && styles.inputDark]}
-          placeholder="Enter your email"
-          placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!alreadySubmitted}
-        />
         <Text style={[styles.label, isDarkMode && styles.textDark]}>Weight</Text>
         <TextInput
           style={[styles.input, isDarkMode && styles.inputDark]}

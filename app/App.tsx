@@ -9,42 +9,20 @@ import LoginScreen from './screens/LoginScreen';
 import WorkoutScreen from './screens/WorkoutScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import WeeklyCheckInForm from './screens/WeeklyForm';
-
-const Stack = createNativeStackNavigator();
+import AuthNavigator from './navigation/AuthNavigator';
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{ title: 'Home', headerShown: false }}
-            />
-            <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
-            <Stack.Screen name="Form" component={FormScreen} options={{ title: 'Form' }} />
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{ title: 'Login', headerShown: false }}
-            />
-            <Stack.Screen
-              name="Workout"
-              component={WorkoutScreen}
-              options={{ title: 'Workout', headerShown: false }}
-            />
-            <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Payment' }} />
-            <Stack.Screen
-              name="WeeklyForm"
-              component={WeeklyCheckInForm}
-              options={{ title: 'Weekly form', headerShown: false }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <AuthNavigator />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

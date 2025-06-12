@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import {
   View,
   Text,
@@ -25,6 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
   const navigation = useNavigation();
+  const { setUser } = useAuth();
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -34,13 +36,13 @@ export default function LoginScreen() {
 
     try {
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const { user } = await createUserWithEmailAndPassword(auth, email, password);
+        setUser(user);
         Alert.alert('Success', 'Account created successfully');
-        navigation.navigate('Home');
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { user } = await signInWithEmailAndPassword(auth, email, password);
+        setUser(user);
         Alert.alert('Success', 'Logged in successfully');
-        navigation.navigate('Home');
       }
     } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {
