@@ -83,15 +83,11 @@ const DailyCheckInForm = () => {
           maxWeekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
           currentWeekKey = `week${maxWeekNum}`;
         }
-        // Check if waist/hip already exist for this week
+        // Check if waist/hip already exist for this week AT THE WEEK LEVEL
         if (data[currentWeekKey]) {
-          for (const dayKey of Object.keys(data[currentWeekKey])) {
-            const entry = data[currentWeekKey][dayKey];
-            if (entry.waist && entry.hip) {
-              foundWaist = true;
-              foundHip = true;
-              break;
-            }
+          if (data[currentWeekKey].waist && data[currentWeekKey].hip) {
+            foundWaist = true;
+            foundHip = true;
           }
         }
         // Check if already submitted for this day
