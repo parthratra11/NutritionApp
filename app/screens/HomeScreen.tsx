@@ -69,6 +69,10 @@ export default function HomeScreen() {
         <Text style={buttonTextStyle}>Weekly Form</Text>
       </Pressable>
 
+      <Pressable onPress={() => navigation.navigate('Nutrition')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Nutrition</Text>
+      </Pressable>
+
       <Pressable
         onPress={handleLogout}
         style={[buttonStyle(), { backgroundColor: isDarkMode ? '#991b1b' : '#dc2626' }]}>
