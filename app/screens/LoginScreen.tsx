@@ -36,8 +36,16 @@ export default function LoginScreen() {
     }
 
     try {
-      await login(email, password);
-      Alert.alert('Success', 'Logged in successfully');
+      if (isSignup) {
+        // Sign up logic
+        await createUserWithEmailAndPassword(auth, email, password);
+        Alert.alert('Success', 'Account created! You can now log in.');
+        setIsSignup(false);
+      } else {
+        // Login logic
+        await login(email, password);
+        Alert.alert('Success', 'Logged in successfully');
+      }
     } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {
         Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');

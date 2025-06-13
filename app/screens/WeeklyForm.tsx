@@ -41,7 +41,10 @@ const DailyCheckInForm = () => {
   const [day, setDay] = useState('');
   const [formData, setFormData] = useState({});
   const [weight, setWeight] = useState('');
+  const [waist, setWaist] = useState(''); // <-- add this
+  const [hip, setHip] = useState('');     // <-- add this
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [showWaistHip, setShowWaistHip] = useState(true); // <-- add this
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -62,22 +65,44 @@ const DailyCheckInForm = () => {
     const checkAlreadySubmitted = async () => {
       if (!user?.email) {
         setAlreadySubmitted(false);
+        setShowWaistHip(true);
         return;
       }
       const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
       const userDocSnap = await getDoc(userDocRef);
 
+      let foundWaist = false;
+      let foundHip = false;
+
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
         const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
+        let currentWeekKey = '';
+        let maxWeekNum = 1;
+        if (weekKeys.length > 0) {
+          maxWeekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
+          currentWeekKey = `week${maxWeekNum}`;
+        }
+        // Check if waist/hip already exist for this week
+        if (data[currentWeekKey]) {
+          for (const dayKey of Object.keys(data[currentWeekKey])) {
+            const entry = data[currentWeekKey][dayKey];
+            if (entry.waist && entry.hip) {
+              foundWaist = true;
+              foundHip = true;
+              break;
+            }
+          }
+        }
+        // Check if already submitted for this day
         for (const weekKey of weekKeys) {
           if (data[weekKey] && data[weekKey][day]) {
             setAlreadySubmitted(true);
-            return;
+            break;
           }
         }
       }
-      setAlreadySubmitted(false);
+      setShowWaistHip(!(foundWaist && foundHip));
     };
 
     checkAlreadySubmitted();
@@ -102,12 +127,20 @@ const DailyCheckInForm = () => {
       return;
     }
 
+    // Validate required metrics
+    for (const metric of metrics) {
+      if (formData[metric] == null) {
+        alert(`Please select a value for "${metric}"`);
+        return;
+      }
+    }
+
     const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
     const userDocSnap = await getDoc(userDocRef);
 
     let weekNum = 1;
     let weekKey = 'week1';
-    let data = {};
+    let data: { [key: string]: any } = {};
 
     if (userDocSnap.exists()) {
       data = userDocSnap.data();
@@ -118,7 +151,7 @@ const DailyCheckInForm = () => {
         weekKey = `week${weekNum}`;
         // If this week already has 7 days, start a new week
         if (
-          Object.keys(data[weekKey] || {}).length >= 7 &&
+          Object.keys(data[weekKey] || {}).filter((k) => k !== 'waist' && k !== 'hip').length >= 7 &&
           !(data[weekKey] && data[weekKey][day])
         ) {
           weekNum += 1;
@@ -134,7 +167,7 @@ const DailyCheckInForm = () => {
     }
 
     // Prepare the object to save: value + color tag for each metric
-    const metricsWithTags = {};
+    const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
     Object.keys(formData).forEach((metric) => {
       metricsWithTags[metric] = {
         value: formData[metric],
@@ -142,7 +175,8 @@ const DailyCheckInForm = () => {
       };
     });
 
-    const update = {
+    // Build the update object
+    let update: any = {
       [weekKey]: {
         ...(data[weekKey] || {}),
         [day]: {
@@ -153,6 +187,12 @@ const DailyCheckInForm = () => {
         },
       },
     };
+
+    // Only add waist/hip at the week level if user is allowed to submit them
+    if (showWaistHip && waist && hip) {
+      update[weekKey].waist = waist;
+      update[weekKey].hip = hip;
+    }
 
     await setDoc(userDocRef, update, { merge: true });
     Alert.alert('Success', `Check-in for ${day} saved in ${weekKey}!`);
@@ -191,6 +231,31 @@ const DailyCheckInForm = () => {
           keyboardType="numeric"
           editable={!alreadySubmitted}
         />
+        {/* Only show waist/hip if not already filled this week */}
+        {showWaistHip && (
+          <>
+            <Text style={[styles.label, isDarkMode && styles.textDark]}>Waist Circumference (cm)</Text>
+            <TextInput
+              style={[styles.input, isDarkMode && styles.inputDark]}
+              placeholder="Enter your waist circumference"
+              placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+              value={waist}
+              onChangeText={setWaist}
+              keyboardType="numeric"
+              editable={!alreadySubmitted}
+            />
+            <Text style={[styles.label, isDarkMode && styles.textDark]}>Hip Circumference (cm)</Text>
+            <TextInput
+              style={[styles.input, isDarkMode && styles.inputDark]}
+              placeholder="Enter your hip circumference"
+              placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+              value={hip}
+              onChangeText={setHip}
+              keyboardType="numeric"
+              editable={!alreadySubmitted}
+            />
+          </>
+        )}
         {metrics.map((metric) => (
           <View key={metric} style={styles.inputGroup}>
             <Text style={[styles.label, isDarkMode && styles.textDark]}>{metric}</Text>
