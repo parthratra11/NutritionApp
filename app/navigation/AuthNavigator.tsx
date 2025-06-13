@@ -9,6 +9,7 @@ import WorkoutScreen from '../screens/WorkoutScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import WeeklyCheckInForm from '../screens/WeeklyForm';
 import ReportScreen from 'screens/ReportScreen';
+import NutritionScreen from 'screens/NutritionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,10 +23,11 @@ export default function AuthNavigator() {
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Form" component={FormScreen} />
+          <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }}/>
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Reports" component={ReportScreen} />
+          <Stack.Screen name="Nutrition" component={NutritionScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="WeeklyForm"
             component={WeeklyCheckInForm}
