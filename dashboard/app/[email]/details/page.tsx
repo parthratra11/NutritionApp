@@ -107,8 +107,11 @@ export default function UserDetails() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Client Details</h1>
-        <Link href="/" className="text-blue-600 hover:text-blue-800">
-          Back to Dashboard
+        <Link
+          href={`/${params.email}`}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          Back to Client Overview
         </Link>
       </div>
 
