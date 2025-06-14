@@ -62,6 +62,7 @@ export default function NutritionScreen() {
               dropdownIconColor={isDarkMode ? '#a5b4fc' : '#6366f1'}>
               <Picker.Item label="Training Day" value="training" />
               <Picker.Item label="Rest Day" value="rest" />
+              <Picker.Item label="Cardio Day" value="cardio" />
             </Picker>
           </View>
         </View>
