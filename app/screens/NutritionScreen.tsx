@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from '../context/ThemeContext'; // <-- Add this line
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const mealFields = ['Protein (g)', 'Fat (g)', 'Carbohydrate (g)', 'Kcal'];
 
@@ -42,76 +43,75 @@ export default function NutritionScreen() {
   };
 
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        isDarkMode && styles.containerDark, // <-- Add dark mode style
-      ]}
-      contentContainerStyle={{ paddingBottom: 40 }}
-    >
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>🍽️ Nutrition Tracker</Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView
+        style={[
+          styles.container,
+          isDarkMode && styles.containerDark, // <-- Add dark mode style
+        ]}
+        contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text style={[styles.title, isDarkMode && styles.textDark]}>🍽️ Nutrition Tracker</Text>
 
-      <View style={styles.pickerContainer}>
-        <Text style={[styles.label, isDarkMode && styles.textDark]}>Select Day Type:</Text>
-        <View style={[styles.pickerWrapper, isDarkMode && styles.pickerWrapperDark]}>
-          <Picker
-            selectedValue={dayType}
-            onValueChange={(value) => setDayType(value)}
-            style={[styles.picker, isDarkMode && styles.pickerDark]}
-            dropdownIconColor={isDarkMode ? "#a5b4fc" : "#6366f1"}
-          >
-            <Picker.Item label="Training Day" value="training" />
-            <Picker.Item label="Rest Day" value="rest" />
-          </Picker>
-        </View>
-      </View>
-
-      <View>
-        {defaultMeals[dayType].map((meal, idx) => (
-          <View
-            key={meal}
-            style={[
-              styles.mealCard,
-              { borderLeftColor: colors[idx % colors.length] },
-              isDarkMode && styles.mealCardDark,
-            ]}
-          >
-            <Text style={[styles.mealTitle, isDarkMode && styles.textDark]}>{meal}</Text>
-            {mealFields.map((field) => (
-              <View key={field} style={styles.inputRow}>
-                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>{field}</Text>
-                <TextInput
-                  style={[styles.input, isDarkMode && styles.inputDark]}
-                  keyboardType="numeric"
-                  value={mealData[meal]?.[field] || ''}
-                  onChangeText={(text) => handleChange(meal, field, text)}
-                  placeholder="0"
-                  placeholderTextColor={isDarkMode ? "#888" : "#b2bec3"}
-                />
-              </View>
-            ))}
+        <View style={styles.pickerContainer}>
+          <Text style={[styles.label, isDarkMode && styles.textDark]}>Select Day Type:</Text>
+          <View style={[styles.pickerWrapper, isDarkMode && styles.pickerWrapperDark]}>
+            <Picker
+              selectedValue={dayType}
+              onValueChange={(value) => setDayType(value)}
+              style={[styles.picker, isDarkMode && styles.pickerDark]}
+              dropdownIconColor={isDarkMode ? '#a5b4fc' : '#6366f1'}>
+              <Picker.Item label="Training Day" value="training" />
+              <Picker.Item label="Rest Day" value="rest" />
+            </Picker>
           </View>
-        ))}
-      </View>
+        </View>
 
-      <View style={[styles.totalContainer, isDarkMode && styles.totalContainerDark]}>
-        <Text style={[styles.totalTitle, isDarkMode && styles.textDark]}>Total</Text>
-        {mealFields.map((field) => (
-          <Text key={field} style={[styles.totalText, isDarkMode && styles.textDark]}>
-            {field}: <Text style={styles.totalValue}>{calculateTotal(field)}</Text>
+        <View>
+          {defaultMeals[dayType].map((meal, idx) => (
+            <View
+              key={meal}
+              style={[
+                styles.mealCard,
+                { borderLeftColor: colors[idx % colors.length] },
+                isDarkMode && styles.mealCardDark,
+              ]}>
+              <Text style={[styles.mealTitle, isDarkMode && styles.textDark]}>{meal}</Text>
+              {mealFields.map((field) => (
+                <View key={field} style={styles.inputRow}>
+                  <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>{field}</Text>
+                  <TextInput
+                    style={[styles.input, isDarkMode && styles.inputDark]}
+                    keyboardType="numeric"
+                    value={mealData[meal]?.[field] || ''}
+                    onChangeText={(text) => handleChange(meal, field, text)}
+                    placeholder="0"
+                    placeholderTextColor={isDarkMode ? '#888' : '#b2bec3'}
+                  />
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+
+        <View style={[styles.totalContainer, isDarkMode && styles.totalContainerDark]}>
+          <Text style={[styles.totalTitle, isDarkMode && styles.textDark]}>Total</Text>
+          {mealFields.map((field) => (
+            <Text key={field} style={[styles.totalText, isDarkMode && styles.textDark]}>
+              {field}: <Text style={styles.totalValue}>{calculateTotal(field)}</Text>
+            </Text>
+          ))}
+        </View>
+
+        <View style={[styles.fiberCard, isDarkMode && styles.fiberCardDark]}>
+          <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
+            🌱 Daily Fibre Goal: <Text style={{ color: '#00b894' }}>38g</Text>
           </Text>
-        ))}
-      </View>
-
-      <View style={[styles.fiberCard, isDarkMode && styles.fiberCardDark]}>
-        <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
-          🌱 Daily Fibre Goal: <Text style={{ color: '#00b894' }}>38g</Text>
-        </Text>
-        <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
-          🥗 Per Meal Min: <Text style={{ color: '#00b894' }}>8g</Text>
-        </Text>
-      </View>
-    </ScrollView>
+          <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
+            🥗 Per Meal Min: <Text style={{ color: '#00b894' }}>8g</Text>
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
