@@ -42,7 +42,7 @@ const DailyCheckInForm = () => {
   const [formData, setFormData] = useState({});
   const [weight, setWeight] = useState('');
   const [waist, setWaist] = useState(''); // <-- add this
-  const [hip, setHip] = useState('');     // <-- add this
+  const [hip, setHip] = useState(''); // <-- add this
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [showWaistHip, setShowWaistHip] = useState(true); // <-- add this
   const { isDarkMode } = useTheme();
@@ -147,7 +147,8 @@ const DailyCheckInForm = () => {
         weekKey = `week${weekNum}`;
         // If this week already has 7 days, start a new week
         if (
-          Object.keys(data[weekKey] || {}).filter((k) => k !== 'waist' && k !== 'hip').length >= 7 &&
+          Object.keys(data[weekKey] || {}).filter((k) => k !== 'waist' && k !== 'hip').length >=
+            7 &&
           !(data[weekKey] && data[weekKey][day])
         ) {
           weekNum += 1;
@@ -230,7 +231,9 @@ const DailyCheckInForm = () => {
         {/* Only show waist/hip if not already filled this week */}
         {showWaistHip && (
           <>
-            <Text style={[styles.label, isDarkMode && styles.textDark]}>Waist Circumference (cm)</Text>
+            <Text style={[styles.label, isDarkMode && styles.textDark]}>
+              Waist Circumference (cm)
+            </Text>
             <TextInput
               style={[styles.input, isDarkMode && styles.inputDark]}
               placeholder="Enter your waist circumference"
@@ -240,7 +243,9 @@ const DailyCheckInForm = () => {
               keyboardType="numeric"
               editable={!alreadySubmitted}
             />
-            <Text style={[styles.label, isDarkMode && styles.textDark]}>Hip Circumference (cm)</Text>
+            <Text style={[styles.label, isDarkMode && styles.textDark]}>
+              Hip Circumference (cm)
+            </Text>
             <TextInput
               style={[styles.input, isDarkMode && styles.inputDark]}
               placeholder="Enter your hip circumference"
