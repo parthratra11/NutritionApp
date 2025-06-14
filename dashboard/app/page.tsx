@@ -3,16 +3,19 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
 import { collection, getDocs } from "@firebase/firestore";
+import { useRouter } from "next/navigation";
 
 interface IntakeForm {
   id: string;
-  name: string;
-  age: number;
+  fullName: string;
   email: string;
-  // Add other fields that match your intake form structure
+  timestamp: {
+    toDate: () => Date;
+  };
 }
 
 export default function Home() {
+  const router = useRouter();
   const [intakeForms, setIntakeForms] = useState<IntakeForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +40,8 @@ export default function Home() {
     fetchIntakeForms();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
     <div className="p-6">
@@ -47,14 +50,21 @@ export default function Home() {
       </h1>
       <div className="grid gap-4">
         {intakeForms.map((form) => (
-          <div key={form.id} className="border rounded-lg p-4 shadow">
+          <div
+            key={form.email} // Changed from form.id
+            className="border rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => router.push(`/${encodeURIComponent(form.email)}`)} // Changed from form.id
+          >
             <h2 className="font-semibold">Name: {form.fullName}</h2>
-            <p>Age: {form.age}</p>
-            <p>Email: {form.email}</p>
-            {/* Add more fields as needed */}
+            <p className="text-gray-600">Email: {form.email}</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Submitted: {form.timestamp?.toDate().toLocaleDateString()}
+            </p>
           </div>
         ))}
-        {intakeForms.length === 0 && <p>No intake forms found.</p>}
+        {intakeForms.length === 0 && (
+          <p className="text-gray-500">No intake forms found.</p>
+        )}
       </div>
     </div>
   );
