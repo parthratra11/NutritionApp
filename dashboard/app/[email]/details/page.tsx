@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "../../firebaseConfig";
+import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -56,10 +56,10 @@ export default function UserDetails() {
 
   useEffect(() => {
     const fetchUserDetails = async () => {
-      if (!params?.id) return;
+      if (!params?.email) return;
 
       try {
-        const decodedEmail = decodeURIComponent(params.id as string);
+        const decodedEmail = decodeURIComponent(params.email as string);
         const docRef = doc(db, "intakeForms", decodedEmail);
         const docSnap = await getDoc(docRef);
 

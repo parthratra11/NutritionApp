@@ -45,15 +45,13 @@ export default function Home() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">
-        Dashboard for Nutrition App
-      </h1>
+      <h1 className="text-2xl font-semibold mb-6">Client Dashboard</h1>
       <div className="grid gap-4">
         {intakeForms.map((form) => (
           <div
-            key={form.email} // Changed from form.id
+            key={form.email}
             className="border rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => router.push(`/${encodeURIComponent(form.email)}`)} // Changed from form.id
+            onClick={() => router.push(`/${encodeURIComponent(form.email)}`)} // Remove /details
           >
             <h2 className="font-semibold">Name: {form.fullName}</h2>
             <p className="text-gray-600">Email: {form.email}</p>
