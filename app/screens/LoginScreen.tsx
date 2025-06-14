@@ -18,7 +18,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { auth } from '../firebaseConfig.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 
 export default function LoginScreen() {
   const { isDarkMode } = useTheme();
@@ -36,11 +40,26 @@ export default function LoginScreen() {
     }
 
     try {
-      await login(email, password);
-      Alert.alert('Success', 'Logged in successfully');
+      if (isSignup) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        Alert.alert(
+          'Verify Email',
+          'Account created! Please check your email and verify your address before logging in.'
+        );
+        setIsSignup(false);
+      } else {
+        await login(email, password);
+        Alert.alert('Success', 'Logged in successfully');
+      }
     } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {
         Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
+      } else if (error.code === 'auth/email-not-verified') {
+        Alert.alert(
+          'Email Not Verified',
+          'Please verify your email address before logging in. Check your inbox for a verification email.'
+        );
       } else if (
         !isSignup &&
         (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password')
@@ -48,6 +67,26 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', 'Incorrect email or password.');
       } else {
         Alert.alert('Error', 'Please enter valid credentials');
+      }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Forgot Password', 'Please enter your email address above first.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Password Reset',
+        'A password reset email has been sent. Please check your inbox.'
+      );
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        Alert.alert('Error', 'No user found with this email address.');
+      } else {
+        Alert.alert('Error', 'Failed to send password reset email.');
       }
     }
   };
@@ -97,6 +136,17 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               secureTextEntry
             />
+
+            {/* Forgot Password Button */}
+            {!isSignup && (
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={handleForgotPassword}>
+                <Text style={[styles.forgotPasswordText, isDarkMode && styles.textDark]}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.buttonPrimary, isDarkMode && styles.buttonPrimaryDark]}
@@ -223,5 +273,14 @@ const styles = StyleSheet.create({
     color: '#111',
     fontSize: 16,
     fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 10,
+  },
+  forgotPasswordText: {
+    color: '#4F46E5',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
