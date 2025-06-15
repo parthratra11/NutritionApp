@@ -7,22 +7,62 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Alert,
+  Button,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { useTheme } from '../context/ThemeContext'; // <-- Add this line
+import { useTheme } from '../context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { db } from '../firebaseConfig';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 const mealFields = ['Protein (g)', 'Fat (g)', 'Carbohydrate (g)', 'Kcal'];
 
 const defaultMeals = {
   training: ['Pre-workout', 'Lunch', 'Afternoon', 'Dinner'],
-  rest: ['Late Lunch', 'Dinner'],
+  rest: ['Breakfast','Lunch', 'Dinner'],
+  cardio: ['Breakfast', 'Lunch', 'Dinner'],
 };
 
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${(d.getMonth() + 1)
+    .toString()
+    .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+}
+
 export default function NutritionScreen() {
-  const { isDarkMode } = useTheme(); // <-- Add this line
+  const { isDarkMode } = useTheme();
+  const { user } = useAuth();
   const [dayType, setDayType] = useState('training');
   const [mealData, setMealData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+
+  // Reset mealData when dayType changes
+  React.useEffect(() => {
+    setMealData({});
+  }, [dayType]);
+
+  // Check if already submitted for today
+  React.useEffect(() => {
+    const checkSubmitted = async () => {
+      if (!user?.email) {
+        setAlreadySubmitted(false);
+        return;
+      }
+      const todayKey = getTodayKey();
+      const docRef = doc(db, 'nutrition', user.email.toLowerCase());
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data()[todayKey]) {
+        setAlreadySubmitted(true);
+      } else {
+        setAlreadySubmitted(false);
+      }
+    };
+    checkSubmitted();
+  }, [user?.email]);
 
   const handleChange = (meal, field, value) => {
     setMealData((prev) => ({
@@ -42,12 +82,60 @@ export default function NutritionScreen() {
     }, 0);
   };
 
+  const handleSave = async () => {
+    if (!user?.email) {
+      Alert.alert('Error', 'Please login first');
+      return;
+    }
+    if (alreadySubmitted) {
+      Alert.alert('Already Submitted', 'You have already submitted your nutrition for today.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const todayKey = getTodayKey();
+      const docRef = doc(db, 'nutrition', user.email.toLowerCase());
+      const docSnap = await getDoc(docRef);
+
+      let data = {};
+      if (docSnap.exists()) {
+        data = docSnap.data();
+      }
+
+      // Calculate totals for each field
+      const totals = {};
+      for (const field of mealFields) {
+        totals[field] = calculateTotal(field);
+      }
+
+      data[todayKey] = {
+        dayType,
+        meals: {},
+        totals, // <-- Store totals in Firestore
+      };
+      for (const meal of defaultMeals[dayType]) {
+        data[todayKey].meals[meal] = {};
+        for (const field of mealFields) {
+          data[todayKey].meals[meal][field] = mealData[meal]?.[field] || '';
+        }
+      }
+
+      await setDoc(docRef, data, { merge: true });
+      Alert.alert('Success', 'Nutrition data saved!');
+      setAlreadySubmitted(true);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save nutrition data.');
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView
         style={[
           styles.container,
-          isDarkMode && styles.containerDark, // <-- Add dark mode style
+          isDarkMode && styles.containerDark,
         ]}
         contentContainerStyle={{ paddingBottom: 40 }}>
         <Text style={[styles.title, isDarkMode && styles.textDark]}>🍽️ Nutrition Tracker</Text>
@@ -111,6 +199,18 @@ export default function NutritionScreen() {
             🥗 Per Meal Min: <Text style={{ color: '#00b894' }}>8g</Text>
           </Text>
         </View>
+
+        <Button
+          title={
+            alreadySubmitted
+              ? 'Already Submitted'
+              : loading
+              ? 'Saving...'
+              : 'Save Nutrition'
+          }
+          onPress={handleSave}
+          disabled={loading || alreadySubmitted}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,7 +254,7 @@ const styles = StyleSheet.create({
     borderColor: '#444',
   },
   picker: {
-    height: Platform.OS === 'ios' ? 180 : 52,
+    height: 54,
     color: '#6366f1',
   },
   pickerDark: {
