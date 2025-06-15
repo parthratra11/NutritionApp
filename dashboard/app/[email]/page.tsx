@@ -98,6 +98,14 @@ export default function ClientOverview() {
             Nutrition
           </button>
         </div>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={() => router.push(`/${params.email}/report`)}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+          >
+            Reports
+          </button>
+        </div>
       </div>
     </div>
   );
