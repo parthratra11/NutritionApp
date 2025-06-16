@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useState, useEffect } from 'react';
@@ -116,7 +117,7 @@ const getSessionForDay = (dayIndex: number): string | null => {
 const getCurrentSession = async (userEmail: string): Promise<string | null> => {
   const docRef = doc(db, 'Workout', userEmail.toLowerCase());
   const docSnap = await getDoc(docRef);
-  
+
   if (!docSnap.exists()) {
     return 'A'; // Start with Session A if no previous workouts
   }
@@ -125,10 +126,12 @@ const getCurrentSession = async (userEmail: string): Promise<string | null> => {
   let lastCompletedSession = 'rest';
 
   // Find the last completed session
-  const weekKeys = Object.keys(data).filter(key => key.startsWith('week')).sort();
+  const weekKeys = Object.keys(data)
+    .filter((key) => key.startsWith('week'))
+    .sort();
   if (weekKeys.length > 0) {
     const lastWeek = data[weekKeys[weekKeys.length - 1]];
-    const dayKeys = Object.keys(lastWeek).filter(key => key !== 'firstEntryDate');
+    const dayKeys = Object.keys(lastWeek).filter((key) => key !== 'firstEntryDate');
     if (dayKeys.length > 0) {
       const lastDay = lastWeek[dayKeys[dayKeys.length - 1]];
       // Get session from the workout name or data
@@ -147,7 +150,11 @@ const getCurrentSession = async (userEmail: string): Promise<string | null> => {
 };
 
 // Add this function at the top level
-const autoSubmitRestDay = async (userEmail: string, session: string, firstEntryDate: string | null) => {
+const autoSubmitRestDay = async (
+  userEmail: string,
+  session: string,
+  firstEntryDate: string | null
+) => {
   if (session !== 'rest' || !firstEntryDate) return;
 
   const docRef = doc(db, 'Workout', userEmail.toLowerCase());
@@ -393,7 +400,7 @@ export default function WorkoutScreen() {
               {
                 id: Date.now().toString(),
                 weight: '', // Empty string instead of copying previous set's weight
-                reps: '',  // Empty string instead of copying previous set's reps
+                reps: '', // Empty string instead of copying previous set's reps
                 completed: false,
               },
             ],
@@ -461,9 +468,25 @@ export default function WorkoutScreen() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const sessionExercises = data[`Session ${session}`] || {};
-        const exerciseNames = Object.keys(sessionExercises).filter(key => 
-          sessionExercises[key] !== null && sessionExercises[key] !== undefined
+        const exerciseNames = Object.keys(sessionExercises).filter(
+          (key) => sessionExercises[key] !== null && sessionExercises[key] !== undefined
         );
+
+        // Create initial exercises array with one empty set each
+        const initialExercises = exerciseNames.map((name) => ({
+          id: Date.now().toString() + Math.random(),
+          name: name,
+          sets: [
+            {
+              id: Date.now().toString() + Math.random(),
+              weight: '',
+              reps: '',
+              completed: false,
+            },
+          ],
+        }));
+
+        setExercises(initialExercises);
         setAvailableExercises(exerciseNames);
       }
     };
@@ -486,9 +509,7 @@ export default function WorkoutScreen() {
 
           <ScrollView>
             <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
-              {currentSession === 'rest' 
-                ? 'Rest Day' 
-                : 'Today\'s Exercises'}
+              {currentSession === 'rest' ? 'Rest Day' : "Today's Exercises"}
             </Text>
 
             {currentSession === 'rest' ? (
@@ -501,14 +522,16 @@ export default function WorkoutScreen() {
                   <Pressable
                     key={index}
                     style={[styles.exerciseOption, isDarkMode && styles.exerciseOptionDark]}
-                    onPress={() => addExercise({
-                      id: Date.now().toString(),
-                      name: exerciseName,
-                      bodyPart: 'Custom',
-                      description: '',
-                      muscleGroups: [],
-                      instructions: []
-                    })}>
+                    onPress={() =>
+                      addExercise({
+                        id: Date.now().toString(),
+                        name: exerciseName,
+                        bodyPart: 'Custom',
+                        description: '',
+                        muscleGroups: [],
+                        instructions: [],
+                      })
+                    }>
                     <Text style={[styles.exerciseOptionText, isDarkMode && styles.textDark]}>
                       {exerciseName}
                     </Text>
@@ -579,7 +602,12 @@ export default function WorkoutScreen() {
   };
 
   // Modify handleSetChange to automatically check completion
-  const handleSetChange = (exerciseIndex: number, setIndex: number, field: string, value: string) => {
+  const handleSetChange = (
+    exerciseIndex: number,
+    setIndex: number,
+    field: string,
+    value: string
+  ) => {
     const newExercises = [...exercises];
     const currentSet = newExercises[exerciseIndex].sets[setIndex];
     currentSet[field] = value;
@@ -601,27 +629,22 @@ export default function WorkoutScreen() {
 
           <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Log Workout</Text>
 
-          <Pressable 
-            style={[
-              styles.finishButton, 
-              alreadySubmitted && styles.finishButtonDisabled
-            ]} 
+          <Pressable
+            style={[styles.finishButton, alreadySubmitted && styles.finishButtonDisabled]}
             onPress={saveWorkout}
-            disabled={alreadySubmitted}
-          >
+            disabled={alreadySubmitted}>
             <Text style={styles.finishButtonText}>
               {alreadySubmitted ? 'Already Submitted' : 'Finish'}
             </Text>
           </Pressable>
         </View>
 
-        <KeyboardAwareScrollView 
+        <KeyboardAwareScrollView
           style={styles.scrollView}
           enableOnAndroid={true}
           enableAutomaticScroll={true}
           extraScrollHeight={100}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           <TextInput
             value={workoutName}
             onChangeText={setWorkoutName}
@@ -629,6 +652,15 @@ export default function WorkoutScreen() {
             placeholder="Workout Name"
             placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
           />
+
+          <View style={[styles.sessionIndicator, isDarkMode && styles.sessionIndicatorDark]}>
+            <Text style={[styles.sessionLabel, isDarkMode && styles.sessionLabelDark]}>
+              Current Session:
+            </Text>
+            <Text style={styles.sessionValue}>
+              {currentSession === 'rest' ? 'Rest Day' : `Session ${currentSession}`}
+            </Text>
+          </View>
 
           <TextInput
             value={workoutNote}
@@ -644,16 +676,18 @@ export default function WorkoutScreen() {
           {exerciseModal}
 
           {exercises.map((exercise, exerciseIndex) => (
-            <View key={exerciseIndex} style={[styles.exerciseCard, isDarkMode && styles.exerciseCardDark]}>
-              <Pressable 
+            <View
+              key={exerciseIndex}
+              style={[styles.exerciseCard, isDarkMode && styles.exerciseCardDark]}>
+              <Pressable
                 onPress={() => !alreadySubmitted && handleExercisePress(exercise)}
-                disabled={alreadySubmitted}
-              >
-                <Text style={[
-                  styles.exerciseName, 
-                  isDarkMode && styles.textDark,
-                  alreadySubmitted && styles.disabledText
-                ]}>
+                disabled={alreadySubmitted}>
+                <Text
+                  style={[
+                    styles.exerciseName,
+                    isDarkMode && styles.textDark,
+                    alreadySubmitted && styles.disabledText,
+                  ]}>
                   {exercise.name}
                 </Text>
               </Pressable>
@@ -680,27 +714,31 @@ export default function WorkoutScreen() {
                   </View>
                   <TextInput
                     style={[
-                      styles.input, 
+                      styles.input,
                       isDarkMode && styles.inputDark,
-                      alreadySubmitted && styles.disabledInput
+                      alreadySubmitted && styles.disabledInput,
                     ]}
                     placeholder="Weight"
                     placeholderTextColor={isDarkMode ? '#666' : '#999'}
                     value={set.weight}
-                    onChangeText={(value) => !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'weight', value)}
+                    onChangeText={(value) =>
+                      !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'weight', value)
+                    }
                     keyboardType="numeric"
                     editable={!alreadySubmitted}
                   />
                   <TextInput
                     style={[
-                      styles.input, 
+                      styles.input,
                       isDarkMode && styles.inputDark,
-                      alreadySubmitted && styles.disabledInput
+                      alreadySubmitted && styles.disabledInput,
                     ]}
                     placeholder="Reps"
                     placeholderTextColor={isDarkMode ? '#666' : '#999'}
                     value={set.reps}
-                    onChangeText={(value) => !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'reps', value)}
+                    onChangeText={(value) =>
+                      !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'reps', value)
+                    }
                     keyboardType="numeric"
                     editable={!alreadySubmitted}
                   />
@@ -711,16 +749,17 @@ export default function WorkoutScreen() {
                 <Pressable
                   onPress={() => addSet(exercise.id)}
                   style={[
-                    styles.addSetButton, 
+                    styles.addSetButton,
                     isDarkMode && styles.addSetButtonDark,
-                    alreadySubmitted && styles.disabledButton
+                    alreadySubmitted && styles.disabledButton,
                   ]}
                   disabled={alreadySubmitted}>
-                  <Text style={[
-                    styles.addSetButtonText, 
-                    isDarkMode && styles.textDark,
-                    alreadySubmitted && styles.disabledText
-                  ]}>
+                  <Text
+                    style={[
+                      styles.addSetButtonText,
+                      isDarkMode && styles.textDark,
+                      alreadySubmitted && styles.disabledText,
+                    ]}>
                     Add Set
                   </Text>
                 </Pressable>
@@ -731,10 +770,10 @@ export default function WorkoutScreen() {
                   }}
                   style={[styles.deleteButton, alreadySubmitted && styles.disabledButton]}
                   disabled={alreadySubmitted}>
-                  <Ionicons 
-                    name="trash-outline" 
-                    size={20} 
-                    color={alreadySubmitted ? '#9ca3af' : '#ef4444'} 
+                  <Ionicons
+                    name="trash-outline"
+                    size={20}
+                    color={alreadySubmitted ? '#9ca3af' : '#ef4444'}
                   />
                 </Pressable>
               </View>
@@ -742,14 +781,10 @@ export default function WorkoutScreen() {
           ))}
 
           {/* Disable Add Exercise button when submitted */}
-          <Pressable 
-            onPress={() => setShowExerciseModal(true)} 
-            style={[
-              styles.addExerciseButton,
-              alreadySubmitted && styles.disabledButton
-            ]}
-            disabled={alreadySubmitted}
-          >
+          <Pressable
+            onPress={() => setShowExerciseModal(true)}
+            style={[styles.addExerciseButton, alreadySubmitted && styles.disabledButton]}
+            disabled={alreadySubmitted}>
             <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
           </Pressable>
         </KeyboardAwareScrollView>
@@ -1062,12 +1097,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  exerciseName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#3b82f6', // Bluish color for clickable appearance
-  },
 
   timeButton: {
     flex: 1,
@@ -1124,5 +1153,36 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.5,
     backgroundColor: '#e5e7eb',
+  },
+  sessionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  sessionIndicatorDark: {
+    backgroundColor: '#1f2937', // Dark mode background
+  },
+  sessionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  sessionLabelDark: {
+    color: '#9ca3af', // Lighter text for dark mode
+  },
+  sessionValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3b82f6', // Keep blue color for consistency
+    marginLeft: 8,
+  },
+  exerciseName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#3b82f6', // Keep blue color for interactive elements
   },
 });
