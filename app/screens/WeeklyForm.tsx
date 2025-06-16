@@ -41,10 +41,11 @@ const DailyCheckInForm = () => {
   const [day, setDay] = useState('');
   const [formData, setFormData] = useState({});
   const [weight, setWeight] = useState('');
-  const [waist, setWaist] = useState(''); // <-- add this
-  const [hip, setHip] = useState(''); // <-- add this
+  const [waist, setWaist] = useState('');
+  const [hip, setHip] = useState('');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  const [showWaistHip, setShowWaistHip] = useState(true); // <-- add this
+  const [showWaistHip, setShowWaistHip] = useState(true);
+  const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null); // <-- add this
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -59,6 +60,24 @@ const DailyCheckInForm = () => {
     setFormData(initialData);
     setWeight('');
   }, []);
+
+  // Fetch or set firstEntryDate
+  useEffect(() => {
+    const fetchFirstEntryDate = async () => {
+      if (!user?.email) {
+        setFirstEntryDate(null);
+        return;
+      }
+      const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists() && userDocSnap.data().firstEntryDate) {
+        setFirstEntryDate(userDocSnap.data().firstEntryDate);
+      } else {
+        setFirstEntryDate(null);
+      }
+    };
+    fetchFirstEntryDate();
+  }, [user?.email]);
 
   // Check if already submitted for yesterday when email changes
   useEffect(() => {
@@ -137,9 +156,19 @@ const DailyCheckInForm = () => {
     let weekNum = 1;
     let weekKey = 'week1';
     let data: { [key: string]: any } = {};
+    let entryDate = firstEntryDate;
 
     if (userDocSnap.exists()) {
       data = userDocSnap.data();
+      if (!data.firstEntryDate) {
+        // Set firstEntryDate if not present
+        const today = new Date();
+        entryDate = today.toISOString().slice(0, 10);
+        data.firstEntryDate = entryDate;
+        setFirstEntryDate(entryDate);
+      } else {
+        entryDate = data.firstEntryDate;
+      }
       // Find the latest week number
       const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
       if (weekKeys.length > 0) {
@@ -161,6 +190,12 @@ const DailyCheckInForm = () => {
         setAlreadySubmitted(true);
         return;
       }
+    } else {
+      // First ever entry for this user
+      const today = new Date();
+      entryDate = today.toISOString().slice(0, 10);
+      data.firstEntryDate = entryDate;
+      setFirstEntryDate(entryDate);
     }
 
     // Prepare the object to save: value + color tag for each metric
@@ -174,6 +209,7 @@ const DailyCheckInForm = () => {
 
     // Build the update object
     let update: any = {
+      ...data,
       [weekKey]: {
         ...(data[weekKey] || {}),
         [day]: {
@@ -183,6 +219,7 @@ const DailyCheckInForm = () => {
           timestamp: new Date().toISOString(),
         },
       },
+      firstEntryDate: entryDate, // <-- ensure this is always set
     };
 
     // Only add waist/hip at the week level if user is allowed to submit them
