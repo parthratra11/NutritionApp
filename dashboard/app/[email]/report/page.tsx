@@ -251,6 +251,46 @@ export default function ReportPage() {
             ))}
           </div>
 
+          {selectedWeek &&
+            (weeklyData[selectedWeek]?.waist ||
+              weeklyData[selectedWeek]?.hip) && (
+              <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+                <h3 className="text-lg font-semibold mb-2">
+                  Week {selectedWeek} Measurements
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {weeklyData[selectedWeek]?.waist && (
+                    <div>
+                      <span className="text-gray-500">Waist:</span>
+                      <span className="ml-2 font-medium">
+                        {weeklyData[selectedWeek].waist} cm
+                      </span>
+                    </div>
+                  )}
+                  {weeklyData[selectedWeek]?.hip && (
+                    <div>
+                      <span className="text-gray-500">Hip:</span>
+                      <span className="ml-2 font-medium">
+                        {weeklyData[selectedWeek].hip} cm
+                      </span>
+                    </div>
+                  )}
+                  {weeklyData[selectedWeek]?.waist &&
+                    weeklyData[selectedWeek]?.hip && (
+                      <div>
+                        <span className="text-gray-500">W/H Ratio:</span>
+                        <span className="ml-2 font-medium">
+                          {(
+                            parseFloat(weeklyData[selectedWeek].waist) /
+                            parseFloat(weeklyData[selectedWeek].hip)
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                </div>
+              </div>
+            )}
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 border">
               <thead className="bg-gray-50">
@@ -318,29 +358,203 @@ export default function ReportPage() {
                     })}
                   </tr>
                 ))}
-                {/* Circumference Measurements */}
-                {selectedWeek && weeklyData[selectedWeek]?.waist && (
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      Waist (cm)
-                    </td>
-                    <td className="px-6 py-4" colSpan={7}>
-                      {weeklyData[selectedWeek].waist}
-                    </td>
-                  </tr>
-                )}
-                {selectedWeek && weeklyData[selectedWeek]?.hip && (
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      Hip (cm)
-                    </td>
-                    <td className="px-6 py-4" colSpan={7}>
-                      {weeklyData[selectedWeek].hip}
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
+          </div>
+          {/* Daily Progress Charts */}
+          <div className="mt-8 grid gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Daily Weight & Measurements Chart */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4">
+                  Daily Weight Progress
+                </h2>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={days.map((day) => {
+                        const dayData =
+                          selectedWeek && weeklyData[selectedWeek]?.[day];
+                        return {
+                          day,
+                          weight: dayData?.weight
+                            ? parseFloat(dayData.weight)
+                            : null,
+                        };
+                      })}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="weight"
+                        stroke="#2563eb"
+                        name="Weight (kg)"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Daily Well-being Metrics Chart */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4">
+                  Daily Well-being Metrics
+                </h2>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={days.map((day) => {
+                        const dayData =
+                          selectedWeek && weeklyData[selectedWeek]?.[day];
+                        return {
+                          day,
+                          sleep: dayData?.["Sleep Quality"]?.value || null,
+                          mood: dayData?.Mood?.value || null,
+                          hunger: dayData?.["Hunger Level"]?.value || null,
+                        };
+                      })}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis domain={[0, 5]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="sleep"
+                        stroke="#4ade80"
+                        name="Sleep Quality"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="mood"
+                        stroke="#f59e0b"
+                        name="Mood"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="hunger"
+                        stroke="#ef4444"
+                        name="Hunger Level"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Daily Progress Table */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Day
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Weight (kg)
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Sleep Quality
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Mood
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Hunger Level
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Daily Change
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {days.map((day, index) => {
+                    const dayData =
+                      selectedWeek && weeklyData[selectedWeek]?.[day];
+                    const prevDayData =
+                      index > 0 &&
+                      selectedWeek &&
+                      weeklyData[selectedWeek]?.[days[index - 1]];
+                    const weightChange =
+                      dayData?.weight && prevDayData?.weight
+                        ? (
+                            parseFloat(dayData.weight) -
+                            parseFloat(prevDayData.weight)
+                          ).toFixed(1)
+                        : null;
+
+                    return (
+                      <tr key={day}>
+                        <td className="px-6 py-4 whitespace-nowrap font-medium">
+                          {day}
+                        </td>
+                        <td className="px-6 py-4">{dayData?.weight || "-"}</td>
+                        <td className="px-6 py-4">
+                          <div
+                            className={`px-2 py-1 rounded-full inline-block ${
+                              dayData?.["Sleep Quality"]
+                                ? getColorClass(dayData["Sleep Quality"].color)
+                                : ""
+                            }`}
+                          >
+                            {dayData?.["Sleep Quality"]?.value || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div
+                            className={`px-2 py-1 rounded-full inline-block ${
+                              dayData?.Mood
+                                ? getColorClass(dayData.Mood.color)
+                                : ""
+                            }`}
+                          >
+                            {dayData?.Mood?.value || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div
+                            className={`px-2 py-1 rounded-full inline-block ${
+                              dayData?.["Hunger Level"]
+                                ? getColorClass(dayData["Hunger Level"].color)
+                                : ""
+                            }`}
+                          >
+                            {dayData?.["Hunger Level"]?.value || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div
+                            className={`px-2 py-1 rounded-full inline-block ${
+                              weightChange
+                                ? parseFloat(weightChange) < 0
+                                  ? "bg-green-100 text-green-800"
+                                  : parseFloat(weightChange) > 0
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                                : ""
+                            }`}
+                          >
+                            {weightChange
+                              ? `${
+                                  weightChange > 0 ? "+" : ""
+                                }${weightChange} kg`
+                              : "-"}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : (
@@ -389,30 +603,32 @@ export default function ReportPage() {
 
             {/* Waist-Hip Ratio Chart */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">
-                Waist-Hip Ratio Trend
-              </h2>
+              <h2 className="text-xl font-semibold mb-4">Waist-Hip Ratio</h2>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={calculateAverages().map((week) => ({
-                      ...week,
-                      waistHipRatio:
-                        week.waist && week.hip
-                          ? (
-                              parseFloat(week.waist) / parseFloat(week.hip)
-                            ).toFixed(2)
-                          : null,
-                    }))}
+                    data={[
+                      {
+                        day: "Week Average",
+                        ratio:
+                          weeklyData[selectedWeek]?.waist &&
+                          weeklyData[selectedWeek]?.hip
+                            ? (
+                                parseFloat(weeklyData[selectedWeek].waist) /
+                                parseFloat(weeklyData[selectedWeek].hip)
+                              ).toFixed(2)
+                            : null,
+                      },
+                    ]}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
+                    <XAxis dataKey="day" />
                     <YAxis domain={[0.6, 1.0]} />
                     <Tooltip />
                     <Legend />
                     <Line
                       type="monotone"
-                      dataKey="waistHipRatio"
+                      dataKey="ratio"
                       stroke="#9333ea"
                       name="Waist-Hip Ratio"
                     />
@@ -461,11 +677,13 @@ export default function ReportPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Week
+                    Day
                   </th>
-                  {/* Weight & Body Measurements */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Weight (kg)
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Weight (kg)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Waist (cm)
@@ -473,107 +691,101 @@ export default function ReportPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Hip (cm)
                   </th>
-                  {/* Well-being Metrics */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Sleep Quality
+                    W/H Ratio
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Mood
+                    Sleep Quality
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Hunger Level
-                  </th>
-                  {/* Calculations */}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Waist/Hip Ratio
+                    Mood
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Weight Change
+                    Hunger Level
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Daily Change
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {calculateAverages().map((weekData, index, array) => {
-                  // Calculate waist/hip ratio
-                  const waistHipRatio =
-                    weekData.waist && weekData.hip
-                      ? (
-                          parseFloat(weekData.waist) / parseFloat(weekData.hip)
-                        ).toFixed(2)
-                      : "-";
-
-                  // Calculate weight change from previous week
-                  const previousWeight =
-                    index > 0 ? array[index - 1].avgWeight : null;
+                {days.map((day, index) => {
+                  const dayData =
+                    selectedWeek && weeklyData[selectedWeek]?.[day];
+                  const prevDayData =
+                    index > 0 &&
+                    selectedWeek &&
+                    weeklyData[selectedWeek]?.[days[index - 1]];
                   const weightChange =
-                    previousWeight && weekData.avgWeight
+                    dayData?.weight && prevDayData?.weight
                       ? (
-                          parseFloat(weekData.avgWeight) -
-                          parseFloat(previousWeight)
+                          parseFloat(dayData.weight) -
+                          parseFloat(prevDayData.weight)
                         ).toFixed(1)
-                      : "-";
+                      : null;
+
+                  const waistHipRatio =
+                    weeklyData[selectedWeek]?.waist &&
+                    weeklyData[selectedWeek]?.hip
+                      ? (
+                          parseFloat(weeklyData[selectedWeek].waist) /
+                          parseFloat(weeklyData[selectedWeek].hip)
+                        ).toFixed(2)
+                      : null;
 
                   return (
-                    <tr key={weekData.week}>
+                    <tr key={day}>
                       <td className="px-6 py-4 whitespace-nowrap font-medium">
-                        {weekData.week}
+                        {day}
                       </td>
-                      {/* Weight & Body Measurements */}
-                      <td className="px-6 py-4">{weekData.avgWeight || "-"}</td>
-                      <td className="px-6 py-4">{weekData.waist || "-"}</td>
-                      <td className="px-6 py-4">{weekData.hip || "-"}</td>
-                      {/* Well-being Metrics */}
+                      <td className="px-6 py-4">
+                        {dayData ? formatDate(dayData.timestamp) : "-"}
+                      </td>
+                      <td className="px-6 py-4">{dayData?.weight || "-"}</td>
+                      <td className="px-6 py-4">
+                        {weeklyData[selectedWeek]?.waist || "-"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {weeklyData[selectedWeek]?.hip || "-"}
+                      </td>
+                      <td className="px-6 py-4">{waistHipRatio || "-"}</td>
                       <td className="px-6 py-4">
                         <div
                           className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgSleep
-                              ? parseFloat(weekData.avgSleep) >= 4
-                                ? "bg-green-100 text-green-800"
-                                : parseFloat(weekData.avgSleep) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
+                            dayData?.["Sleep Quality"]
+                              ? getColorClass(dayData["Sleep Quality"].color)
                               : ""
                           }`}
                         >
-                          {weekData.avgSleep || "-"}
+                          {dayData?.["Sleep Quality"]?.value || "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div
                           className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgMood
-                              ? parseFloat(weekData.avgMood) >= 4
-                                ? "bg-green-100 text-green-800"
-                                : parseFloat(weekData.avgMood) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
+                            dayData?.Mood
+                              ? getColorClass(dayData.Mood.color)
                               : ""
                           }`}
                         >
-                          {weekData.avgMood || "-"}
+                          {dayData?.Mood?.value || "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div
                           className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgHunger
-                              ? parseFloat(weekData.avgHunger) >= 4
-                                ? "bg-red-100 text-red-800"
-                                : parseFloat(weekData.avgHunger) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-green-100 text-green-800"
+                            dayData?.["Hunger Level"]
+                              ? getColorClass(dayData["Hunger Level"].color)
                               : ""
                           }`}
                         >
-                          {weekData.avgHunger || "-"}
+                          {dayData?.["Hunger Level"]?.value || "-"}
                         </div>
                       </td>
-                      {/* Calculations */}
-                      <td className="px-6 py-4">{waistHipRatio}</td>
                       <td className="px-6 py-4">
                         <div
                           className={`px-2 py-1 rounded-full inline-block ${
-                            weightChange !== "-"
+                            weightChange
                               ? parseFloat(weightChange) < 0
                                 ? "bg-green-100 text-green-800"
                                 : parseFloat(weightChange) > 0
@@ -582,7 +794,7 @@ export default function ReportPage() {
                               : ""
                           }`}
                         >
-                          {weightChange !== "-"
+                          {weightChange
                             ? `${weightChange > 0 ? "+" : ""}${weightChange} kg`
                             : "-"}
                         </div>
