@@ -32,6 +32,23 @@ function getTodayKey() {
     .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
+function getDaysBetween(date1, date2) {
+  // Returns the number of days between two dates (date2 - date1)
+  const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+  const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+  return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+function getWeekAndDayKey(firstEntryDate) {
+  const today = new Date();
+  const start = new Date(firstEntryDate);
+  const daysSinceFirst = getDaysBetween(start, today);
+  const weekNum = Math.floor(daysSinceFirst / 7) + 1;
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[today.getDay()];
+  return { weekKey: `week${weekNum}`, dayKey: dayName };
+}
+
 export default function NutritionScreen() {
   const { isDarkMode } = useTheme();
   const { user } = useAuth();
@@ -39,30 +56,49 @@ export default function NutritionScreen() {
   const [mealData, setMealData] = useState({});
   const [loading, setLoading] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [firstEntryDate, setFirstEntryDate] = useState(null);
 
   // Reset mealData when dayType changes
   React.useEffect(() => {
     setMealData({});
   }, [dayType]);
 
+  // On mount, get or set firstEntryDate
+  React.useEffect(() => {
+    const fetchFirstEntryDate = async () => {
+      if (!user?.email) {
+        setFirstEntryDate(null);
+        return;
+      }
+      const docRef = doc(db, 'nutrition', user.email.toLowerCase());
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().firstEntryDate) {
+        setFirstEntryDate(docSnap.data().firstEntryDate);
+      } else {
+        setFirstEntryDate(null);
+      }
+    };
+    fetchFirstEntryDate();
+  }, [user?.email]);
+
   // Check if already submitted for today
   React.useEffect(() => {
     const checkSubmitted = async () => {
-      if (!user?.email) {
+      if (!user?.email || !firstEntryDate) {
         setAlreadySubmitted(false);
         return;
       }
-      const todayKey = getTodayKey();
+      const { weekKey, dayKey } = getWeekAndDayKey(firstEntryDate);
       const docRef = doc(db, 'nutrition', user.email.toLowerCase());
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data()[todayKey]) {
+      if (docSnap.exists() && docSnap.data()[weekKey] && docSnap.data()[weekKey][dayKey]) {
         setAlreadySubmitted(true);
       } else {
         setAlreadySubmitted(false);
       }
     };
-    checkSubmitted();
-  }, [user?.email]);
+    if (firstEntryDate) checkSubmitted();
+  }, [user?.email, firstEntryDate]);
 
   const handleChange = (meal, field, value) => {
     setMealData((prev) => ({
@@ -93,14 +129,31 @@ export default function NutritionScreen() {
     }
     setLoading(true);
     try {
-      const todayKey = getTodayKey();
       const docRef = doc(db, 'nutrition', user.email.toLowerCase());
       const docSnap = await getDoc(docRef);
 
       let data = {};
+      let entryDate = firstEntryDate;
       if (docSnap.exists()) {
         data = docSnap.data();
+        if (!data.firstEntryDate) {
+          // Set firstEntryDate if not present
+          const today = new Date();
+          entryDate = today.toISOString().slice(0, 10);
+          data.firstEntryDate = entryDate;
+          setFirstEntryDate(entryDate);
+        } else {
+          entryDate = data.firstEntryDate;
+        }
+      } else {
+        // First ever entry for this user
+        const today = new Date();
+        entryDate = today.toISOString().slice(0, 10);
+        data.firstEntryDate = entryDate;
+        setFirstEntryDate(entryDate);
       }
+
+      const { weekKey, dayKey } = getWeekAndDayKey(entryDate);
 
       // Calculate totals for each field
       const totals = {};
@@ -108,15 +161,17 @@ export default function NutritionScreen() {
         totals[field] = calculateTotal(field);
       }
 
-      data[todayKey] = {
+      // Save under weekKey -> dayKey
+      if (!data[weekKey]) data[weekKey] = {};
+      data[weekKey][dayKey] = {
         dayType,
         meals: {},
-        totals, // <-- Store totals in Firestore
+        totals,
       };
       for (const meal of defaultMeals[dayType]) {
-        data[todayKey].meals[meal] = {};
+        data[weekKey][dayKey].meals[meal] = {};
         for (const field of mealFields) {
-          data[todayKey].meals[meal][field] = mealData[meal]?.[field] || '';
+          data[weekKey][dayKey].meals[meal][field] = mealData[meal]?.[field] || '';
         }
       }
 
