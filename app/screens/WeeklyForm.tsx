@@ -130,6 +130,14 @@ const DailyCheckInForm = () => {
     }));
   };
 
+  const shouldStartNewWeek = (currentWeekData: any, currentDay: string) => {
+    // If it's Monday, always start a new week
+    if (currentDay === 'Monday') return true;
+
+    // If current week has Sunday logged, start a new week
+    return currentWeekData && currentWeekData['Sunday'];
+  };
+
   // Firestore save logic
   const saveWeeklyForm = async () => {
     if (!user?.email) {
@@ -161,7 +169,6 @@ const DailyCheckInForm = () => {
     if (userDocSnap.exists()) {
       data = userDocSnap.data();
       if (!data.firstEntryDate) {
-        // Set firstEntryDate if not present
         const today = new Date();
         entryDate = today.toISOString().slice(0, 10);
         data.firstEntryDate = entryDate;
@@ -169,21 +176,20 @@ const DailyCheckInForm = () => {
       } else {
         entryDate = data.firstEntryDate;
       }
+
       // Find the latest week number
       const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
       if (weekKeys.length > 0) {
         weekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
         weekKey = `week${weekNum}`;
-        // If this week already has 7 days, start a new week
-        if (
-          Object.keys(data[weekKey] || {}).filter((k) => k !== 'waist' && k !== 'hip').length >=
-            7 &&
-          !(data[weekKey] && data[weekKey][day])
-        ) {
+
+        // Check if we should start a new week
+        if (shouldStartNewWeek(data[weekKey], day)) {
           weekNum += 1;
           weekKey = `week${weekNum}`;
         }
       }
+
       // Prevent duplicate submission for the same day
       if (data[weekKey] && data[weekKey][day]) {
         Alert.alert('Already Submitted', `You have already submitted for ${day}.`);
@@ -219,7 +225,7 @@ const DailyCheckInForm = () => {
           timestamp: new Date().toISOString(),
         },
       },
-      firstEntryDate: entryDate, // <-- ensure this is always set
+      firstEntryDate: entryDate,
     };
 
     // Only add waist/hip at the week level if user is allowed to submit them
