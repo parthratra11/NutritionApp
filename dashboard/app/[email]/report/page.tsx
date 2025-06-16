@@ -586,6 +586,9 @@ export default function ReportPage() {
                         <td className="px-6 py-4 whitespace-nowrap font-medium">
                           {day}
                         </td>
+                        <td className="px-6 py-4">
+                          {dayData ? formatDate(dayData.timestamp) : "-"}
+                        </td>
                         <td className="px-6 py-4">{dayData?.weight || "-"}</td>
                         <td className="px-6 py-4">
                           <div
