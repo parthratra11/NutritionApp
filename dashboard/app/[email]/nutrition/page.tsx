@@ -56,6 +56,12 @@ export default function NutritionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDateData, setSelectedDateData] = useState<{
+    date: string;
+    data: any;
+  } | null>(null);
+
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-");
     return new Date(
@@ -101,6 +107,7 @@ export default function NutritionPage() {
           weeks[weekKey].dayTypes.push(dayData.dayType);
           weeks[weekKey].dailyData[dayData.date] = {
             dayType: dayData.dayType,
+            meals: dayData.meals, // Include meals data
             totals: dayData.totals,
           };
         }
@@ -166,16 +173,163 @@ export default function NutritionPage() {
     fetchData();
   }, [params?.email]);
 
+  // Add this component after the CustomTooltip
+  const NutritionModal = ({
+    isOpen,
+    onClose,
+    date,
+    dayData,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    date: string;
+    dayData: any;
+  }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-xl font-semibold">
+                {getDayName(date)} - {formatDate(date)}
+              </h2>
+              <p className="text-gray-500">{dayData.dayType} Day</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Meals Breakdown */}
+          <div className="space-y-4">
+            {dayData.meals &&
+              Object.entries(dayData.meals).map(
+                ([meal, data]: [string, MealData]) => (
+                  <div key={meal} className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-2">{meal}</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Protein</p>
+                        <p className="font-medium">{data["Protein (g)"]}g</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Carbs</p>
+                        <p className="font-medium">
+                          {data["Carbohydrate (g)"]}g
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Fat</p>
+                        <p className="font-medium">{data["Fat (g)"]}g</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Calories</p>
+                        <p className="font-medium">{data.Kcal}</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+          </div>
+
+          {/* Daily Totals */}
+          <div className="mt-6 border-t pt-6">
+            <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Total Protein</p>
+                  <p className="font-medium">
+                    {dayData.totals["Protein (g)"]}g
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Carbs</p>
+                  <p className="font-medium">
+                    {dayData.totals["Carbohydrate (g)"]}g
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Fat</p>
+                  <p className="font-medium">{dayData.totals["Fat (g)"]}g</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Calories</p>
+                  <p className="font-medium">{dayData.totals.Kcal}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dayData = weeklyData[selectedWeek]?.dailyData[label];
+      if (!dayData) return null;
+
       return (
-        <div className="bg-white p-3 rounded shadow-lg border border-gray-200">
-          <p className="font-medium">{formatDate(label)}</p>
-          {payload.map((entry: any) => (
-            <p key={entry.name} style={{ color: entry.color }}>
-              {`${entry.name}: ${entry.value}`}
+        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 min-w-[300px]">
+          <div className="border-b pb-2 mb-3">
+            <p className="font-medium">
+              {getDayName(label)} - {formatDate(label)}
             </p>
-          ))}
+            <p className="text-sm text-gray-500">{dayData.dayType} Day</p>
+          </div>
+
+          {/* Meals Breakdown */}
+          {dayData.meals &&
+            Object.entries(dayData.meals).map(
+              ([meal, data]: [string, MealData]) => (
+                <div key={meal} className="mb-3">
+                  <p className="font-medium text-gray-700 mb-1">{meal}</p>
+                  <div className="grid grid-cols-2 gap-x-4 text-sm">
+                    <p className="text-gray-600">
+                      Protein: {data["Protein (g)"]}g
+                    </p>
+                    <p className="text-gray-600">
+                      Carbs: {data["Carbohydrate (g)"]}g
+                    </p>
+                    <p className="text-gray-600">Fat: {data["Fat (g)"]}g</p>
+                    <p className="text-gray-600">Calories: {data.Kcal}</p>
+                  </div>
+                </div>
+              )
+            )}
+
+          {/* Daily Totals */}
+          <div className="border-t pt-2 mt-2">
+            <p className="font-medium text-gray-700 mb-1">Daily Totals</p>
+            <div className="grid grid-cols-2 gap-x-4 text-sm">
+              <p className="text-gray-600">
+                Protein: {dayData.totals["Protein (g)"]}g
+              </p>
+              <p className="text-gray-600">
+                Carbs: {dayData.totals["Carbohydrate (g)"]}g
+              </p>
+              <p className="text-gray-600">Fat: {dayData.totals["Fat (g)"]}g</p>
+              <p className="text-gray-600">Calories: {dayData.totals.Kcal}</p>
+            </div>
+          </div>
         </div>
       );
     }
@@ -398,7 +552,20 @@ export default function NutritionPage() {
                       const dayData = weeklyData[selectedWeek].dailyData[date];
                       return (
                         <tr key={date}>
-                          <td className="px-6 py-4">{formatDate(date)}</td>
+                          <td
+                            className="px-6 py-4 cursor-pointer hover:text-blue-600"
+                            onClick={() => {
+                              const dayData =
+                                weeklyData[selectedWeek].dailyData[date];
+                              setSelectedDateData({
+                                date,
+                                data: dayData, // Now contains both meals and totals
+                              });
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            {formatDate(date)}
+                          </td>
                           <td className="px-6 py-4">{dayData.dayType}</td>
                           <td className="px-6 py-4">
                             {dayData.totals["Protein (g)"]}
@@ -551,6 +718,17 @@ export default function NutritionPage() {
             </table>
           </div>
         </div>
+      )}
+      {selectedDateData && (
+        <NutritionModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedDateData(null);
+          }}
+          date={selectedDateData.date}
+          dayData={selectedDateData.data}
+        />
       )}
     </div>
   );
