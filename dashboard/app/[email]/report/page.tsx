@@ -544,7 +544,7 @@ export default function ReportPage() {
             </div>
 
             {/* Daily Progress Table */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -653,7 +653,7 @@ export default function ReportPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </div> */}
           </div>
         </>
       ) : (
