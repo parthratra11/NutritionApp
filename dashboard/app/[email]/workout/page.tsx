@@ -101,12 +101,19 @@ export default function WorkoutDashboard() {
 
   // Helper to get session type from workout name
   const getSessionType = (exercises: ExerciseData[]): string | null => {
-    const exerciseNames = exercises.map((e) => e.name);
+    const exerciseNames = exercises.map((e) => e.name.trim());
 
     for (const [session, templateExercises] of Object.entries(
       sessionTemplates
     )) {
-      if (exerciseNames.some((name) => templateExercises.includes(name))) {
+      // Check if any of the exercises in this workout match the template exercises
+      if (
+        exerciseNames.some((name) =>
+          templateExercises.some(
+            (template) => name.toLowerCase() === template.toLowerCase()
+          )
+        )
+      ) {
         return session;
       }
     }
@@ -171,8 +178,13 @@ export default function WorkoutDashboard() {
             : "";
 
         dayData.exercises.forEach((exercise) => {
-          if (sessionTemplates[sessionType].includes(exercise.name)) {
-            sessions[sessionType][exercise.name][date] = {
+          const matchingTemplateExercise = sessionTemplates[sessionType].find(
+            (template) =>
+              template.toLowerCase() === exercise.name.toLowerCase().trim()
+          );
+
+          if (matchingTemplateExercise) {
+            sessions[sessionType][matchingTemplateExercise][date] = {
               sets: exercise.sets,
               workoutNote: dayData.workoutNote || "",
               duration,
