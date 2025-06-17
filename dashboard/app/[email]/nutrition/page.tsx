@@ -127,6 +127,11 @@ export default function NutritionPage() {
     return weeks;
   };
 
+  const getDayName = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { weekday: "long" });
+  };
+
   const getWeekRange = (dates: string[]) => {
     const sortedDates = dates.sort();
     return `${formatDate(sortedDates[0])} - ${formatDate(
@@ -283,7 +288,7 @@ export default function NutritionPage() {
                   </h2>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <BarChart
                         data={weeklyData[selectedWeek].dates.map((date) => ({
                           date,
                           protein:
@@ -302,7 +307,11 @@ export default function NutritionPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
                           dataKey="date"
-                          tickFormatter={formatDate}
+                          tickFormatter={(date) =>
+                            `${getDayName(date).slice(0, 3)} ${formatDate(
+                              date
+                            )}`
+                          }
                           height={60}
                           angle={-45}
                           textAnchor="end"
@@ -310,25 +319,10 @@ export default function NutritionPage() {
                         <YAxis />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="protein"
-                          stroke="#4ade80"
-                          name="Protein"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="carbs"
-                          stroke="#f59e0b"
-                          name="Carbs"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="fat"
-                          stroke="#ef4444"
-                          name="Fat"
-                        />
-                      </LineChart>
+                        <Bar dataKey="protein" fill="#4ade80" name="Protein" />
+                        <Bar dataKey="carbs" fill="#f59e0b" name="Carbs" />
+                        <Bar dataKey="fat" fill="#ef4444" name="Fat" />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
@@ -340,7 +334,7 @@ export default function NutritionPage() {
                   </h2>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <BarChart
                         data={weeklyData[selectedWeek].dates.map((date) => ({
                           date,
                           calories:
@@ -351,7 +345,11 @@ export default function NutritionPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
                           dataKey="date"
-                          tickFormatter={formatDate}
+                          tickFormatter={(date) =>
+                            `${getDayName(date).slice(0, 3)} ${formatDate(
+                              date
+                            )}`
+                          }
                           height={60}
                           angle={-45}
                           textAnchor="end"
@@ -359,13 +357,12 @@ export default function NutritionPage() {
                         <YAxis />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
-                        <Line
-                          type="monotone"
+                        <Bar
                           dataKey="calories"
-                          stroke="#8b5cf6"
+                          fill="#8b5cf6"
                           name="Calories"
                         />
-                      </LineChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
