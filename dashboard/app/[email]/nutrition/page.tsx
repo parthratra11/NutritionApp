@@ -17,16 +17,18 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+interface MealData {
+  "Protein (g)": string;
+  "Fat (g)": string;
+  "Carbohydrate (g)": string;
+  Kcal: string;
+}
 
-interface NutritionData {
+interface DayData {
+  date: string;
   dayType: string;
   meals: {
-    [meal: string]: {
-      "Protein (g)": string;
-      "Fat (g)": string;
-      "Carbohydrate (g)": string;
-      Kcal: string;
-    };
+    [meal: string]: MealData;
   };
   totals: {
     "Protein (g)": number;
@@ -36,26 +38,17 @@ interface NutritionData {
   };
 }
 
-interface DailyNutrition {
-  [date: string]: NutritionData;
+interface WeekData {
+  [day: string]: DayData;
 }
 
-interface WeekData {
-  [week: string]: {
-    dates: string[];
-    avgProtein: number;
-    avgCarbs: number;
-    avgFat: number;
-    avgCalories: number;
-    dayTypes: string[];
-  };
+interface NutritionDataStructure {
+  firstEntryDate: string;
+  [week: string]: WeekData | string;
 }
 
 export default function NutritionPage() {
   const params = useParams();
-  const [nutritionData, setNutritionData] = useState<DailyNutrition | null>(
-    null
-  );
   const [weeklyData, setWeeklyData] = useState<WeekData | null>(null);
   const [viewMode, setViewMode] = useState<"weekly" | "overview">("weekly");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -76,12 +69,13 @@ export default function NutritionPage() {
     });
   };
 
-  const groupDataByWeeks = (data: DailyNutrition): WeekData => {
+  const groupDataByWeeks = (data: NutritionDataStructure): WeekData => {
     const weeks: WeekData = {};
 
-    Object.entries(data).forEach(([date, dayData]) => {
-      const d = new Date(date);
-      const weekNum = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
+    Object.entries(data).forEach(([key, value]) => {
+      if (key === "firstEntryDate") return;
+
+      const weekNum = parseInt(key.replace("week", ""));
       const weekKey = `Week ${weekNum}`;
 
       if (!weeks[weekKey]) {
@@ -92,24 +86,42 @@ export default function NutritionPage() {
           avgFat: 0,
           avgCalories: 0,
           dayTypes: [],
+          dailyData: {},
         };
       }
 
-      weeks[weekKey].dates.push(date);
-      weeks[weekKey].avgProtein += dayData.totals["Protein (g)"];
-      weeks[weekKey].avgCarbs += dayData.totals["Carbohydrate (g)"];
-      weeks[weekKey].avgFat += dayData.totals["Fat (g)"];
-      weeks[weekKey].avgCalories += dayData.totals.Kcal;
-      weeks[weekKey].dayTypes.push(dayData.dayType);
-    });
+      const weekData = value as WeekData;
+      Object.entries(weekData).forEach(([day, dayData]) => {
+        if (dayData.date) {
+          weeks[weekKey].dates.push(dayData.date);
+          weeks[weekKey].avgProtein += dayData.totals["Protein (g)"];
+          weeks[weekKey].avgCarbs += dayData.totals["Carbohydrate (g)"];
+          weeks[weekKey].avgFat += dayData.totals["Fat (g)"];
+          weeks[weekKey].avgCalories += dayData.totals.Kcal;
+          weeks[weekKey].dayTypes.push(dayData.dayType);
+          weeks[weekKey].dailyData[dayData.date] = {
+            dayType: dayData.dayType,
+            totals: dayData.totals,
+          };
+        }
+      });
 
-    // Calculate averages
-    Object.values(weeks).forEach((week) => {
-      const daysCount = week.dates.length;
-      week.avgProtein = parseFloat((week.avgProtein / daysCount).toFixed(1));
-      week.avgCarbs = parseFloat((week.avgCarbs / daysCount).toFixed(1));
-      week.avgFat = parseFloat((week.avgFat / daysCount).toFixed(1));
-      week.avgCalories = parseFloat((week.avgCalories / daysCount).toFixed(1));
+      // Calculate averages
+      const daysCount = weeks[weekKey].dates.length;
+      if (daysCount > 0) {
+        weeks[weekKey].avgProtein = parseFloat(
+          (weeks[weekKey].avgProtein / daysCount).toFixed(1)
+        );
+        weeks[weekKey].avgCarbs = parseFloat(
+          (weeks[weekKey].avgCarbs / daysCount).toFixed(1)
+        );
+        weeks[weekKey].avgFat = parseFloat(
+          (weeks[weekKey].avgFat / daysCount).toFixed(1)
+        );
+        weeks[weekKey].avgCalories = parseFloat(
+          (weeks[weekKey].avgCalories / daysCount).toFixed(1)
+        );
+      }
     });
 
     return weeks;
@@ -132,14 +144,11 @@ export default function NutritionPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const data = docSnap.data() as DailyNutrition;
-          setNutritionData(data);
+          const data = docSnap.data() as NutritionDataStructure;
           const weeks = groupDataByWeeks(data);
           setWeeklyData(weeks);
           const weeksList = Object.keys(weeks);
           setSelectedWeek(weeksList[weeksList.length - 1]);
-          const dates = Object.keys(data).sort();
-          setSelectedDate(dates[dates.length - 1]);
         }
       } catch (err) {
         setError("Failed to fetch nutrition data");
@@ -170,9 +179,7 @@ export default function NutritionPage() {
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!nutritionData || !weeklyData)
-    return <div className="p-6">No nutrition data found</div>;
-
+  if (!weeklyData) return <div className="p-6">No nutrition data found</div>;
   return (
     <div className="p-6">
       {/* View Toggle */}
@@ -279,9 +286,17 @@ export default function NutritionPage() {
                       <LineChart
                         data={weeklyData[selectedWeek].dates.map((date) => ({
                           date,
-                          protein: nutritionData[date].totals["Protein (g)"],
-                          carbs: nutritionData[date].totals["Carbohydrate (g)"],
-                          fat: nutritionData[date].totals["Fat (g)"],
+                          protein:
+                            weeklyData[selectedWeek].dailyData[date].totals[
+                              "Protein (g)"
+                            ],
+                          carbs:
+                            weeklyData[selectedWeek].dailyData[date].totals[
+                              "Carbohydrate (g)"
+                            ],
+                          fat: weeklyData[selectedWeek].dailyData[date].totals[
+                            "Fat (g)"
+                          ],
                         }))}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
@@ -328,7 +343,9 @@ export default function NutritionPage() {
                       <LineChart
                         data={weeklyData[selectedWeek].dates.map((date) => ({
                           date,
-                          calories: nutritionData[date].totals.Kcal,
+                          calories:
+                            weeklyData[selectedWeek].dailyData[date].totals
+                              .Kcal,
                         }))}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
@@ -381,7 +398,7 @@ export default function NutritionPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {weeklyData[selectedWeek].dates.map((date) => {
-                      const dayData = nutritionData[date];
+                      const dayData = weeklyData[selectedWeek].dailyData[date];
                       return (
                         <tr key={date}>
                           <td className="px-6 py-4">{formatDate(date)}</td>

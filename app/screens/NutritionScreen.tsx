@@ -21,7 +21,7 @@ const mealFields = ['Protein (g)', 'Fat (g)', 'Carbohydrate (g)', 'Kcal'];
 
 const defaultMeals = {
   training: ['Pre-workout', 'Lunch', 'Afternoon', 'Dinner'],
-  rest: ['Breakfast','Lunch', 'Dinner'],
+  rest: ['Breakfast', 'Lunch', 'Dinner'],
   cardio: ['Breakfast', 'Lunch', 'Dinner'],
 };
 
@@ -118,6 +118,13 @@ export default function NutritionScreen() {
     }, 0);
   };
 
+  // Add this function at the top with other utility functions
+  const getTodaysDate = () => {
+    const today = new Date();
+    return today.toISOString().slice(0, 10); // Returns YYYY-MM-DD format
+  };
+
+  // Modify the handleSave function
   const handleSave = async () => {
     if (!user?.email) {
       Alert.alert('Error', 'Please login first');
@@ -138,8 +145,8 @@ export default function NutritionScreen() {
         data = docSnap.data();
         if (!data.firstEntryDate) {
           // Set firstEntryDate if not present
-          const today = new Date();
-          entryDate = today.toISOString().slice(0, 10);
+          const today = getTodaysDate();
+          entryDate = today;
           data.firstEntryDate = entryDate;
           setFirstEntryDate(entryDate);
         } else {
@@ -147,8 +154,8 @@ export default function NutritionScreen() {
         }
       } else {
         // First ever entry for this user
-        const today = new Date();
-        entryDate = today.toISOString().slice(0, 10);
+        const today = getTodaysDate();
+        entryDate = today;
         data.firstEntryDate = entryDate;
         setFirstEntryDate(entryDate);
       }
@@ -161,13 +168,15 @@ export default function NutritionScreen() {
         totals[field] = calculateTotal(field);
       }
 
-      // Save under weekKey -> dayKey
+      // Save under weekKey -> dayKey with date
       if (!data[weekKey]) data[weekKey] = {};
       data[weekKey][dayKey] = {
         dayType,
+        date: getTodaysDate(), // Add today's date
         meals: {},
         totals,
       };
+
       for (const meal of defaultMeals[dayType]) {
         data[weekKey][dayKey].meals[meal] = {};
         for (const field of mealFields) {
@@ -188,10 +197,7 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView
-        style={[
-          styles.container,
-          isDarkMode && styles.containerDark,
-        ]}
+        style={[styles.container, isDarkMode && styles.containerDark]}
         contentContainerStyle={{ paddingBottom: 40 }}>
         <Text style={[styles.title, isDarkMode && styles.textDark]}>🍽️ Nutrition Tracker</Text>
 
@@ -256,13 +262,7 @@ export default function NutritionScreen() {
         </View>
 
         <Button
-          title={
-            alreadySubmitted
-              ? 'Already Submitted'
-              : loading
-              ? 'Saving...'
-              : 'Save Nutrition'
-          }
+          title={alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
           onPress={handleSave}
           disabled={loading || alreadySubmitted}
         />
