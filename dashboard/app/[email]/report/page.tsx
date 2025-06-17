@@ -398,8 +398,9 @@ export default function ReportPage() {
                         if (metric === "Weight") {
                           value = dayData.weight;
                         } else {
-                          const metricData =
-                            dayData[metric.replace(" ", "") as keyof DayData];
+                          // Access the metrics directly using the exact key names
+                          const metricKey = metric as keyof DayData;
+                          const metricData = dayData[metricKey];
                           if (
                             metricData &&
                             typeof metricData === "object" &&
@@ -416,7 +417,7 @@ export default function ReportPage() {
                           key={`${day}-${metric}`}
                           className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${colorClass}`}
                         >
-                          {value}
+                          {value || "-"}
                         </td>
                       );
                     })}
