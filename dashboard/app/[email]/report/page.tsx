@@ -196,8 +196,11 @@ export default function ReportPage() {
         const clientDocSnap = await getDoc(clientDocRef);
 
         if (weeklyDocSnap.exists()) {
-          setWeeklyData(weeklyDocSnap.data() as WeeklyForms);
-          const weeks = Object.keys(weeklyDocSnap.data());
+          const data = weeklyDocSnap.data();
+          // Remove firstEntryDate before setting the state
+          const { firstEntryDate, ...weekData } = data;
+          setWeeklyData(weekData as WeeklyForms);
+          const weeks = Object.keys(weekData);
           setSelectedWeek(weeks[weeks.length - 1]);
         }
 
@@ -294,20 +297,22 @@ export default function ReportPage() {
       {viewMode === "weekly" ? (
         <>
           <div className="mb-6 flex flex-wrap gap-2">
-            {Object.entries(weeklyData).map(([week, data]) => (
-              <button
-                key={week}
-                onClick={() => setSelectedWeek(week)}
-                className={`px-4 py-2 rounded-lg ${
-                  selectedWeek === week
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-              >
-                <div className="text-sm font-medium">{week}</div>
-                <div className="text-xs opacity-75">{getWeekDates(data)}</div>
-              </button>
-            ))}
+            {Object.entries(weeklyData)
+              .filter(([week]) => week !== "firstEntryDate")
+              .map(([week, data]) => (
+                <button
+                  key={week}
+                  onClick={() => setSelectedWeek(week)}
+                  className={`px-4 py-2 rounded-lg ${
+                    selectedWeek === week
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 hover:bg-gray-300"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{week}</div>
+                  <div className="text-xs opacity-75">{getWeekDates(data)}</div>
+                </button>
+              ))}
           </div>
 
           {selectedWeek &&
