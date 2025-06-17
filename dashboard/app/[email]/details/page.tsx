@@ -38,6 +38,18 @@ interface IntakeForm {
   sleepQuality: string;
   caffeineIntake: string;
   menstrualCycle: string;
+  squatRack: boolean;
+  hyperBench: boolean;
+  gluteHam: boolean;
+  standingCalf: boolean;
+  dipBelt: boolean;
+  legCurl: boolean;
+  gymRings: boolean;
+  trx: boolean;
+  resistanceBands: boolean;
+  pullUpBar: boolean;
+  seatedCalf: boolean;
+  cableTower: boolean;
   supplements: string;
   wristCircumference: string;
   ankleCircumference: string;
@@ -47,6 +59,21 @@ interface IntakeForm {
     toDate: () => Date;
   };
 }
+
+const equipmentFields = [
+  { field: "squatRack", label: "Squat cage or rack" },
+  { field: "hyperBench", label: "45° hyperextension bench" },
+  { field: "gluteHam", label: "Glute-ham raise" },
+  { field: "standingCalf", label: "Standing calf raise machine" },
+  { field: "dipBelt", label: "Dip/chin-up belt" },
+  { field: "legCurl", label: "Leg curl machine" },
+  { field: "gymRings", label: "Gymnastic rings" },
+  { field: "trx", label: "TRX" },
+  { field: "resistanceBands", label: "Resistance bands" },
+  { field: "pullUpBar", label: "Pull-up bar" },
+  { field: "seatedCalf", label: "Seated calf raise machine" },
+  { field: "cableTower", label: "Cable tower" },
+];
 
 export default function UserDetails() {
   const params = useParams();
@@ -85,17 +112,19 @@ export default function UserDetails() {
 
   const renderSection = (
     title: string,
-    fields: { label: string; value: string | undefined }[]
+    fields: { label: string; value: string | boolean | undefined }[]
   ) => (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
       <div className="grid gap-4">
         {fields.map(
           ({ label, value }) =>
-            value && (
+            value !== undefined && (
               <div key={label} className="bg-white p-4 rounded-lg shadow">
                 <p className="font-medium text-gray-700">{label}</p>
-                <p className="text-gray-600">{value}</p>
+                <p className="text-gray-600">
+                  {typeof value === "boolean" ? (value ? "Yes" : "No") : value}
+                </p>
               </div>
             )
         )}
@@ -161,6 +190,28 @@ export default function UserDetails() {
         { label: "Stress Level", value: form.stressLevel },
         { label: "Sleep Quality", value: form.sleepQuality },
         { label: "Caffeine Intake", value: form.caffeineIntake },
+      ])}
+
+      {/* Add Equipment section */}
+      {renderSection(
+        "Equipment Access",
+        equipmentFields.map(({ field, label }) => ({
+          label,
+          value: form[field as keyof IntakeForm],
+        }))
+      )}
+
+      {/* Add Menstrual Cycle to Additional Information section */}
+      {renderSection("Additional Information", [
+        {
+          label: "Menstrual Cycle & Contraception",
+          value: form.menstrualCycle,
+        },
+        { label: "Supplements", value: form.supplements },
+        { label: "Wrist Circumference", value: form.wristCircumference },
+        { label: "Ankle Circumference", value: form.ankleCircumference },
+        { label: "Typical Diet", value: form.typicalDiet },
+        { label: "Current Training", value: form.currentTraining },
       ])}
 
       {/* Additional Information */}
