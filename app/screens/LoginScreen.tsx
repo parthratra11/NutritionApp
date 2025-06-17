@@ -29,6 +29,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigation = useNavigation();
   const { setUser } = useAuth();
   const { login } = useAuth();
@@ -128,14 +129,25 @@ export default function LoginScreen() {
               autoCapitalize="none"
             />
 
-            <TextInput
-              style={[styles.input, isDarkMode && styles.inputDark]}
-              placeholder="Password"
-              placeholderTextColor={isDarkMode ? '#666' : '#999'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
+              <TextInput
+                style={[styles.inputWithIcon, isDarkMode && styles.inputDark]}
+                placeholder="Password"
+                placeholderTextColor={isDarkMode ? '#666' : '#999'}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color={isDarkMode ? '#666' : '#999'}
+                />
+              </TouchableOpacity>
+            </View>
 
             {/* Forgot Password Button */}
             {!isSignup && (
@@ -238,6 +250,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f2937',
     borderColor: '#374151',
     color: '#fff',
+  },
+  inputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  inputContainerDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+  inputWithIcon: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#000',
+    backgroundColor: 'transparent',
+  },
+  eyeIcon: {
+    padding: 10,
+    marginRight: 5,
   },
   buttonPrimary: {
     width: '100%',

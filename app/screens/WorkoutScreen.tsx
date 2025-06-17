@@ -618,6 +618,43 @@ export default function WorkoutScreen() {
     setExercises(newExercises);
   };
 
+  // Add these functions inside your WorkoutScreen component
+  const deleteExercise = (exerciseIndex: number) => {
+    Alert.alert(
+      'Delete Exercise',
+      'Are you sure you want to delete this exercise and all its sets?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const newExercises = [...exercises];
+            newExercises.splice(exerciseIndex, 1);
+            setExercises(newExercises);
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteSet = (exerciseIndex: number, setIndex: number) => {
+    const newExercises = [...exercises];
+    const exercise = newExercises[exerciseIndex];
+
+    // Don't delete if it's the only set
+    if (exercise.sets.length === 1) {
+      Alert.alert('Cannot Delete', 'Exercise must have at least one set');
+      return;
+    }
+
+    exercise.sets.splice(setIndex, 1);
+    setExercises(newExercises);
+  };
+
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
@@ -742,6 +779,13 @@ export default function WorkoutScreen() {
                     keyboardType="numeric"
                     editable={!alreadySubmitted}
                   />
+                  {!alreadySubmitted && (
+                    <Pressable
+                      onPress={() => deleteSet(exerciseIndex, setIndex)}
+                      style={styles.deleteSetButton}>
+                      <Ionicons name="remove-circle" size={24} color="#ef4444" />
+                    </Pressable>
+                  )}
                 </View>
               ))}
 
@@ -765,10 +809,11 @@ export default function WorkoutScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => {
-                    /* Handle delete exercise */
-                  }}
-                  style={[styles.deleteButton, alreadySubmitted && styles.disabledButton]}
+                  onPress={() => deleteExercise(exerciseIndex)}
+                  style={[
+                    styles.deleteButton,
+                    alreadySubmitted && styles.disabledButton,
+                  ]}
                   disabled={alreadySubmitted}>
                   <Ionicons
                     name="trash-outline"
@@ -1184,5 +1229,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#3b82f6', // Keep blue color for interactive elements
+  },
+  deleteSetButton: {
+    padding: 8,
+    marginLeft: 4,
   },
 });
