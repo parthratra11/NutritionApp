@@ -174,6 +174,7 @@ export default function NutritionPage() {
   }, [params?.email]);
 
   // Add this component after the CustomTooltip
+  // Update the NutritionModal component
   const NutritionModal = ({
     isOpen,
     onClose,
@@ -188,9 +189,17 @@ export default function NutritionPage() {
     if (!isOpen) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-start mb-4">
+      <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
+        {/* Semi-transparent backdrop */}
+        <div
+          className="fixed inset-0 bg-gray-500/20 backdrop-blur-sm"
+          onClick={onClose}
+        />
+
+        {/* Modal content */}
+        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto m-4">
+          {/* Header with sticky positioning */}
+          <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center z-10">
             <div>
               <h2 className="text-xl font-semibold">
                 {getDayName(date)} - {formatDate(date)}
@@ -199,10 +208,11 @@ export default function NutritionPage() {
             </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Close modal"
             >
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5 text-gray-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -217,62 +227,65 @@ export default function NutritionPage() {
             </button>
           </div>
 
-          {/* Meals Breakdown */}
-          <div className="space-y-4">
-            {dayData.meals &&
-              Object.entries(dayData.meals).map(
-                ([meal, data]: [string, MealData]) => (
-                  <div key={meal} className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-lg mb-2">{meal}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Protein</p>
-                        <p className="font-medium">{data["Protein (g)"]}g</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Carbs</p>
-                        <p className="font-medium">
-                          {data["Carbohydrate (g)"]}g
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Fat</p>
-                        <p className="font-medium">{data["Fat (g)"]}g</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Calories</p>
-                        <p className="font-medium">{data.Kcal}</p>
+          {/* Modal body */}
+          <div className="p-6">
+            {/* Meals Breakdown */}
+            <div className="space-y-4">
+              {dayData.meals &&
+                Object.entries(dayData.meals).map(
+                  ([meal, data]: [string, MealData]) => (
+                    <div key={meal} className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-medium text-lg mb-2">{meal}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Protein</p>
+                          <p className="font-medium">{data["Protein (g)"]}g</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Carbs</p>
+                          <p className="font-medium">
+                            {data["Carbohydrate (g)"]}g
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Fat</p>
+                          <p className="font-medium">{data["Fat (g)"]}g</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Calories</p>
+                          <p className="font-medium">{data.Kcal}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              )}
-          </div>
+                  )
+                )}
+            </div>
 
-          {/* Daily Totals */}
-          <div className="mt-6 border-t pt-6">
-            <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Total Protein</p>
-                  <p className="font-medium">
-                    {dayData.totals["Protein (g)"]}g
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Total Carbs</p>
-                  <p className="font-medium">
-                    {dayData.totals["Carbohydrate (g)"]}g
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Total Fat</p>
-                  <p className="font-medium">{dayData.totals["Fat (g)"]}g</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Total Calories</p>
-                  <p className="font-medium">{dayData.totals.Kcal}</p>
+            {/* Daily Totals */}
+            <div className="mt-6 border-t pt-6">
+              <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Protein</p>
+                    <p className="font-medium">
+                      {dayData.totals["Protein (g)"]}g
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Carbs</p>
+                    <p className="font-medium">
+                      {dayData.totals["Carbohydrate (g)"]}g
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Fat</p>
+                    <p className="font-medium">{dayData.totals["Fat (g)"]}g</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Calories</p>
+                    <p className="font-medium">{dayData.totals.Kcal}</p>
+                  </div>
                 </div>
               </div>
             </div>
