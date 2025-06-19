@@ -5,8 +5,22 @@ const WEBHOOK_URL = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || "";
 
 const SlackPage = () => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch("/api/slack-messages");
+      const data = await res.json();
+      if (res.ok) {
+        setMessages(data);
+      } else {
+        console.error("Error fetching messages:", data.error);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
+  };
 
   const sendMessage = async () => {
     if (!message.trim()) return;
@@ -21,6 +35,7 @@ const SlackPage = () => {
       if (response.ok) {
         setMessages((prev) => [...prev, message]);
         setMessage("");
+        fetchMessages();
       } else {
         alert("Failed to send message");
       }
@@ -30,6 +45,10 @@ const SlackPage = () => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -55,11 +74,11 @@ const SlackPage = () => {
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Recent Messages:</h2>
         {messages.length === 0 ? (
-          <p className="text-gray-500">No messages sent yet</p>
+          <p className="text-gray-500">No messages yet</p>
         ) : (
           messages.map((msg, index) => (
             <div key={index} className="p-2 border rounded-md bg-gray-50">
-              {msg}
+              {msg.text}
             </div>
           ))
         )}
