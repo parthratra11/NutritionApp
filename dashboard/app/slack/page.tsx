@@ -78,7 +78,8 @@ const SlackPage = () => {
         ) : (
           messages.map((msg, index) => (
             <div key={index} className="p-2 border rounded-md bg-gray-50">
-              {msg.text}
+              <p className="font-semibold">{msg.username || "Unknown"}:</p>
+              <p>{msg.text}</p>
             </div>
           ))
         )}
