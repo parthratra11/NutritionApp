@@ -76,12 +76,21 @@ const SlackPage = () => {
         {messages.length === 0 ? (
           <p className="text-gray-500">No messages yet</p>
         ) : (
-          messages.map((msg, index) => (
-            <div key={index} className="p-2 border rounded-md bg-gray-50">
-              <p className="font-semibold">{msg.username || "Unknown"}:</p>
-              <p>{msg.text}</p>
-            </div>
-          ))
+          messages.map((msg, index) => {
+            const time = msg.ts
+              ? new Date(parseFloat(msg.ts) * 1000).toLocaleString()
+              : "Unknown time";
+
+            return (
+              <div key={index} className="p-2 border rounded-md bg-gray-50">
+                <p className="font-semibold">
+                  {msg.username || "Unknown"}{" "}
+                  <span className="text-sm text-gray-500">({time})</span>
+                </p>
+                <p>{msg.text}</p>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
