@@ -406,7 +406,10 @@ export default function ReportPage() {
                             typeof metricData === "object" &&
                             "value" in metricData
                           ) {
-                            value = metricData.value.toString();
+                            value =
+                              metricData.value != null
+                                ? metricData.value.toString()
+                                : "";
                             colorClass = getColorClass(metricData.color);
                           }
                         }
