@@ -1,127 +1,370 @@
-import React, { useEffect, useState } from 'react';
-import { collection, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
-  ScrollView,
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  Alert,
   SafeAreaView,
-  Pressable,
+  StyleSheet,
+  Alert,
 } from 'react-native';
-import { StyleSheet } from 'react-native';
-import { db } from '../firebaseConfig.js';
-import { useTheme } from '../context/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
+import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { NavigationProp } from '@react-navigation/native';
 
-export default function IntakeForm() {
-  const { user } = useAuth();
+// Define types for form data
+interface FormData {
+  email: string;
+  fullName: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  age: string;
+  height: string;
+  weight: string;
+  bodyFat: string;
+  strengthTrainingExperience: string;
+  benchPress: string;
+  squat: string;
+  chinUp: string;
+  deadlift: string;
+  overheadPress: string;
+  exerciseCompetency: string;
+  goals: string;
+  obstacle: string;
+  otherExercises: string;
+  dedicationLevel: string;
+  weeklyFrequency: string;
+  occupation: string;
+  medicalConditions: string;
+  specialDiet: string;
+  trainingTimePreference: string;
+  activityLevel: string;
+  stressLevel: string;
+  sleepQuality: string;
+  caffeineIntake: string;
+  menstrualCycle: string;
+  squatRack: boolean;
+  hyperBench: boolean;
+  gluteHam: boolean;
+  standingCalf: boolean;
+  dipBelt: boolean;
+  legCurl: boolean;
+  gymRings: boolean;
+  trx: boolean;
+  resistanceBands: boolean;
+  pullUpBar: boolean;
+  seatedCalf: boolean;
+  cableTower: boolean;
+  supplements: string;
+  wristCircumference: string;
+  ankleCircumference: string;
+  typicalDiet: string;
+  currentTraining: string;
+}
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+// Define types for field configuration
+interface Field {
+  name: keyof FormData | string;
+  label: string;
+  type?: 'text' | 'checkbox' | 'radio';
+  options?: {
+    required?: boolean;
+    keyboardType?: string;
+    multiline?: boolean;
+    custom?: Array<{ value: string; description: string }>;
+  };
+}
 
-  const [form, setForm] = useState({
-    // Personal Info
-    email: user?.email || '',
-    fullName: '',
-    street: '',
-    postalCode: '',
-    city: '',
-    country: '',
-    age: '',
-    height: '',
-    weight: '',
-    bodyFat: '',
-    strengthTrainingExperience: '',
-    // Strength
-    benchPress: '',
-    squat: '',
-    chinUp: '',
-    deadlift: '',
-    overheadPress: '',
-    strengthLevel: '',
-    exerciseCompetency: '',
-    // Goals
-    goals: '',
-    obstacle: '',
-    otherExercises: '',
-    dedicationLevel: '',
-    weeklyFrequency: '',
-    // Misc
-    occupation: '',
-    medicalConditions: '',
-    specialDiet: '',
-    // Lifestyle
-    trainingTimePreference: '',
-    activityLevel: '',
-    stressLevel: '',
-    sleepQuality: '',
-    caffeineIntake: '',
-    menstrualCycle: '',
-    // Equipment
-    calipers: '',
-    myoTape: '',
-    fitnessTech: '',
-    cardioEquipment: '',
-    squatRack: '',
-    hyperBench: '',
-    gluteHam: '',
-    standingCalf: '',
-    dipBelt: '',
-    legCurl: '',
-    gymRings: '',
-    trx: '',
-    resistanceBands: '',
-    pullUpBar: '',
-    seatedCalf: '',
-    cableTower: '',
-    otherEquipment: '',
-    // Supplements
-    supplements: '',
-    // Genetics
-    wristCircumference: '',
-    ankleCircumference: '',
-    // Current Program
-    typicalDiet: '',
-    currentTraining: '',
-  });
+// Define navigation param list
+type RootStackParamList = {
+  Address: FormScreenProps;
+  PersonalInfo: FormScreenProps;
+  StrengthLevel: FormScreenProps;
+  Goals: FormScreenProps;
+  Misc: FormScreenProps;
+  Lifestyle: FormScreenProps;
+  Equipment: FormScreenProps;
+  Supplements: FormScreenProps;
+  Genetics: FormScreenProps;
+  CurrentProgram: FormScreenProps;
+  StrikeAPose: FormScreenProps;
+  Welcome: undefined;
+  Home: undefined;
+};
 
+// Define props for FormScreen
+interface FormScreenProps {
+  fields: Field[];
+  title: string;
+  nextScreen?: keyof RootStackParamList;
+  isLast?: boolean;
+  progress: number;
+}
+
+// Create context for form data
+interface FormContextType {
+  formData: FormData;
+  setFormData: (data: FormData | ((prev: FormData) => FormData)) => void;
+  hasSubmitted: boolean;
+  handleSubmit: () => Promise<boolean>;
+}
+
+const FormContext = createContext<FormContextType | undefined>(undefined);
+
+const useFormContext = () => {
+  const context = useContext(FormContext);
+  if (!context) {
+    throw new Error('useFormContext must be used within a FormProvider');
+  }
+  return context;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
+
+// Initial form state
+const initialFormState: FormData = {
+  email: '',
+  fullName: '',
+  street: '',
+  postalCode: '',
+  city: '',
+  country: '',
+  age: '',
+  height: '',
+  weight: '',
+  bodyFat: '',
+  strengthTrainingExperience: '',
+  benchPress: '',
+  squat: '',
+  chinUp: '',
+  deadlift: '',
+  overheadPress: '',
+  exerciseCompetency: '',
+  goals: '',
+  obstacle: '',
+  otherExercises: '',
+  dedicationLevel: '',
+  weeklyFrequency: '',
+  occupation: '',
+  medicalConditions: '',
+  specialDiet: '',
+  trainingTimePreference: '',
+  activityLevel: '',
+  stressLevel: '',
+  sleepQuality: '',
+  caffeineIntake: '',
+  menstrualCycle: '',
+  squatRack: false,
+  hyperBench: false,
+  gluteHam: false,
+  standingCalf: false,
+  dipBelt: false,
+  legCurl: false,
+  gymRings: false,
+  trx: false,
+  resistanceBands: false,
+  pullUpBar: false,
+  seatedCalf: false,
+  cableTower: false,
+  supplements: '',
+  wristCircumference: '',
+  ankleCircumference: '',
+  typicalDiet: '',
+  currentTraining: '',
+};
+
+// Form Screen Component
+const FormScreen: React.FC<{
+  route: { params: FormScreenProps };
+  navigation: StackNavigationProp<RootStackParamList>;
+}> = ({ route, navigation }) => {
+  const { fields, title, nextScreen, isLast, progress } = route.params;
   const { isDarkMode } = useTheme();
-  const navigation = useNavigation();
+  const { formData, setFormData, hasSubmitted, handleSubmit } = useFormContext();
 
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof FormData, value: string) => {
+    if (!hasSubmitted) {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
   };
 
-  const handleCheckbox = (field: string) => {
-    setForm((prev) => ({ ...prev, [field]: !prev[field] }));
+  const handleCheckbox = (field: keyof FormData) => {
+    if (!hasSubmitted) {
+      setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
+    }
   };
 
-  // const handleSubmit = async () => {
-  //   try {
-  //     if (!form.fullName || !form.email || !form.age) {
-  //       Alert.alert('Error', 'Please fill in all required fields');
-  //       return;
-  //     }
+  const renderInput = (
+    label: string,
+    field: keyof FormData | string,
+    options: Field['options'] = {},
+    index: number
+  ) => (
+    <View key={`input-${field}-${index}`} style={styles.inputContainer}>
+      <Text style={[styles.label, isDarkMode && styles.textDark]}>{label}</Text>
+      <TextInput
+        style={[styles.input, isDarkMode && styles.inputDark]}
+        onChangeText={(text) => field in formData && handleChange(field as keyof FormData, text)}
+        value={field in formData ? (formData[field as keyof FormData] as string) : ''}
+        placeholderTextColor={isDarkMode ? '#666666' : '#999999'}
+        editable={!hasSubmitted}
+        selectTextOnFocus={!hasSubmitted}
+        {...options}
+      />
+    </View>
+  );
 
-  //     const docRef = await addDoc(collection(db, 'intakeForms'), {
-  //       ...form,
-  //       timestamp: new Date(),
-  //     });
-  //     Alert.alert('Success', 'Form submitted successfully!', [
-  //       { text: 'OK', onPress: () => navigation.navigate('Home') },
-  //     ]);
-  //   } catch (error) {
-  //     console.error('Error adding document:', error);
-  //     Alert.alert('Error', 'Failed to submit form. Please try again.');
-  //   }
-  // };
+  const renderCheckbox = (
+    label: string,
+    field: keyof FormData,
+    description?: string,
+    index: number
+  ) => (
+    <TouchableOpacity
+      key={`checkbox-${field}-${index}`}
+      style={[styles.checkboxContainer, hasSubmitted && styles.disabled]}
+      onPress={() => handleCheckbox(field)}
+      disabled={hasSubmitted}>
+      <View
+        style={[
+          styles.checkbox,
+          isDarkMode && styles.checkboxDark,
+          formData[field] && styles.checkboxChecked,
+        ]}
+      />
+      <Text style={[styles.checkboxLabel, isDarkMode && styles.textDark]}>
+        {label}
+        {description && `: ${description}`}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderRadio = (field: keyof FormData, options: Field['options'], index: number) => (
+    <View key={`radio-${field}-${index}`}>
+      {options?.custom?.map((item, itemIndex) => (
+        <TouchableOpacity
+          key={`radio-${field}-${item.value}-${itemIndex}`}
+          style={[
+            styles.checkboxContainer,
+            { alignItems: 'flex-start', marginBottom: 12 },
+            hasSubmitted && styles.disabled,
+          ]}
+          onPress={() => handleChange(field, item.value)}
+          disabled={hasSubmitted}>
+          <View
+            style={[
+              styles.checkbox,
+              isDarkMode && styles.checkboxDark,
+              formData[field] === item.value && styles.checkboxChecked,
+            ]}
+          />
+          <Text style={[styles.checkboxLabel, isDarkMode && styles.textDark]}>
+            {item.value}: {item.description}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const handleNext = async () => {
+    if (isLast && !hasSubmitted) {
+      const success = await handleSubmit();
+      if (success) {
+        navigation.navigate('Welcome');
+      }
+    } else if (nextScreen) {
+      navigation.navigate(nextScreen);
+    }
+  };
+
+  return (
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.containerDark]}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>{title}</Text>
+        <View style={styles.headerButton} />
+      </View>
+      <View style={styles.progressContainer}>
+        <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+      </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+        <ScrollView
+          style={[styles.container, isDarkMode && styles.containerDark]}
+          contentContainerStyle={{ paddingBottom: 100 }}>
+          {fields.map((field, index) =>
+            field.type === 'checkbox'
+              ? renderCheckbox(field.label, field.name as keyof FormData, undefined, index)
+              : field.type === 'radio'
+                ? renderRadio(field.name as keyof FormData, field.options, index)
+                : renderInput(field.label, field.name, field.options, index)
+          )}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                isDarkMode && styles.nextButtonDark,
+                hasSubmitted && isLast && styles.disabled,
+              ]}
+              onPress={handleNext}
+              disabled={hasSubmitted && isLast}>
+              <Text style={styles.nextButtonText}>{isLast ? 'Submit' : 'Next'}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+// Welcome Screen Component
+const WelcomeScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> = ({
+  navigation,
+}) => {
+  const { isDarkMode } = useTheme();
+
+  return (
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.containerDark]}>
+      <View style={[styles.container, isDarkMode && styles.containerDark, styles.centerContent]}>
+        <Text style={[styles.welcomeTitle, isDarkMode && styles.textDark]}>Welcome, Legend!</Text>
+        <Text style={[styles.welcomeText, isDarkMode && styles.textDark]}>
+          Your intake form has been submitted successfully. Let's start your fitness journey!
+        </Text>
+        <TouchableOpacity
+          style={[styles.nextButton, isDarkMode && styles.nextButtonDark]}
+          onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.nextButtonText}>Go to Home</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+// Main Intake Form Component
+const IntakeForm: React.FC<{ navigation: NavigationProp<RootStackParamList> }> = ({
+  navigation,
+}) => {
+  const { user } = useAuth();
+  const { isDarkMode } = useTheme();
+  const [formData, setFormData] = useState<FormData>({
+    ...initialFormState,
+    email: user?.email || '',
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
   useEffect(() => {
     const checkExistingForm = async () => {
@@ -133,7 +376,7 @@ export default function IntakeForm() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setForm(docSnap.data());
+          setFormData({ ...initialFormState, ...(docSnap.data() as DocumentData) });
           setHasSubmitted(true);
         }
       } catch (error) {
@@ -147,79 +390,34 @@ export default function IntakeForm() {
     checkExistingForm();
   }, [user?.email]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<boolean> => {
     if (!user?.email) {
       Alert.alert('Error', 'Please login first');
-      return;
+      return false;
     }
 
     if (hasSubmitted) {
       Alert.alert('Already Submitted', 'You have already submitted the intake form.');
-      return;
+      return false;
     }
 
     try {
-      const formData = {
-        ...form,
+      const formDataToSubmit = {
+        ...formData,
         email: user.email.toLowerCase(),
         timestamp: new Date(),
       };
 
-      await setDoc(doc(db, 'intakeForms', user.email.toLowerCase()), formData);
+      await setDoc(doc(db, 'intakeForms', user.email.toLowerCase()), formDataToSubmit);
 
-      Alert.alert('Success', 'Form submitted successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('Home') },
-      ]);
       setHasSubmitted(true);
+      return true;
     } catch (error) {
       console.error('Error adding document:', error);
       Alert.alert('Error', 'Failed to submit form. Please try again.');
+      return false;
     }
   };
-
-  // Helper function to render form inputs
-  const renderInput = (label: string, field: string, options: any = {}) => (
-    <>
-      <Text style={[styles.label, isDarkMode && styles.textDark]}>
-        {label}
-        {options.required ? '*' : ''}
-      </Text>
-      <TextInput
-        style={[
-          styles.input,
-          isDarkMode && styles.inputDark,
-          hasSubmitted && {
-            ...styles.inputDisabled,
-            backgroundColor: isDarkMode ? '#1f2937' : '#f0f0f0',
-          },
-        ]}
-        onChangeText={(t) => handleChange(field, t)}
-        value={form[field]}
-        placeholderTextColor={isDarkMode ? '#666' : '#999'}
-        editable={!hasSubmitted}
-        {...options}
-      />
-    </>
-  );
-
-  // Helper function to render checkboxes
-  const renderCheckbox = (label: string, field: string, description: string = '') => (
-    <TouchableOpacity
-      style={[styles.checkboxContainer, { alignItems: 'flex-start', marginBottom: 10 }]}
-      onPress={() => handleCheckbox(field)}>
-      <View
-        style={[
-          styles.checkbox,
-          isDarkMode && styles.checkboxDark,
-          form[field] && styles.checkboxChecked,
-        ]}
-      />
-      <Text style={[{ flex: 1 }, isDarkMode && styles.textDark]}>
-        {label}
-        {description && `: ${description}`}
-      </Text>
-    </TouchableOpacity>
-  );
 
   if (isLoading) {
     return (
@@ -229,396 +427,309 @@ export default function IntakeForm() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.containerDark]}>
-      <View style={[styles.header, isDarkMode && styles.headerDark]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-        </Pressable>
-        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Client Intake Form</Text>
-        <View style={styles.headerButton} /> {/* Empty view for spacing */}
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-        <ScrollView
-          style={[styles.container, isDarkMode && styles.containerDark]}
-          contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* GENERAL */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>1. General</Text>
-
-          {renderInput('Full name', 'fullName', { required: true })}
-          {renderInput('Street and house number', 'street')}
-          {renderInput('Postal code', 'postalCode')}
-          {renderInput('City', 'city', { required: true })}
-          {renderInput('Country', 'country', { required: true })}
-          {renderInput('Age', 'age', { required: true, keyboardType: 'numeric' })}
-          {renderInput('Height', 'height', { required: true })}
-          {renderInput('Weight', 'weight', { required: true })}
-          {renderInput('Body fat percentage (plus estimation method)', 'bodyFat')}
-          {renderInput(
-            'Do you have experience with strength training?',
-            'strengthTrainingExperience'
-          )}
-
-          {/* STRENGTH LEVEL */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-            2. Strength Level
-          </Text>
-          {renderInput('Barbell Bench Press (kg x reps)', 'benchPress')}
-          {renderInput('Back Squat (kg x reps)', 'squat')}
-          {renderInput('Chin-up (kg x reps)', 'chinUp')}
-          {renderInput('Deadlift (kg x reps)', 'deadlift')}
-          {renderInput('Barbell Overhead Press (kg x reps)', 'overheadPress')}
-          {renderInput(
-            'How would you rate your competency on the aforementioned exercises?',
-            'exerciseCompetency',
-            { required: true }
-          )}
-
-          {/* GOALS */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>3. Goals</Text>
-          {renderInput('What are your top 3 goals?', 'goals', { multiline: true, required: true })}
-          {renderInput('What is your number 1 obstacle?', 'obstacle', { required: true })}
-          {renderInput(
-            'Will you be performing any other form of exercise alongside strength training?',
-            'otherExercises',
-            { required: true }
-          )}
-
-          <Text style={[styles.label, isDarkMode && styles.textDark]}>
-            What's your dedication level?*
-          </Text>
-          <View style={{ marginTop: 10 }}>
-            {[
+  const screens = [
+    {
+      name: 'Address',
+      title: 'Address Details',
+      fields: [
+        { name: 'street', label: 'Street and house number', options: {} },
+        { name: 'postalCode', label: 'Postal code', options: {} },
+        { name: 'city', label: 'City', options: {} },
+        { name: 'country', label: 'Country', options: {} },
+      ],
+      nextScreen: 'PersonalInfo',
+      progress: 0.08,
+    },
+    {
+      name: 'PersonalInfo',
+      title: 'Personal Information',
+      fields: [
+        { name: 'fullName', label: 'Full name', options: {} },
+        { name: 'age', label: 'Age', options: { keyboardType: 'numeric' } },
+        { name: 'height', label: 'Height', options: {} },
+        { name: 'weight', label: 'Weight', options: {} },
+        { name: 'bodyFat', label: 'Body Fat % (if known)', options: {} },
+        {
+          name: 'strengthTrainingExperience',
+          label: 'Do you have experience with strength training?',
+          options: { multiline: true },
+        },
+      ],
+      nextScreen: 'StrengthLevel',
+      progress: 0.16,
+    },
+    {
+      name: 'StrengthLevel',
+      title: 'Strength Level',
+      fields: [
+        { name: 'benchPress', label: 'Barbell Bench Press (kg x reps)', options: {} },
+        { name: 'squat', label: 'Back Squat (kg x reps)', options: {} },
+        { name: 'chinUp', label: 'Chin-up (kg x reps)', options: {} },
+        { name: 'deadlift', label: 'Deadlift (kg x reps)', options: {} },
+        { name: 'overheadPress', label: 'Barbell Overhead Press (kg x reps)', options: {} },
+        {
+          name: 'exerciseCompetency',
+          label: 'How would you rate your competency on the aforementioned exercises?',
+          type: 'radio',
+          options: {
+            custom: [
+              { value: 'Novice', description: 'Questionable Technique' },
+              { value: 'Intermediate', description: 'Reasonably Competent' },
+              { value: 'Advanced', description: 'Highly Competent' },
+            ],
+          },
+        },
+      ],
+      nextScreen: 'Goals',
+      progress: 0.24,
+    },
+    {
+      name: 'Goals',
+      title: 'Your Goals',
+      fields: [
+        {
+          name: 'goals',
+          label: 'What are your top 3 goals? (combine into one answer)',
+          options: { multiline: true },
+        },
+        {
+          name: 'obstacle',
+          label: 'What is your number 1 obstacle?',
+          options: { multiline: true },
+        },
+        {
+          name: 'otherExercises',
+          label: 'Will you be performing any other form of exercise alongside strength training?',
+          options: { multiline: true },
+        },
+        {
+          name: 'dedicationLevel',
+          label: 'Dedication Level',
+          type: 'radio',
+          options: {
+            custom: [
+              { value: 'A', description: 'Steady and sustainable' },
+              { value: 'B', description: 'Balanced pace' },
+              { value: 'C', description: 'Max results at all cost' },
+            ],
+          },
+        },
+        {
+          name: 'weeklyFrequency',
+          label: 'How often in a week would you be prepared to train for maximal results?',
+          options: {},
+        },
+      ],
+      nextScreen: 'Misc',
+      progress: 0.32,
+    },
+    {
+      name: 'Misc',
+      title: 'Miscellaneous',
+      fields: [
+        { name: 'occupation', label: 'What is your occupation?', options: {} },
+        {
+          name: 'medicalConditions',
+          label: 'Please list any medical conditions or injuries',
+          options: { multiline: true },
+        },
+        { name: 'specialDiet', label: 'Do you currently follow any special diet?', options: {} },
+      ],
+      nextScreen: 'Lifestyle',
+      progress: 0.4,
+    },
+    {
+      name: 'Lifestyle',
+      title: 'Lifestyle',
+      fields: [
+        {
+          name: 'trainingTimePreference',
+          label: 'Training time preference',
+          options: { multiline: true },
+        },
+        {
+          name: 'activityLevel',
+          label: 'Activity Level (excluding exercise)',
+          type: 'radio',
+          options: {
+            custom: [
+              { value: 'Sedentary', description: '(e.g. office job), below 7,500 steps/day' },
               {
-                level: 'A',
-                description:
-                  "Steady and sustainability is most important to me. As long as I'm moving in the right direction, I don't mind about the rate of progress.",
-              },
-              {
-                level: 'B',
-                description:
-                  'I want to achieve results at a good pace whilst maintaining a balanced lifestyle.',
-              },
-              {
-                level: 'C',
-                description:
-                  'I will do whatever it takes to achieve maximum results without compromising my health.',
-              },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.level}
-                style={[styles.checkboxContainer, { alignItems: 'flex-start', marginBottom: 10 }]}
-                onPress={() => handleChange('dedicationLevel', item.level)}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    isDarkMode && styles.checkboxDark,
-                    form.dedicationLevel === item.level && styles.checkboxChecked,
-                  ]}
-                />
-                <Text style={[{ flex: 1 }, isDarkMode && styles.textDark]}>
-                  <Text style={[styles.checkboxLabel, isDarkMode && styles.textDark]}>
-                    {item.level}:{' '}
-                  </Text>
-                  {item.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {renderInput(
-            'How often in a week would you be prepared to train for maximal results?',
-            'weeklyFrequency',
-            { required: true }
-          )}
-
-          {/* Misc */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>4. Misc</Text>
-          {renderInput('What is your occupation?', 'occupation')}
-          {renderInput('Please list any medical conditions or injuries', 'medicalConditions', {
-            multiline: true,
-          })}
-          {renderInput('Do you currently follow any special diet?', 'specialDiet')}
-
-          {/* Lifestyle */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>5. Lifestyle</Text>
-          {renderInput('Training time preference', 'trainingTimePreference', {
-            required: true,
-            multiline: true,
-          })}
-
-          <Text style={[styles.label, isDarkMode && styles.textDark]}>
-            Which of the following options best describes your activity level (this does NOT include
-            exercise)?*
-          </Text>
-          <View style={{ marginTop: 10 }}>
-            {[
-              {
-                level: 'Sedentary',
-                description: '(e.g. office job), below 7,500 steps/day',
-              },
-              {
-                level: 'Somewhat active',
+                value: 'Somewhat active',
                 description:
                   '(e.g. you walk your dog several times a day or you commute by bicycle/on foot), 7,500 – 9,999 steps/day',
               },
               {
-                level: 'Active',
+                value: 'Active',
                 description:
                   '(e.g. full-time PT, literally on your feet most of the day), 10,000 – 12,500 steps/day',
               },
               {
-                level: 'Very active',
+                value: 'Very active',
                 description:
                   '(e.g. involved in physical labour), over 12,500 steps/day with intensive movement',
               },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.level}
-                style={[styles.checkboxContainer, { alignItems: 'flex-start', marginBottom: 10 }]}
-                onPress={() => handleChange('activityLevel', item.level)}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    isDarkMode && styles.checkboxDark,
-                    form.activityLevel === item.level && styles.checkboxChecked,
-                  ]}
-                />
-                <Text style={[{ flex: 1 }, isDarkMode && styles.textDark]}>
-                  <Text style={[styles.checkboxLabel, isDarkMode && styles.textDark]}>
-                    {item.level}:{' '}
-                  </Text>
-                  {item.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={[styles.label, isDarkMode && styles.textDark]}>
-            Which of the following options best describes your stress level?*
-          </Text>
-          <View style={{ marginTop: 10 }}>
-            {[
+            ],
+          },
+        },
+        {
+          name: 'stressLevel',
+          label: 'Stress Level',
+          type: 'radio',
+          options: {
+            custom: [
+              { value: 'Stress-free', description: '(e.g. on holiday)' },
+              { value: 'Mild', description: '(e.g. student not during exam period)' },
+              { value: 'Average', description: '(e.g. full-time work with deadlines/commuting)' },
               {
-                level: 'Stress-free',
-                description: '(e.g. on holiday)',
-              },
-              {
-                level: 'Only occasional/mild stress',
-                description: '(e.g. student not during exam period)',
-              },
-              {
-                level: 'Average stress',
-                description: '(e.g. full-time work with deadlines/commuting)',
-              },
-              {
-                level: 'High stress',
+                value: 'High',
                 description: '(e.g. very high-paced work environment with great responsibility)',
               },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.level}
-                style={[styles.checkboxContainer, { alignItems: 'flex-start', marginBottom: 10 }]}
-                onPress={() => handleChange('stressLevel', item.level)}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    isDarkMode && styles.checkboxDark,
-                    form.stressLevel === item.level && styles.checkboxChecked,
-                  ]}
-                />
-                <Text style={[{ flex: 1 }, isDarkMode && styles.textDark]}>
-                  <Text style={[styles.checkboxLabel, isDarkMode && styles.textDark]}>
-                    {item.level}:{' '}
-                  </Text>
-                  {item.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            ],
+          },
+        },
+        { name: 'sleepQuality', label: 'Sleep Quality', options: {} },
+        { name: 'caffeineIntake', label: 'Caffeine Intake (Daily Avg)', options: {} },
+        {
+          name: 'menstrualCycle',
+          label: 'Menstrual Cycle & Contraception',
+          options: { multiline: true },
+        },
+      ],
+      nextScreen: 'Equipment',
+      progress: 0.48,
+    },
+    {
+      name: 'Equipment',
+      title: 'Equipment Access',
+      fields: [
+        { name: 'squatRack', label: 'Squat cage or rack', type: 'checkbox' },
+        { name: 'hyperBench', label: '45° hyperextension bench', type: 'checkbox' },
+        { name: 'gluteHam', label: 'Glute-ham raise', type: 'checkbox' },
+        { name: 'standingCalf', label: 'Standing calf raise machine', type: 'checkbox' },
+        { name: 'dipBelt', label: 'Dip/chin-up belt', type: 'checkbox' },
+        { name: 'legCurl', label: 'Leg curl machine (seated/lying/standing)', type: 'checkbox' },
+        { name: 'gymRings', label: 'Gymnastic rings', type: 'checkbox' },
+        { name: 'trx', label: 'TRX or similar suspension device', type: 'checkbox' },
+        { name: 'resistanceBands', label: 'Resistance bands', type: 'checkbox' },
+        { name: 'pullUpBar', label: 'Pull-up bar', type: 'checkbox' },
+        { name: 'seatedCalf', label: 'Seated calf raise machine', type: 'checkbox' },
+        { name: 'cableTower', label: 'Cable tower', type: 'checkbox' },
+      ],
+      nextScreen: 'Supplements',
+      progress: 0.56,
+    },
+    {
+      name: 'Supplements',
+      title: 'Supplements',
+      fields: [
+        {
+          name: 'supplements',
+          label: 'Please list all the supplements you are currently taking.',
+          options: { multiline: true },
+        },
+      ],
+      nextScreen: 'Genetics',
+      progress: 0.64,
+    },
+    {
+      name: 'Genetics',
+      title: 'Genetics',
+      fields: [
+        { name: 'wristCircumference', label: 'Wrist circumference (smallest point)', options: {} },
+        { name: 'ankleCircumference', label: 'Ankle circumference (smallest point)', options: {} },
+      ],
+      nextScreen: 'CurrentProgram',
+      progress: 0.72,
+    },
+    {
+      name: 'CurrentProgram',
+      title: 'Current Program',
+      fields: [
+        {
+          name: 'typicalDiet',
+          label: 'Describe your eating habits',
+          options: { multiline: true },
+        },
+        {
+          name: 'currentTraining',
+          label: 'Describe current program',
+          options: { multiline: true },
+        },
+      ],
+      nextScreen: 'StrikeAPose',
+      progress: 0.8,
+    },
+    {
+      name: 'StrikeAPose',
+      title: 'Strike a Pose',
+      fields: [
+        {
+          name: 'photoFront' as any, // TODO: Not linked to Firestore, safe to ignore
+          label: 'Front Photo (Optional)',
+          options: { multiline: true },
+        },
+        {
+          name: 'photoBack' as any, // TODO: Not linked to Firestore, safe to ignore
+          label: 'Back Photo (Optional)',
+          options: { multiline: true },
+        },
+        {
+          name: 'photoSideLeft' as any, // TODO: Not linked to Firestore, safe to ignore
+          label: 'Side Left Photo (Optional)',
+          options: { multiline: true },
+        },
+        {
+          name: 'photoSideRight' as any, // TODO: Not linked to Firestore, safe to ignore
+          label: 'Side Right Photo (Optional)',
+          options: { multiline: true },
+        },
+      ],
+      isLast: true,
+      progress: 1.0,
+      // TODO: Add 4 photo uploads (front, back, side-left, side-right) using Expo ImagePicker
+    },
+  ];
 
-          {renderInput('Sleep Quality', 'sleepQuality', { required: true })}
-          {renderInput('Caffeine Intake (Daily Avg)', 'caffeineIntake')}
-          {renderInput('[Women only] Menstrual Cycle & Contraception', 'menstrualCycle', {
-            multiline: true,
-          })}
-
-          {/* Equipment */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>6. Equipment</Text>
-          <Text style={[styles.label, isDarkMode && styles.textDark]}>Do you have access to…</Text>
-
-          <View style={{ marginTop: 10 }}>
-            {[
-              { field: 'squatRack', label: 'Squat cage or rack' },
-              { field: 'hyperBench', label: '45° hyperextension bench' },
-              { field: 'gluteHam', label: 'Glute-ham raise' },
-              { field: 'standingCalf', label: 'Standing calf raise machine' },
-              { field: 'dipBelt', label: 'Dip/chin-up belt' },
-              { field: 'legCurl', label: 'Leg curl machine (seated/lying/standing)' },
-              { field: 'gymRings', label: 'Gymnastic rings' },
-              { field: 'trx', label: 'TRX or similar suspension device' },
-              { field: 'resistanceBands', label: 'Resistance bands' },
-              { field: 'pullUpBar', label: 'Pull-up bar' },
-              { field: 'seatedCalf', label: 'Seated calf raise machine' },
-              { field: 'cableTower', label: 'Cable tower' },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.field}
-                style={[styles.checkboxContainer, { marginBottom: 10 }]}
-                onPress={() => handleCheckbox(item.field)}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    isDarkMode && styles.checkboxDark,
-                    form[item.field] && styles.checkboxChecked,
-                  ]}
-                />
-                <Text style={[{ flex: 1 }, isDarkMode && styles.textDark]}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Supplements */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>7. Supplements</Text>
-          {renderInput('Please list all the supplements you are currently taking.', 'supplements', {
-            multiline: true,
-          })}
-
-          {/* Genetics */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>8. Genetics</Text>
-          {renderInput('Wrist circumference (smallest point)', 'wristCircumference')}
-          {renderInput('Ankle circumference (smallest point)', 'ankleCircumference')}
-
-          {/* Current Program */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-            9. Current Program
-          </Text>
-          {renderInput('Describe a typical day of eating (or diet plan)', 'typicalDiet', {
-            multiline: true,
-          })}
-          {renderInput('Describe or attach your current training program', 'currentTraining', {
-            multiline: true,
-          })}
-
-          <View style={styles.buttonContainer}>
-            {hasSubmitted ? (
-              <Text style={[styles.submittedText, isDarkMode && styles.textDark]}>
-                You have already submitted the intake form.
-              </Text>
-            ) : (
-              <TouchableOpacity
-                style={[styles.submitButton, isDarkMode && styles.submitButtonDark]}
-                onPress={handleSubmit}>
-                <Text style={styles.submitButtonText}>Submit Form</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+  return (
+    <FormContext.Provider value={{ formData, setFormData, hasSubmitted, handleSubmit }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: isDarkMode ? '#111827' : '#ffffff' },
+        }}>
+        {screens.map((screen) => (
+          <Stack.Screen
+            key={screen.name}
+            name={screen.name as keyof RootStackParamList}
+            component={FormScreen}
+            initialParams={{
+              fields: screen.fields,
+              title: screen.title,
+              nextScreen: screen.nextScreen,
+              isLast: screen.isLast || false,
+              progress: screen.progress,
+            }}
+          />
+        ))}
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      </Stack.Navigator>
+    </FormContext.Provider>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  checkboxGroup: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
-  checkboxLabel: {
-    fontWeight: '600',
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  submittedText: {
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 20,
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: '#4F46E5',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 30,
-    alignItems: 'center',
-  },
-  submitButtonDark: {
-    backgroundColor: '#4338ca',
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonContainer: { marginVertical: 20 },
-
-  containerDark: {
-    backgroundColor: '#111827',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#000000',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-    color: '#000000',
-  },
-  textDark: {
-    color: '#ffffff',
-  },
-  label: {
-    marginTop: 15,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 5,
-    backgroundColor: '#ffffff',
-    color: '#000000',
-  },
-  inputDark: {
-    backgroundColor: '#374151', // Lighter background for better contrast
-    borderColor: '#4b5563',
-    color: '#ffffff', // White text for dark mode
-  },
-  inputDisabled: {
-    opacity: 0.7,
-    backgroundColor: '#f0f0f0', // Different background for dark mode
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: '#aaa',
-    borderRadius: 3,
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxDark: {
-    borderColor: '#4b5563',
-    backgroundColor: '#1f2937',
-  },
-  checkboxChecked: {
-    backgroundColor: '#007bff',
-  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  containerDark: {
+    backgroundColor: '#111827',
   },
   header: {
     flexDirection: 'row',
@@ -641,13 +752,122 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     flex: 1,
     textAlign: 'center',
+    color: '#000000',
   },
-  container: {
+  textDark: {
+    color: '#ffffff',
+  },
+  text: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  progressContainer: {
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 20,
+    borderRadius: 3,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#4F46E5',
+    borderRadius: 3,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    fontSize: 16,
+  },
+  inputDark: {
+    backgroundColor: '#374151',
+    borderColor: '#4b5563',
+    color: '#ffffff',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#6b7280',
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  checkboxDark: {
+    borderColor: '#9ca3af',
+    backgroundColor: '#1f2937',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#000000',
     flex: 1,
-    padding: 20,
+  },
+  buttonContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  nextButton: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  nextButtonDark: {
+    backgroundColor: '#4338ca',
+  },
+  nextButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 32,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
+
+export default IntakeForm;
