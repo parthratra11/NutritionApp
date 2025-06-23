@@ -54,7 +54,7 @@ const SlackPage = () => {
     <div className="p-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Slack Messages</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -63,15 +63,21 @@ const SlackPage = () => {
           rows={4}
         />
         <button
-          onClick={sendMessage}
-          disabled={loading}
-          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400"
+          onClick={() => (window.location.href = "/slack/dms")}
+          className="ml-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
         >
-          {loading ? "Sending..." : "Send Message"}
+          Go to DMs
         </button>
       </div>
+      <button
+        onClick={sendMessage}
+        disabled={loading}
+        className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400"
+      >
+        {loading ? "Sending..." : "Send Message"}
+      </button>
 
-      <div className="space-y-2">
+      <div className="space-y-2 mt-4">
         <h2 className="text-xl font-semibold">Recent Messages:</h2>
         {messages.length === 0 ? (
           <p className="text-gray-500">No messages yet</p>

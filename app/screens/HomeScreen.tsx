@@ -73,6 +73,10 @@ export default function HomeScreen() {
         <Text style={buttonTextStyle}>Nutrition</Text>
       </Pressable>
 
+      <Pressable onPress={() => navigation.navigate('Slack')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Slack Screen</Text>
+      </Pressable>
+
       <Pressable
         onPress={handleLogout}
         style={[buttonStyle(), { backgroundColor: isDarkMode ? '#991b1b' : '#dc2626' }]}>
