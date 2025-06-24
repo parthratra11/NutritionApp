@@ -94,6 +94,33 @@ export default function ReportPage() {
     return null;
   };
 
+  // Add this custom tooltip component for the waist-hip ratio chart
+  const WaistHipTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 rounded shadow-lg border border-gray-200">
+          <p className="font-medium">{data.week}</p>
+          <p className="text-xs text-gray-500">{data.weekDates}</p>
+          <p style={{ color: "#9333ea" }}>
+            <strong>W/H Ratio:</strong> {data.waistHipRatio}
+          </p>
+          {data.waist && (
+            <p style={{ color: "#ec4899" }}>
+              <strong>Waist:</strong> {data.waist} cm
+            </p>
+          )}
+          {data.hip && (
+            <p style={{ color: "#8b5cf6" }}>
+              <strong>Hip:</strong> {data.hip} cm
+            </p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const calculateAverages = () => {
     if (!weeklyData) return [];
 
@@ -639,7 +666,7 @@ export default function ReportPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
                     <YAxis domain={[0.6, 1.0]} />
-                    <Tooltip />
+                    <Tooltip content={<WaistHipTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
