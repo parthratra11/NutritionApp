@@ -13,6 +13,7 @@ import NutritionScreen from 'screens/NutritionScreen';
 import LandingScreen from '../screens/LandingScreen';
 import AuthRedirectScreen from 'screens/AuthRedirectScreen';
 import SlackScreen from 'screens/SlackScreen';
+import StepScreen from 'screens/StepScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,6 +31,7 @@ export default function AuthNavigator() {
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Reports" component={ReportScreen} />
+          <Stack.Screen name="Steps" component={StepScreen} />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
