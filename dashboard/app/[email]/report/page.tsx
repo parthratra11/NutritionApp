@@ -52,6 +52,7 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [isWeekDropdownOpen, setIsWeekDropdownOpen] = useState(false);
 
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
@@ -157,10 +158,27 @@ export default function ReportPage() {
               : null,
         };
       })
-      .sort(
-        (a, b) =>
-          parseInt(a.week.split(" ")[1]) - parseInt(b.week.split(" ")[1])
-      );
+      .sort((a, b) => {
+        // Sort by the first date in each week's data
+        const aStartDate = getWeekStartDate(weeklyData[a.week]) || new Date(0);
+        const bStartDate = getWeekStartDate(weeklyData[b.week]) || new Date(0);
+        return aStartDate.getTime() - bStartDate.getTime(); // Ascending order by date
+      });
+  };
+
+  // Helper function to get the earliest date in a week's data
+  const getWeekStartDate = (weekData: WeekData) => {
+    if (!weekData) return null;
+
+    const timestamps = Object.entries(weekData)
+      .filter(([key, value]) => {
+        return value && typeof value === "object" && "timestamp" in value;
+      })
+      .map(([_, day]) => new Date(day.timestamp));
+
+    if (timestamps.length === 0) return null;
+
+    return new Date(Math.min(...timestamps.map((d) => d.getTime())));
   };
 
   const getWeekDates = (weekData: WeekData) => {
@@ -296,23 +314,64 @@ export default function ReportPage() {
 
       {viewMode === "weekly" ? (
         <>
-          <div className="mb-6 flex flex-wrap gap-2">
-            {Object.entries(weeklyData)
-              .filter(([week]) => week !== "firstEntryDate")
-              .map(([week, data]) => (
-                <button
-                  key={week}
-                  onClick={() => setSelectedWeek(week)}
-                  className={`px-4 py-2 rounded-lg ${
-                    selectedWeek === week
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                >
-                  <div className="text-sm font-medium">{week}</div>
-                  <div className="text-xs opacity-75">{getWeekDates(data)}</div>
-                </button>
-              ))}
+          <div className="mb-6 relative">
+            <button
+              onClick={() => setIsWeekDropdownOpen(!isWeekDropdownOpen)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-64"
+            >
+              <span>
+                {selectedWeek}{" "}
+                {selectedWeek && weeklyData[selectedWeek]
+                  ? `(${getWeekDates(weeklyData[selectedWeek])})`
+                  : ""}
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-5 w-5 transition-transform ${
+                  isWeekDropdownOpen ? "rotate-180" : ""
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {isWeekDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-64 bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                {Object.entries(weeklyData)
+                  .filter(([week]) => week !== "firstEntryDate")
+                  .sort((a, b) => {
+                    // Sort by the first date in each week's data in descending order
+                    const aStartDate = getWeekStartDate(a[1]) || new Date(0);
+                    const bStartDate = getWeekStartDate(b[1]) || new Date(0);
+                    return bStartDate.getTime() - aStartDate.getTime(); // Descending order by date
+                  })
+                  .map(([week, data]) => (
+                    <button
+                      key={week}
+                      onClick={() => {
+                        setSelectedWeek(week);
+                        setIsWeekDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                        selectedWeek === week ? "bg-blue-100" : ""
+                      }`}
+                    >
+                      <div className="font-medium">{week}</div>
+                      <div className="text-xs text-gray-500">
+                        {getWeekDates(data)}
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
 
           {selectedWeek &&
@@ -456,18 +515,8 @@ export default function ReportPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="day"
-                        tickFormatter={(day) => {
-                          const dayData =
-                            selectedWeek && weeklyData[selectedWeek]?.[day];
-                          const date = dayData
-                            ? formatDate(dayData.timestamp)
-                            : "";
-                          return `${day}\n${date}`;
-                        }}
-                        height={120}
-                        angle={-45}
-                        textAnchor="end"
-                        interval={0}
+                        height={60}
+                        tick={{ fontSize: 10 }}
                       />
                       <YAxis />
                       <Tooltip />
@@ -506,18 +555,8 @@ export default function ReportPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="day"
-                        tickFormatter={(day) => {
-                          const dayData =
-                            selectedWeek && weeklyData[selectedWeek]?.[day];
-                          const date = dayData
-                            ? formatDate(dayData.timestamp)
-                            : "";
-                          return `${day}\n${date}`;
-                        }}
-                        height={120}
-                        angle={-45}
-                        textAnchor="end"
-                        interval={0}
+                        height={60}
+                        tick={{ fontSize: 10 }}
                       />
                       <YAxis domain={[0, 5]} />
                       <Tooltip />
@@ -545,118 +584,6 @@ export default function ReportPage() {
                 </div>
               </div>
             </div>
-
-            {/* Daily Progress Table */}
-            {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Day
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Weight (kg)
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Sleep Quality
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Mood
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Hunger Level
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Daily Change
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {days.map((day, index) => {
-                    const dayData =
-                      selectedWeek && weeklyData[selectedWeek]?.[day];
-                    const prevDayData =
-                      index > 0 &&
-                      selectedWeek &&
-                      weeklyData[selectedWeek]?.[days[index - 1]];
-                    const weightChange =
-                      dayData?.weight && prevDayData?.weight
-                        ? (
-                            parseFloat(dayData.weight) -
-                            parseFloat(prevDayData.weight)
-                          ).toFixed(1)
-                        : null;
-
-                    return (
-                      <tr key={day}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">
-                          {day}
-                        </td>
-                        <td className="px-6 py-4">
-                          {dayData ? formatDate(dayData.timestamp) : "-"}
-                        </td>
-                        <td className="px-6 py-4">{dayData?.weight || "-"}</td>
-                        <td className="px-6 py-4">
-                          <div
-                            className={`px-2 py-1 rounded-full inline-block ${
-                              dayData?.["Sleep Quality"]
-                                ? getColorClass(dayData["Sleep Quality"].color)
-                                : ""
-                            }`}
-                          >
-                            {dayData?.["Sleep Quality"]?.value || "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div
-                            className={`px-2 py-1 rounded-full inline-block ${
-                              dayData?.Mood
-                                ? getColorClass(dayData.Mood.color)
-                                : ""
-                            }`}
-                          >
-                            {dayData?.Mood?.value || "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div
-                            className={`px-2 py-1 rounded-full inline-block ${
-                              dayData?.["Hunger Level"]
-                                ? getColorClass(dayData["Hunger Level"].color)
-                                : ""
-                            }`}
-                          >
-                            {dayData?.["Hunger Level"]?.value || "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div
-                            className={`px-2 py-1 rounded-full inline-block ${
-                              weightChange
-                                ? parseFloat(weightChange) < 0
-                                  ? "bg-green-100 text-green-800"
-                                  : parseFloat(weightChange) > 0
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
-                                : ""
-                            }`}
-                          >
-                            {weightChange
-                              ? `${
-                                  weightChange > 0 ? "+" : ""
-                                }${weightChange} kg`
-                              : "-"}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div> */}
           </div>
         </>
       ) : (
@@ -672,19 +599,7 @@ export default function ReportPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={calculateAverages()}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="week"
-                      tickFormatter={(week) => {
-                        const weekData = weeklyData[week];
-                        const dates = getWeekDates(weekData);
-                        return `${dates}`;
-                      }}
-                      height={120}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                    />
-
+                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
                     <YAxis yAxisId="weight" orientation="left" />
                     <YAxis yAxisId="measurements" orientation="right" />
                     <Tooltip />
@@ -720,43 +635,15 @@ export default function ReportPage() {
               <h2 className="text-xl font-semibold mb-4">Waist-Hip Ratio</h2>
               <div className="h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={[
-                      {
-                        day: "Week Average",
-                        ratio:
-                          weeklyData[selectedWeek]?.waist &&
-                          weeklyData[selectedWeek]?.hip
-                            ? (
-                                parseFloat(weeklyData[selectedWeek].waist) /
-                                parseFloat(weeklyData[selectedWeek].hip)
-                              ).toFixed(2)
-                            : null,
-                      },
-                    ]}
-                  >
+                  <LineChart data={calculateAverages()}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="day"
-                      tickFormatter={(day) => {
-                        const dayData =
-                          selectedWeek && weeklyData[selectedWeek]?.[day];
-                        const date = dayData
-                          ? formatDate(dayData.timestamp)
-                          : "";
-                        return `${day}\n${date}`;
-                      }}
-                      height={120}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                    />
+                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
                     <YAxis domain={[0.6, 1.0]} />
                     <Tooltip />
                     <Legend />
                     <Line
                       type="monotone"
-                      dataKey="ratio"
+                      dataKey="waistHipRatio"
                       stroke="#9333ea"
                       name="Waist-Hip Ratio"
                     />
@@ -772,19 +659,7 @@ export default function ReportPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={calculateAverages()}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="week"
-                      tickFormatter={(week) => {
-                        const weekData = weeklyData[week];
-                        const dates = getWeekDates(weekData);
-                        return `${dates}`;
-                      }}
-                      height={120}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                    />
-
+                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
                     <YAxis domain={[0, 5]} />
                     <Tooltip />
                     <Legend />
@@ -811,6 +686,7 @@ export default function ReportPage() {
               </div>
             </div>
           </div>
+
           {/* Progress Table */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
