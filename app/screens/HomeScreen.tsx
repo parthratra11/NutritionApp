@@ -83,6 +83,10 @@ export default function HomeScreen() {
         <Text style={buttonTextStyle}>Steps Screen</Text>
       </Pressable>
 
+      <Pressable onPress={() => navigation.navigate('Progress')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Progress Screen</Text>
+      </Pressable>
+
       <Pressable
         onPress={handleLogout}
         style={[buttonStyle(), { backgroundColor: isDarkMode ? '#991b1b' : '#dc2626' }]}>
