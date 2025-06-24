@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +31,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDarkMode ? '#111827' : '#ffffff' }]}>
+    <ScrollView
+      style={[styles.scrollContainer, { backgroundColor: isDarkMode ? '#111827' : '#ffffff' }]}
+      contentContainerStyle={styles.contentContainer}>
       {/* Theme Toggle Button */}
       <Pressable
         onPress={toggleDarkMode}
@@ -86,15 +88,18 @@ export default function HomeScreen() {
         style={[buttonStyle(), { backgroundColor: isDarkMode ? '#991b1b' : '#dc2626' }]}>
         <Text style={buttonTextStyle}>Logout</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
+  },
+  contentContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 30,
     gap: 16,
   },
   themeToggle: {
