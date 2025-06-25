@@ -79,6 +79,20 @@ export default function UploadPage() {
     "Sunday",
   ];
 
+  // Helper: check if a week has any meaningful data (moved here after dayNames is defined)
+  function hasValidData(weekData: { [key: string]: any }): boolean {
+    // Check if waist or hip measurements exist
+    if (weekData.waist !== null || weekData.hip !== null) return true;
+
+    // Check if any day has a weight value
+    for (const dayKey of Object.keys(weekData)) {
+      if (dayNames.includes(dayKey) && weekData[dayKey]?.weight) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   const coreColumns = [
     "Week",
     "Date",
@@ -167,6 +181,14 @@ export default function UploadPage() {
           let weekData: { [key: string]: any } = {};
           let weekCount = 0;
 
+          // Store all weeks temporarily to filter later
+          const allWeeks: {
+            weekNum: number;
+            key: string;
+            data: any;
+            hasValidData: boolean;
+          }[] = [];
+
           // Ensure weekNum is always a stringified number (not float, not padded)
           const getWeekKey = (weekNum: string) => {
             // Remove any decimals or leading zeros
@@ -188,8 +210,14 @@ export default function UploadPage() {
             // Start new week if needed
             if (currentWeek !== weekNum) {
               if (currentWeek !== null && Object.keys(weekData).length > 0) {
-                jsonData[getWeekKey(currentWeek)] = weekData;
-                weekCount++;
+                const weekKey = getWeekKey(currentWeek);
+                const weekNumber = parseInt(currentWeek, 10);
+                allWeeks.push({
+                  weekNum: weekNumber,
+                  key: weekKey,
+                  data: { ...weekData },
+                  hasValidData: hasValidData(weekData),
+                });
               }
               currentWeek = weekNum;
               weekData = {
@@ -223,10 +251,39 @@ export default function UploadPage() {
               jsonData.firstEntryDate = date.toISOString().split("T")[0];
             }
           }
-          // Add the last week
+
+          // Add the last week to our collection
           if (currentWeek !== null && Object.keys(weekData).length > 0) {
-            jsonData[getWeekKey(currentWeek)] = weekData;
-            weekCount++;
+            const weekKey = getWeekKey(currentWeek);
+            const weekNumber = parseInt(currentWeek, 10);
+            allWeeks.push({
+              weekNum: weekNumber,
+              key: weekKey,
+              data: { ...weekData },
+              hasValidData: hasValidData(weekData),
+            });
+          }
+
+          // Sort weeks by week number
+          allWeeks.sort((a, b) => a.weekNum - b.weekNum);
+
+          // Find the last week with valid data
+          let lastValidWeekIndex = -1;
+          for (let i = allWeeks.length - 1; i >= 0; i--) {
+            if (allWeeks[i].hasValidData) {
+              lastValidWeekIndex = i;
+              break;
+            }
+          }
+
+          // Add only weeks up to the last valid week
+          if (lastValidWeekIndex >= 0) {
+            for (let i = 0; i <= lastValidWeekIndex; i++) {
+              if (allWeeks[i].hasValidData) {
+                jsonData[allWeeks[i].key] = allWeeks[i].data;
+                weekCount++;
+              }
+            }
           }
 
           setJsonPreview(jsonData); // Show JSON preview
