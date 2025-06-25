@@ -8,12 +8,41 @@ import {
   ActivityIndicator,
   Dimensions,
   SafeAreaView,
+  Alert,
 } from 'react-native';
+// Import directly from react-native-chart-kit
 import { LineChart, BarChart } from 'react-native-chart-kit';
+// Make sure to import SVG components
+import { Svg, Rect } from 'react-native-svg';
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { format, parseISO } from 'date-fns';
+import { fetchUserDocument, safeDataFetch, fetchWithRetry } from '../utils/DataFetcher';
+
+// Define the function to fetch data by email (was missing)
+const fetchDataByEmail = async (collection, user) => {
+  if (!user || !user.email) {
+    console.log('No user or email available');
+    return null;
+  }
+
+  try {
+    const userEmail = user.email.toLowerCase();
+    const docRef = doc(db, collection, userEmail);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data();
+    } else {
+      console.log(`No ${collection} document found for email: ${userEmail}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error fetching ${collection} document:`, error);
+    return null;
+  }
+};
 
 // Define the tabs we'll use
 const TABS = {
@@ -38,6 +67,104 @@ const TabBar = ({ activeTab, onChangeTab }) => {
   );
 };
 
+// Safe Chart Component to handle rendering errors
+const SafeLineChart = ({ data, ...props }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (
+    hasError ||
+    !data ||
+    !data.datasets ||
+    data.datasets.length === 0 ||
+    !data.datasets[0].data ||
+    data.datasets[0].data.length === 0
+  ) {
+    return (
+      <View style={styles.chartFallback}>
+        <Text style={styles.chartFallbackText}>Chart data unavailable</Text>
+      </View>
+    );
+  }
+
+  try {
+    // Check for any invalid values in the data
+    const hasInvalidData = data.datasets.some((dataset) =>
+      dataset.data.some((value) => value === undefined || value === null || isNaN(value))
+    );
+
+    if (hasInvalidData) {
+      return (
+        <View style={styles.chartFallback}>
+          <Text style={styles.chartFallbackText}>Invalid chart data</Text>
+        </View>
+      );
+    }
+
+    // Wrap LineChart with error handling
+    return (
+      <View style={{ position: 'relative' }}>
+        <LineChart data={data} {...props} onError={() => setHasError(true)} />
+      </View>
+    );
+  } catch (error) {
+    console.error('Error rendering LineChart:', error);
+    return (
+      <View style={styles.chartFallback}>
+        <Text style={styles.chartFallbackText}>Chart rendering failed</Text>
+      </View>
+    );
+  }
+};
+
+// Safe Bar Chart Component
+const SafeBarChart = ({ data, ...props }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (
+    hasError ||
+    !data ||
+    !data.datasets ||
+    data.datasets.length === 0 ||
+    !data.datasets[0].data ||
+    data.datasets[0].data.length === 0
+  ) {
+    return (
+      <View style={styles.chartFallback}>
+        <Text style={styles.chartFallbackText}>Chart data unavailable</Text>
+      </View>
+    );
+  }
+
+  try {
+    // Check for any invalid values in the data
+    const hasInvalidData = data.datasets.some((dataset) =>
+      dataset.data.some((value) => value === undefined || value === null || isNaN(value))
+    );
+
+    if (hasInvalidData) {
+      return (
+        <View style={styles.chartFallback}>
+          <Text style={styles.chartFallbackText}>Invalid chart data</Text>
+        </View>
+      );
+    }
+
+    // Wrap BarChart with error handling
+    return (
+      <View style={{ position: 'relative' }}>
+        <BarChart data={data} {...props} onError={() => setHasError(true)} />
+      </View>
+    );
+  } catch (error) {
+    console.error('Error rendering BarChart:', error);
+    return (
+      <View style={styles.chartFallback}>
+        <Text style={styles.chartFallbackText}>Chart rendering failed</Text>
+      </View>
+    );
+  }
+};
+
 // Main Progress Screen Component
 const ProgressScreen = () => {
   const [activeTab, setActiveTab] = useState(TABS.REPORT);
@@ -46,55 +173,74 @@ const ProgressScreen = () => {
   const [nutritionData, setNutritionData] = useState(null);
   const [workoutData, setWorkoutData] = useState(null);
   const [clientInfo, setClientInfo] = useState(null);
-  const { currentUser } = useAuth();
+  const { user } = useAuth(); // Use user directly instead of currentUser
+  const [dataFetchStatus, setDataFetchStatus] = useState({
+    clientInfo: false,
+    reportData: false,
+    nutritionData: false,
+    workoutData: false,
+  });
 
   // Fetch all the required data
   useEffect(() => {
     const fetchData = async () => {
-      if (!currentUser?.email) {
+      if (!user) {
+        console.log('No authenticated user found');
         setLoading(false);
         return;
       }
 
-      try {
-        // Fetch client info
-        const clientDocRef = doc(db, 'intakeForms', currentUser.email);
-        const clientDocSnap = await getDoc(clientDocRef);
+      console.log('Current user:', user);
+      console.log('User email:', user.email);
+      console.log('User UID:', user.uid);
+      console.log('User provider data:', user.providerData);
 
-        if (clientDocSnap.exists()) {
-          setClientInfo(clientDocSnap.data());
+      try {
+        // Use enhanced fetchWithRetry for more reliable data fetching
+        // Fetch client info
+        const clientData = await fetchWithRetry(
+          () => fetchUserDocument('intakeForms', user),
+          'client info'
+        );
+        if (clientData) {
+          console.log('Client Info Data received:', clientData);
+          setClientInfo(clientData);
+          setDataFetchStatus((prev) => ({ ...prev, clientInfo: true }));
         }
 
         // Fetch report data
-        const reportDocRef = doc(db, 'weeklyForms', currentUser.email);
-        const reportDocSnap = await getDoc(reportDocRef);
-
-        if (reportDocSnap.exists()) {
-          const data = reportDocSnap.data();
-          console.log('Report Data:', data); // Log to inspect structure
+        const reportDocData = await fetchWithRetry(
+          () => fetchUserDocument('weeklyForms', user),
+          'report data'
+        );
+        if (reportDocData) {
+          console.log('Report Data received:', reportDocData);
           // Remove firstEntryDate before setting the state
-          const { firstEntryDate, ...weekData } = data;
+          const { firstEntryDate, ...weekData } = reportDocData;
           setReportData(weekData);
+          setDataFetchStatus((prev) => ({ ...prev, reportData: true }));
         }
 
-        // Fetch nutrition data
-        const nutritionDocRef = doc(db, 'nutrition', currentUser.email);
-        const nutritionDocSnap = await getDoc(nutritionDocRef);
-
-        if (nutritionDocSnap.exists()) {
-          const data = nutritionDocSnap.data();
-          console.log('Nutrition Data:', data); // Log to inspect structure
-          setNutritionData(data);
+        // Fetch nutrition data - use direct email approach as in dashboard
+        const nutritionDocData = await fetchWithRetry(
+          () => fetchDataByEmail('nutrition', user),
+          'nutrition data'
+        );
+        if (nutritionDocData) {
+          console.log('Nutrition Data received:', nutritionDocData);
+          setNutritionData(nutritionDocData);
+          setDataFetchStatus((prev) => ({ ...prev, nutritionData: true }));
         }
 
-        // Fetch workout data
-        const workoutDocRef = doc(db, 'Workout', currentUser.email);
-        const workoutDocSnap = await getDoc(workoutDocRef);
-
-        if (workoutDocSnap.exists()) {
-          const data = workoutDocSnap.data();
-          console.log('Workout Data:', data); // Log to inspect structure
-          setWorkoutData(data);
+        // Fetch workout data - use direct email approach as in dashboard
+        const workoutDocData = await fetchWithRetry(
+          () => fetchDataByEmail('Workout', user),
+          'workout data'
+        );
+        if (workoutDocData) {
+          console.log('Workout Data received:', workoutDocData);
+          setWorkoutData(workoutDocData);
+          setDataFetchStatus((prev) => ({ ...prev, workoutData: true }));
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -104,7 +250,7 @@ const ProgressScreen = () => {
     };
 
     fetchData();
-  }, [currentUser]);
+  }, [user]);
 
   // Render the appropriate tab content
   const renderTabContent = () => {
@@ -113,6 +259,24 @@ const ProgressScreen = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
           <Text style={styles.loadingText}>Loading your progress data...</Text>
+        </View>
+      );
+    }
+
+    // Show a message if no data was found at all
+    if (
+      !dataFetchStatus.clientInfo &&
+      !dataFetchStatus.reportData &&
+      !dataFetchStatus.nutritionData &&
+      !dataFetchStatus.workoutData
+    ) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyStateText}>No data found for your account</Text>
+          <Text style={styles.emptyStateSubText}>
+            We couldn't find any data linked to your account. If you've recently created your
+            account, please complete your intake form or contact support.
+          </Text>
         </View>
       );
     }
@@ -136,7 +300,16 @@ const ProgressScreen = () => {
         <Text style={styles.headerSubtitle}>Track your fitness and nutrition journey</Text>
       </View>
       <TabBar activeTab={activeTab} onChangeTab={setActiveTab} />
-      <View style={styles.content}>{renderTabContent()}</View>
+      <View style={styles.content}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+            <Text style={styles.loadingText}>Loading your progress data...</Text>
+          </View>
+        ) : (
+          renderTabContent()
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -147,16 +320,26 @@ const ReportTab = ({ data, clientInfo }) => {
   const [viewMode, setViewMode] = useState('weekly'); // weekly or overview
 
   useEffect(() => {
+    console.log('Report Tab - Data received:', data);
+    console.log('Report Tab - Client info received:', clientInfo);
+
     if (data && Object.keys(data).length > 0) {
       const weeks = Object.keys(data);
-      setSelectedWeek(weeks[weeks.length - 1]);
+      console.log('Available weeks:', weeks);
+      const lastWeek = weeks[weeks.length - 1];
+      console.log('Selecting week:', lastWeek);
+      setSelectedWeek(lastWeek);
+    } else {
+      console.log('No week data available to select');
     }
   }, [data]);
 
-  if (!data) {
+  if (!data || Object.keys(data).length === 0) {
+    console.log('Report Tab - No data available to display');
     return (
       <View style={styles.emptyStateContainer}>
         <Text style={styles.emptyStateText}>No progress data available</Text>
+        <Text style={styles.emptyStateSubText}>Check back after submitting your weekly form</Text>
       </View>
     );
   }
@@ -180,7 +363,7 @@ const ReportTab = ({ data, clientInfo }) => {
       .filter((day) => data[selectedWeek][day] && data[selectedWeek][day].weight)
       .map((day) => ({
         day: day.substring(0, 3),
-        weight: parseFloat(data[selectedWeek][day].weight),
+        weight: parseFloat(data[selectedWeek][day].weight) || 0, // Ensure numeric value
       }));
   };
 
@@ -337,7 +520,7 @@ const ReportTab = ({ data, clientInfo }) => {
           {weightData.length > 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Weight Progress</Text>
-              <LineChart
+              <SafeLineChart
                 data={{
                   labels: weightData.map((item) => item.day),
                   datasets: [
@@ -360,7 +543,7 @@ const ReportTab = ({ data, clientInfo }) => {
           {wellbeingData.length > 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Wellbeing Metrics</Text>
-              <LineChart
+              <SafeLineChart
                 data={{
                   labels: wellbeingData.map((item) => item.day),
                   datasets: [
@@ -399,7 +582,7 @@ const ReportTab = ({ data, clientInfo }) => {
           {/* Weight Progress Overview */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Weight Progress Overview</Text>
-            <LineChart
+            <SafeLineChart
               data={{
                 labels: progressData.map((item) => item.week.replace('Week ', '')),
                 datasets: [
@@ -461,28 +644,47 @@ const NutritionTab = ({ data }) => {
   const [viewMode, setViewMode] = useState('weekly');
 
   useEffect(() => {
+    console.log('Nutrition Tab - Data received:', data);
+
     if (data) {
-      const weeks = Object.keys(data).filter((key) => key !== 'firstEntryDate');
-      setSelectedWeek(weeks[weeks.length - 1]);
+      // Filter out non-week keys (like firstEntryDate)
+      const weeks = Object.keys(data).filter((key) => key.startsWith('week'));
+      console.log('Available nutrition weeks after filtering:', weeks);
+
+      if (weeks.length > 0) {
+        const lastWeek = weeks[weeks.length - 1];
+        console.log('Selecting nutrition week:', lastWeek);
+        setSelectedWeek(lastWeek);
+      } else {
+        console.log('No nutrition weeks available to select after filtering');
+      }
     }
   }, [data]);
 
-  if (!data) {
+  if (!data || Object.keys(data).filter((key) => key !== 'firstEntryDate').length === 0) {
+    console.log('Nutrition Tab - No data available to display');
     return (
       <View style={styles.emptyStateContainer}>
         <Text style={styles.emptyStateText}>No nutrition data available</Text>
+        <Text style={styles.emptyStateSubText}>Check back after logging your meals</Text>
       </View>
     );
   }
 
   // Helper function to group data by weeks
   const groupDataByWeeks = (nutritionData) => {
+    console.log('Grouping nutrition data by weeks...');
     if (!nutritionData) return {};
 
     const weeks = {};
     Object.entries(nutritionData).forEach(([key, value]) => {
       if (key === 'firstEntryDate') return;
+      if (!value || typeof value !== 'object') {
+        console.log(`Skipping invalid week data for ${key}:`, value);
+        return;
+      }
 
+      console.log(`Processing week ${key}`);
       const weekData = {
         dates: [],
         avgProtein: 0,
@@ -492,49 +694,96 @@ const NutritionTab = ({ data }) => {
         dailyData: {},
       };
 
+      let validDaysCount = 0;
       Object.entries(value).forEach(([day, dayData]) => {
-        if (dayData.date) {
+        if (dayData && dayData.date) {
           weekData.dates.push(dayData.date);
-          weekData.avgProtein += dayData.totals['Protein (g)'];
-          weekData.avgCarbs += dayData.totals['Carbohydrate (g)'];
-          weekData.avgFat += dayData.totals['Fat (g)'];
-          weekData.avgCalories += dayData.totals.Kcal;
+          if (dayData.totals) {
+            weekData.avgProtein += dayData.totals['Protein (g)'] || 0;
+            weekData.avgCarbs += dayData.totals['Carbohydrate (g)'] || 0;
+            weekData.avgFat += dayData.totals['Fat (g)'] || 0;
+            weekData.avgCalories += dayData.totals.Kcal || 0;
+            validDaysCount++;
+          } else {
+            console.log(`Missing totals for day ${day} in week ${key}`);
+          }
           weekData.dailyData[dayData.date] = {
             dayType: dayData.dayType,
-            meals: dayData.meals,
-            totals: dayData.totals,
+            meals: dayData.meals || [],
+            totals: dayData.totals || {
+              'Protein (g)': 0,
+              'Carbohydrate (g)': 0,
+              'Fat (g)': 0,
+              Kcal: 0,
+            },
           };
+        } else {
+          console.log(`Skipping invalid day data for ${day} in week ${key}`);
         }
       });
 
-      const daysCount = weekData.dates.length;
-      if (daysCount > 0) {
-        weekData.avgProtein = parseFloat((weekData.avgProtein / daysCount).toFixed(1));
-        weekData.avgCarbs = parseFloat((weekData.avgCarbs / daysCount).toFixed(1));
-        weekData.avgFat = parseFloat((weekData.avgFat / daysCount).toFixed(1));
-        weekData.avgCalories = parseFloat((weekData.avgCalories / daysCount).toFixed(1));
+      if (validDaysCount > 0) {
+        weekData.avgProtein = parseFloat((weekData.avgProtein / validDaysCount).toFixed(1));
+        weekData.avgCarbs = parseFloat((weekData.avgCarbs / validDaysCount).toFixed(1));
+        weekData.avgFat = parseFloat((weekData.avgFat / validDaysCount).toFixed(1));
+        weekData.avgCalories = parseFloat((weekData.avgCalories / validDaysCount).toFixed(1));
       }
 
-      weeks[key] = weekData;
+      if (weekData.dates.length > 0) {
+        weeks[key] = weekData;
+        console.log(`Successfully processed week ${key} with ${weekData.dates.length} days`);
+      } else {
+        console.log(`No valid days found for week ${key}`);
+      }
     });
 
+    console.log('Grouped nutrition data results:', Object.keys(weeks));
     return weeks;
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     try {
-      const date = typeof dateStr === 'string' ? parseISO(dateStr) : new Date(dateStr);
-      return format(date, 'MMM d, yy');
+      // First check if it's a valid date string
+      const parsedDate = parseISO(dateStr);
+      if (isNaN(parsedDate.getTime())) {
+        console.log(`Invalid date string: ${dateStr}`);
+        return '';
+      }
+      return format(parsedDate, 'MMM d, yy');
     } catch (error) {
+      console.error(`Error formatting date: ${dateStr}`, error);
       return '';
     }
   };
 
   const weeklyData = groupDataByWeeks(data);
+  console.log('Processed weekly nutrition data:', Object.keys(weeklyData));
+
+  if (Object.keys(weeklyData).length === 0) {
+    console.log('Nutrition Tab - No weekly data after processing');
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>No nutrition data available for display</Text>
+        <Text style={styles.emptyStateSubText}>Make sure you've logged meals properly</Text>
+      </View>
+    );
+  }
 
   if (!selectedWeek || !weeklyData[selectedWeek]) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
+    console.log('Nutrition Tab - No selected week or week data:', selectedWeek);
+    const availableWeeks = Object.keys(weeklyData);
+    if (availableWeeks.length > 0) {
+      console.log('Setting selected week to first available:', availableWeeks[0]);
+      setSelectedWeek(availableWeeks[0]);
+      return <ActivityIndicator size="large" color="#0000ff" />;
+    }
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>Error loading nutrition data</Text>
+        <Text style={styles.emptyStateSubText}>Please try again later</Text>
+      </View>
+    );
   }
 
   // Chart configuration
@@ -551,7 +800,8 @@ const NutritionTab = ({ data }) => {
   const dailyMacroData = weeklyData[selectedWeek].dates.map((date) => {
     const dayData = weeklyData[selectedWeek].dailyData[date];
     return {
-      date: formatDate(date),
+      date: date,
+      shortDate: formatDate(date),
       protein: dayData.totals['Protein (g)'],
       carbs: dayData.totals['Carbohydrate (g)'],
       fat: dayData.totals['Fat (g)'],
@@ -562,7 +812,8 @@ const NutritionTab = ({ data }) => {
   const dailyCaloriesData = weeklyData[selectedWeek].dates.map((date) => {
     const dayData = weeklyData[selectedWeek].dailyData[date];
     return {
-      date: formatDate(date),
+      date: date,
+      shortDate: formatDate(date),
       calories: dayData.totals.Kcal,
     };
   });
@@ -642,20 +893,31 @@ const NutritionTab = ({ data }) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Weekly Macronutrients</Text>
             <ScrollView horizontal>
-              <BarChart
+              <SafeBarChart
                 data={{
-                  labels: dailyMacroData.map((item) => format(new Date(item.date), 'EEE')),
+                  labels: dailyMacroData.map((item) => {
+                    try {
+                      // Use a safe approach to get day abbreviation
+                      const parsedDate = parseISO(item.date);
+                      if (!isNaN(parsedDate.getTime())) {
+                        return format(parsedDate, 'EEE');
+                      }
+                      return 'Day';
+                    } catch (error) {
+                      return 'Day';
+                    }
+                  }),
                   datasets: [
                     {
-                      data: dailyMacroData.map((item) => item.protein),
+                      data: dailyMacroData.map((item) => item.protein || 0),
                       color: (opacity = 1) => `rgba(74, 222, 128, ${opacity})`, // green
                     },
                     {
-                      data: dailyMacroData.map((item) => item.carbs),
+                      data: dailyMacroData.map((item) => item.carbs || 0),
                       color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`, // amber
                     },
                     {
-                      data: dailyMacroData.map((item) => item.fat),
+                      data: dailyMacroData.map((item) => item.fat || 0),
                       color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, // red
                     },
                   ],
@@ -676,12 +938,23 @@ const NutritionTab = ({ data }) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Weekly Calories</Text>
             <ScrollView horizontal>
-              <BarChart
+              <SafeBarChart
                 data={{
-                  labels: dailyCaloriesData.map((item) => format(new Date(item.date), 'EEE')),
+                  labels: dailyCaloriesData.map((item) => {
+                    try {
+                      // Use a safe approach to get day abbreviation
+                      const parsedDate = parseISO(item.date);
+                      if (!isNaN(parsedDate.getTime())) {
+                        return format(parsedDate, 'EEE');
+                      }
+                      return 'Day';
+                    } catch (error) {
+                      return 'Day';
+                    }
+                  }),
                   datasets: [
                     {
-                      data: dailyCaloriesData.map((item) => item.calories),
+                      data: dailyCaloriesData.map((item) => item.calories || 0),
                       color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, // purple
                     },
                   ],
@@ -703,22 +976,22 @@ const NutritionTab = ({ data }) => {
           {/* Macronutrients Progress */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Macronutrients Progress</Text>
-            <LineChart
+            <SafeLineChart
               data={{
                 labels: overviewData.map((item) => item.week.replace('week', '')),
                 datasets: [
                   {
-                    data: overviewData.map((item) => item.protein),
+                    data: overviewData.map((item) => item.protein || 0),
                     color: (opacity = 1) => `rgba(74, 222, 128, ${opacity})`, // green
                     strokeWidth: 2,
                   },
                   {
-                    data: overviewData.map((item) => item.carbs),
+                    data: overviewData.map((item) => item.carbs || 0),
                     color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`, // amber
                     strokeWidth: 2,
                   },
                   {
-                    data: overviewData.map((item) => item.fat),
+                    data: overviewData.map((item) => item.fat || 0),
                     color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, // red
                     strokeWidth: 2,
                   },
@@ -736,12 +1009,12 @@ const NutritionTab = ({ data }) => {
           {/* Calories Progress */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Calories Progress</Text>
-            <LineChart
+            <SafeLineChart
               data={{
                 labels: overviewData.map((item) => item.week.replace('week', '')),
                 datasets: [
                   {
-                    data: overviewData.map((item) => item.calories),
+                    data: overviewData.map((item) => item.calories || 0),
                     color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, // purple
                     strokeWidth: 2,
                   },
@@ -793,10 +1066,21 @@ const WorkoutTab = ({ data }) => {
   const [selectedSession, setSelectedSession] = useState('all');
   const [viewMode, setViewMode] = useState('sessions');
 
-  if (!data) {
+  useEffect(() => {
+    console.log('Workout Tab - Data received:', data);
+    if (data) {
+      // Filter out firstEntryDate to check for actual workout data
+      const workoutKeys = Object.keys(data).filter((key) => key !== 'firstEntryDate');
+      console.log('Workout data keys after filtering:', workoutKeys);
+    }
+  }, [data]);
+
+  if (!data || Object.keys(data).filter((key) => key !== 'firstEntryDate').length === 0) {
+    console.log('Workout Tab - No data available to display after filtering');
     return (
       <View style={styles.emptyStateContainer}>
         <Text style={styles.emptyStateText}>No workout data available</Text>
+        <Text style={styles.emptyStateSubText}>Check back after logging your workouts</Text>
       </View>
     );
   }
@@ -845,6 +1129,7 @@ const WorkoutTab = ({ data }) => {
 
   // Helper to organize data by session
   const organizeBySession = () => {
+    console.log('Organizing workout data by session...');
     const sessions = {
       A: {},
       B: {},
@@ -861,39 +1146,103 @@ const WorkoutTab = ({ data }) => {
     // Populate with actual data
     Object.entries(data).forEach(([weekKey, weekData]) => {
       if (weekKey === 'firstEntryDate') return;
+      if (!weekData) {
+        console.log(`Skipping invalid week data for ${weekKey}`);
+        return;
+      }
 
+      console.log(`Processing workout week ${weekKey}`);
       Object.entries(weekData).forEach(([day, dayData]) => {
-        if (dayData.isRestDay || !dayData.exercises?.length) return;
+        if (!dayData) {
+          console.log(`Skipping null day data for day ${day} in week ${weekKey}`);
+          return;
+        }
+
+        if (dayData.isRestDay) {
+          console.log(`Skipping rest day: ${day} in week ${weekKey}`);
+          return;
+        }
+
+        if (!Array.isArray(dayData.exercises) || dayData.exercises.length === 0) {
+          console.log(`No exercises found for day ${day} in week ${weekKey}`);
+          return;
+        }
 
         const sessionType = getSessionType(dayData.exercises);
-        if (!sessionType) return;
+        if (!sessionType) {
+          console.log(`Could not determine session type for day ${day} in week ${weekKey}`);
+          return;
+        }
 
-        const date = format(new Date(dayData.timestamp), 'MMM d, yy');
-        const duration =
-          dayData.startTime && dayData.endTime
-            ? `${format(new Date(dayData.startTime), 'h:mm a')} - ${format(new Date(dayData.endTime), 'h:mm a')}`
-            : '';
+        try {
+          console.log(`Found session ${sessionType} for day ${day} in week ${weekKey}`);
+          const date = format(new Date(dayData.timestamp || Date.now()), 'MMM d, yy');
+          const duration =
+            dayData.startTime && dayData.endTime
+              ? `${format(new Date(dayData.startTime), 'h:mm a')} - ${format(new Date(dayData.endTime), 'h:mm a')}`
+              : '';
 
-        dayData.exercises.forEach((exercise) => {
-          const matchingTemplateExercise = sessionTemplates[sessionType].find(
-            (template) => template.toLowerCase() === exercise.name.toLowerCase().trim()
-          );
+          dayData.exercises.forEach((exercise) => {
+            if (!exercise || !exercise.name) {
+              console.log('Skipping invalid exercise data (no name)');
+              return;
+            }
+            const exerciseName = exercise.name.trim();
 
-          if (matchingTemplateExercise) {
-            sessions[sessionType][matchingTemplateExercise][date] = {
-              sets: exercise.sets,
-              workoutNote: dayData.workoutNote || '',
-              duration,
-            };
-          }
-        });
+            const matchingTemplateExercise = sessionTemplates[sessionType].find(
+              (template) => template.toLowerCase() === exerciseName.toLowerCase()
+            );
+
+            if (matchingTemplateExercise && exercise.sets && exercise.sets.length) {
+              console.log(`Adding data for exercise: ${matchingTemplateExercise}`);
+              if (!sessions[sessionType][matchingTemplateExercise]) {
+                sessions[sessionType][matchingTemplateExercise] = {};
+              }
+
+              sessions[sessionType][matchingTemplateExercise][date] = {
+                sets: exercise.sets,
+                workoutNote: dayData.workoutNote || '',
+                duration,
+              };
+            } else {
+              console.log(`Exercise ${exerciseName} doesn't match any template or has no sets`);
+            }
+          });
+        } catch (error) {
+          console.error('Error processing workout data:', error);
+        }
       });
+    });
+
+    // Log results
+    Object.entries(sessions).forEach(([session, exercises]) => {
+      const exercisesWithData = Object.entries(exercises).filter(
+        ([_, dates]) => Object.keys(dates).length > 0
+      ).length;
+      console.log(`Session ${session} has ${exercisesWithData} exercises with data`);
     });
 
     return sessions;
   };
 
   const sessionData = organizeBySession();
+
+  // Check if we have any actual workout data
+  const hasWorkoutData = Object.values(sessionData).some((session) =>
+    Object.values(session).some((exercise) => Object.keys(exercise).length > 0)
+  );
+
+  if (!hasWorkoutData) {
+    console.log('Workout Tab - No exercise data matches the templates');
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>No matching workout data found</Text>
+        <Text style={styles.emptyStateSubText}>
+          Try logging exercises from your workout template
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.tabContent}>
@@ -1038,11 +1387,20 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#64748b',
     textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 8,
   },
   card: {
     backgroundColor: '#fff',
@@ -1248,6 +1606,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748b',
     marginTop: 4,
+  },
+  chartFallback: {
+    height: 220,
+    width: '100%',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartFallbackText: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
   },
 });
 
