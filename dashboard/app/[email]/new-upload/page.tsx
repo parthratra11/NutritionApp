@@ -6,7 +6,32 @@ import { db } from "../../../firebaseConfig";
 import { useParams } from "next/navigation";
 import Papa from "papaparse";
 
-// Helper: parse date with year inference (like Python)
+// Replace the getDayNameForDate function with this UTC-safe version:
+function getDayNameForDate(date: Date): string {
+  // Force UTC to avoid timezone issues
+  const utcDay = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  ).getUTCDay();
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  console.log(
+    `Original date: ${date.toISOString()}, UTC day index: ${utcDay}, Day name: ${
+      dayNames[utcDay]
+    }`
+  );
+  return dayNames[utcDay];
+}
+
+// Modify the parseDate function to avoid timezone issues
 function parseDate(dateStr: string, prevDate: Date | null): Date | null {
   try {
     let clean = dateStr;
@@ -29,32 +54,45 @@ function parseDate(dateStr: string, prevDate: Date | null): Date | null {
     };
     const month = monthMap[monthStr];
     let year = 2024;
-    let parsed = new Date(year, month, day);
+
+    // Create a UTC date to avoid timezone issues
+    let parsed = new Date(Date.UTC(year, month, day, 0, 0, 0));
+
+    // Year inference logic
     if (prevDate) {
       if (parsed < new Date(prevDate.getTime() - 180 * 86400000))
-        parsed.setFullYear(year + 1);
+        parsed = new Date(Date.UTC(year + 1, month, day, 0, 0, 0));
       else if (parsed > new Date(prevDate.getTime() + 180 * 86400000))
-        parsed.setFullYear(year - 1);
+        parsed = new Date(Date.UTC(year - 1, month, day, 0, 0, 0));
     } else if (parsed > new Date()) {
-      parsed.setFullYear(year + 1);
+      parsed = new Date(Date.UTC(year - 1, month, day, 0, 0, 0));
     }
+
     return parsed;
   } catch {
     return null;
   }
 }
 
-// Helper: create daily entry
+// Update the createDailyEntry function to use UTC dates
 function createDailyEntry(date: Date, weight: string, email: string) {
+  // Create a UTC timestamp without time component
+  const utcDate = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+
+  const timestamp = utcDate.toISOString().split("T")[0] + "T00:00:00.000Z";
+  console.log(
+    `Creating entry for date: ${date.toISOString()}, using timestamp: ${timestamp}`
+  );
+
   return {
     weight:
       weight && !isNaN(parseFloat(weight))
         ? parseFloat(weight).toFixed(1)
         : null,
     email,
-    timestamp: date
-      ? date.toISOString().split("T")[0] + "T00:00:00.000Z"
-      : null,
+    timestamp,
     "Sleep Quality": { value: null, color: null },
     Mood: { value: null, color: null },
     "Hunger Level": { value: null, color: null },
@@ -69,14 +107,16 @@ export default function UploadPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [jsonPreview, setJsonPreview] = useState<any>(null);
 
+  // Changed this array to match the ordering used in WeeklyForm.tsx
+  // Note: WeeklyForm.tsx uses ['Sunday', 'Monday', ...] but the app logic expects Monday as first
   const dayNames = [
+    "Sunday",
     "Monday",
     "Tuesday",
     "Wednesday",
     "Thursday",
     "Friday",
     "Saturday",
-    "Sunday",
   ];
 
   // Helper: check if a week has any meaningful data (moved here after dayNames is defined)
@@ -205,7 +245,18 @@ export default function UploadPage() {
             if (!date || isNaN(date.getTime())) continue;
             prevDate = date;
 
-            const dayName = dayNames[date.getDay()];
+            // Debug the original date string and parsed date
+            console.log(`Original date string: "${dateStr}"`);
+            console.log(`Parsed date: ${date.toISOString()}`);
+
+            // Get the correct day name based on the date
+            const dayName = getDayNameForDate(date);
+
+            // Additional log to show the date calculation
+            const testDate = new Date(date);
+            console.log(
+              `Date: ${testDate.toDateString()}, getDay(): ${testDate.getDay()}, dayName: ${dayName}`
+            );
 
             // Start new week if needed
             if (currentWeek !== weekNum) {
@@ -234,6 +285,21 @@ export default function UploadPage() {
 
             // Add daily entry if weight exists
             if (row["Weight"] && !isNaN(parseFloat(row["Weight"]))) {
+              // Create a simple verification process to show the day alignment
+              const verificationDate = new Date(date.getTime());
+              const verificationDay = getDayNameForDate(verificationDate);
+
+              console.log(
+                `
+      =================================
+      CSV DATE: ${dateStr}
+      PARSED DATE: ${date.toISOString()}
+      DAY OF WEEK: ${verificationDay}
+      ADDING TO: ${dayName}
+      =================================
+    `
+              );
+
               weekData[dayName] = createDailyEntry(
                 date,
                 row["Weight"],
@@ -241,14 +307,16 @@ export default function UploadPage() {
               );
             }
 
-            // Set firstEntryDate
+            // Set firstEntryDate with time set to midnight
             if (
               !jsonData.firstEntryDate ||
               (date &&
                 new Date(jsonData.firstEntryDate) &&
                 date < new Date(jsonData.firstEntryDate))
             ) {
-              jsonData.firstEntryDate = date.toISOString().split("T")[0];
+              const midnight = new Date(date);
+              midnight.setHours(0, 0, 0, 0);
+              jsonData.firstEntryDate = midnight.toISOString().split("T")[0];
             }
           }
 
