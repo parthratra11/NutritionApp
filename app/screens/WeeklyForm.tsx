@@ -37,6 +37,39 @@ const getTag = (value) => {
   return null;
 };
 
+// Helper to calculate week number from a date and first entry date
+const getWeekNumber = (currentDate, firstEntryDate) => {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const firstDate = new Date(firstEntryDate);
+  const diffTime = Math.abs(currentDate.getTime() - firstDate.getTime());
+  const diffWeeks = Math.floor(diffTime / msPerWeek);
+  return diffWeeks + 1; // Week numbers are 1-based
+};
+
+// Helper to check if a date is from the current week
+const isSameWeek = (date1, date2) => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+
+  // Get first day of week (Sunday) for each date
+  const firstDay1 = new Date(d1.setDate(d1.getDate() - d1.getDay()));
+  const firstDay2 = new Date(d2.setDate(d2.getDate() - d2.getDay()));
+
+  // Compare year and week number
+  return (
+    firstDay1.getFullYear() === firstDay2.getFullYear() &&
+    firstDay1.getMonth() === firstDay2.getMonth() &&
+    firstDay1.getDate() === firstDay2.getDate()
+  );
+};
+
+// Add this helper function near the other helper functions
+const getYesterdayDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date;
+};
+
 const DailyCheckInForm = () => {
   const [day, setDay] = useState('');
   const [formData, setFormData] = useState({});
@@ -45,7 +78,8 @@ const DailyCheckInForm = () => {
   const [hip, setHip] = useState('');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [showWaistHip, setShowWaistHip] = useState(true);
-  const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null); // <-- add this
+  const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null);
+  const [yesterdayDate, setYesterdayDate] = useState(''); // Change to yesterdayDate
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -59,6 +93,10 @@ const DailyCheckInForm = () => {
     });
     setFormData(initialData);
     setWeight('');
+
+    // Set yesterday's date in ISO format
+    const yesterdayDate = getYesterdayDate();
+    setYesterdayDate(yesterdayDate.toISOString().slice(0, 10));
   }, []);
 
   // Fetch or set firstEntryDate
@@ -82,46 +120,65 @@ const DailyCheckInForm = () => {
   // Check if already submitted for yesterday when email changes
   useEffect(() => {
     const checkAlreadySubmitted = async () => {
-      if (!user?.email) {
+      if (!user?.email || !yesterdayDate) {
         setAlreadySubmitted(false);
         setShowWaistHip(true);
         return;
       }
+
       const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
       const userDocSnap = await getDoc(userDocRef);
 
-      let foundWaist = false;
-      let foundHip = false;
+      let foundWaistHip = false;
+      let entryExistsForYesterday = false;
 
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
-        const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
-        let currentWeekKey = '';
-        let maxWeekNum = 1;
-        if (weekKeys.length > 0) {
-          maxWeekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
-          currentWeekKey = `week${maxWeekNum}`;
-        }
-        // Check if waist/hip already exist for this week AT THE WEEK LEVEL
-        if (data[currentWeekKey]) {
-          if (data[currentWeekKey].waist && data[currentWeekKey].hip) {
-            foundWaist = true;
-            foundHip = true;
+        const yesterday = getYesterdayDate();
+
+        // Check if any week has an entry for yesterday's day of the week
+        if (data.firstEntryDate) {
+          const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
+
+          // Calculate current week number based on first entry date
+          const currentWeekNum = getWeekNumber(yesterday, data.firstEntryDate);
+          const currentWeekKey = `week${currentWeekNum}`;
+
+          // Check waist/hip for current week
+          if (data[currentWeekKey] && data[currentWeekKey].waist && data[currentWeekKey].hip) {
+            foundWaistHip = true;
           }
-        }
-        // Check if already submitted for this day
-        for (const weekKey of weekKeys) {
-          if (data[weekKey] && data[weekKey][day]) {
-            setAlreadySubmitted(true);
-            break;
+
+          // Look through each week's entries
+          for (const weekKey of weekKeys) {
+            const weekData = data[weekKey];
+            // Skip non-week fields
+            if (!weekData || typeof weekData !== 'object') continue;
+
+            // Check each day in this week
+            for (const dayKey of dayNames) {
+              if (weekData[dayKey] && weekData[dayKey].timestamp) {
+                const entryDate = weekData[dayKey].timestamp.slice(0, 10);
+
+                // Check if there's an entry with yesterday's date
+                if (entryDate === yesterdayDate) {
+                  entryExistsForYesterday = true;
+                  break;
+                }
+              }
+            }
+
+            if (entryExistsForYesterday) break;
           }
         }
       }
-      setShowWaistHip(!(foundWaist && foundHip));
+
+      setShowWaistHip(!foundWaistHip);
+      setAlreadySubmitted(entryExistsForYesterday);
     };
 
     checkAlreadySubmitted();
-  }, [user?.email, day]);
+  }, [user?.email, day, yesterdayDate]);
 
   const handleSelect = (metric, value) => {
     setFormData((prev) => ({
@@ -130,12 +187,17 @@ const DailyCheckInForm = () => {
     }));
   };
 
-  const shouldStartNewWeek = (currentWeekData: any, currentDay: string) => {
-    // If it's Monday, always start a new week
-    if (currentDay === 'Monday') return true;
+  // Determine the week number for a specific date
+  const calculateWeekForDate = (dateString, firstEntryDateString) => {
+    const date = new Date(dateString);
+    const firstDate = new Date(firstEntryDateString);
 
-    // If current week has Sunday logged, start a new week
-    return currentWeekData && currentWeekData['Sunday'];
+    // Calculate weeks since first entry
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const diffTime = Math.abs(date.getTime() - firstDate.getTime());
+    const weeksSinceStart = Math.floor(diffTime / msPerWeek) + 1;
+
+    return weeksSinceStart;
   };
 
   // Firestore save logic
@@ -161,82 +223,121 @@ const DailyCheckInForm = () => {
     const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
     const userDocSnap = await getDoc(userDocRef);
 
-    let weekNum = 1;
-    let weekKey = 'week1';
+    const yesterday = getYesterdayDate();
+    const yesterdayIsoString = yesterday.toISOString().slice(0, 10);
     let data: { [key: string]: any } = {};
     let entryDate = firstEntryDate;
 
     if (userDocSnap.exists()) {
       data = userDocSnap.data();
+
+      // If this is the first entry ever, set the firstEntryDate
       if (!data.firstEntryDate) {
-        const today = new Date();
-        entryDate = today.toISOString().slice(0, 10);
+        entryDate = yesterdayIsoString;
         data.firstEntryDate = entryDate;
         setFirstEntryDate(entryDate);
       } else {
         entryDate = data.firstEntryDate;
       }
 
-      // Find the latest week number
-      const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
-      if (weekKeys.length > 0) {
-        weekNum = Math.max(...weekKeys.map((k) => parseInt(k.replace('week', ''))));
-        weekKey = `week${weekNum}`;
+      // Calculate which week this entry belongs to
+      const weekNum = calculateWeekForDate(yesterdayIsoString, entryDate);
+      const weekKey = `week${weekNum}`;
 
-        // Check if we should start a new week
-        if (shouldStartNewWeek(data[weekKey], day)) {
-          weekNum += 1;
-          weekKey = `week${weekNum}`;
+      // Check if an entry already exists for yesterday's date
+      let entryExistsForYesterday = false;
+      const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
+
+      for (const wKey of weekKeys) {
+        const weekData = data[wKey];
+        if (!weekData || typeof weekData !== 'object') continue;
+
+        for (const dayKey of dayNames) {
+          if (weekData[dayKey] && weekData[dayKey].timestamp) {
+            const existingEntryDate = new Date(weekData[dayKey].timestamp)
+              .toISOString()
+              .slice(0, 10);
+            if (existingEntryDate === yesterdayIsoString) {
+              entryExistsForYesterday = true;
+              Alert.alert(
+                'Already Submitted',
+                'You have already submitted an entry for yesterday.'
+              );
+              return;
+            }
+          }
         }
       }
 
-      // Prevent duplicate submission for the same day
-      if (data[weekKey] && data[weekKey][day]) {
-        Alert.alert('Already Submitted', `You have already submitted for ${day}.`);
-        setAlreadySubmitted(true);
-        return;
+      // Prepare the object to save: value + color tag for each metric
+      const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
+      Object.keys(formData).forEach((metric) => {
+        metricsWithTags[metric] = {
+          value: formData[metric],
+          color: getTag(formData[metric]),
+        };
+      });
+
+      // Build the update object
+      let update: any = {
+        ...data,
+        [weekKey]: {
+          ...(data[weekKey] || {}),
+          [day]: {
+            ...metricsWithTags,
+            weight,
+            email: user.email,
+            timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+          },
+        },
+        firstEntryDate: entryDate,
+      };
+
+      // Only add waist/hip at the week level if user is allowed to submit them
+      if (showWaistHip && waist && hip) {
+        update[weekKey].waist = waist;
+        update[weekKey].hip = hip;
       }
+
+      await setDoc(userDocRef, update, { merge: true });
+      Alert.alert('Success', `Check-in for ${day} saved in ${weekKey}!`);
+      setAlreadySubmitted(true);
     } else {
       // First ever entry for this user
-      const today = new Date();
-      entryDate = today.toISOString().slice(0, 10);
-      data.firstEntryDate = entryDate;
-      setFirstEntryDate(entryDate);
-    }
+      entryDate = yesterdayIsoString;
 
-    // Prepare the object to save: value + color tag for each metric
-    const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
-    Object.keys(formData).forEach((metric) => {
-      metricsWithTags[metric] = {
-        value: formData[metric],
-        color: getTag(formData[metric]),
-      };
-    });
+      // Prepare the object to save: value + color tag for each metric
+      const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
+      Object.keys(formData).forEach((metric) => {
+        metricsWithTags[metric] = {
+          value: formData[metric],
+          color: getTag(formData[metric]),
+        };
+      });
 
-    // Build the update object
-    let update: any = {
-      ...data,
-      [weekKey]: {
-        ...(data[weekKey] || {}),
-        [day]: {
-          ...metricsWithTags,
-          weight,
-          email: user.email,
-          timestamp: new Date().toISOString(),
+      let newData: any = {
+        firstEntryDate: entryDate,
+        week1: {
+          [day]: {
+            ...metricsWithTags,
+            weight,
+            email: user.email,
+            timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+          },
         },
-      },
-      firstEntryDate: entryDate,
-    };
+      };
 
-    // Only add waist/hip at the week level if user is allowed to submit them
-    if (showWaistHip && waist && hip) {
-      update[weekKey].waist = waist;
-      update[weekKey].hip = hip;
+      // Add waist/hip at the week level for new users
+      if (waist && hip) {
+        newData.week1.waist = waist;
+        newData.week1.hip = hip;
+      }
+
+      await setDoc(userDocRef, newData);
+      setFirstEntryDate(entryDate);
+      Alert.alert('Success', `First check-in saved for ${day}!`);
+      setAlreadySubmitted(true);
     }
-
-    await setDoc(userDocRef, update, { merge: true });
-    Alert.alert('Success', `Check-in for ${day} saved in ${weekKey}!`);
-    setAlreadySubmitted(true);
   };
 
   const handleSubmit = async () => {
@@ -330,12 +431,14 @@ const DailyCheckInForm = () => {
           </View>
         ))}
         <Button
-          title={alreadySubmitted ? 'Already Submitted' : 'Submit Check-in'}
+          title={alreadySubmitted ? 'Already Submitted for Yesterday' : 'Submit Check-in'}
           onPress={handleSubmit}
           disabled={alreadySubmitted}
         />
         {alreadySubmitted && (
-          <Text style={{ color: 'red', marginTop: 10 }}>You have already submitted for {day}.</Text>
+          <Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>
+            You have already submitted an entry for yesterday ({day}).
+          </Text>
         )}
       </View>
     </SafeAreaView>
