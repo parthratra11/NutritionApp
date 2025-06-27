@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const SLACK_USER_TOKEN = process.env.NEXT_PUBLIC_SLACK_ADMIN_TOKEN;
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!SLACK_USER_TOKEN) {
     return NextResponse.json(
       { error: "Missing Slack user token" },
@@ -11,6 +11,9 @@ export async function GET() {
   }
 
   try {
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
+
     const dmRes = await fetch(
       "https://slack.com/api/conversations.list?types=im",
       {
@@ -43,18 +46,38 @@ export async function GET() {
           );
           const userData = await userRes.json();
           if (!userData.ok) throw new Error(userData.error);
+          const username =
+            userData.user?.real_name || userData.user?.name || "Unknown";
+          const userEmail = userData.user?.profile?.email || "N/A";
           return {
             id: dm.id,
             user: dm.user,
-            username:
-              userData.user?.real_name || userData.user?.name || "Unknown",
+            username,
+            email: userEmail,
           };
         } catch (userErr) {
           console.error("Failed to fetch user info for", dm.user, userErr);
-          return { id: dm.id, user: dm.user, username: "Unknown" };
+          return {
+            id: dm.id,
+            user: dm.user,
+            username: "Unknown",
+            email: "N/A",
+          };
         }
       })
     );
+
+    // If email is provided, find and return the specific user's DM channel
+    if (email) {
+      const targetUser = users.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase()
+      );
+
+      return NextResponse.json({
+        channels: users,
+        targetUser: targetUser || null,
+      });
+    }
 
     // Return in the format expected by frontend
     return NextResponse.json({ channels: users });

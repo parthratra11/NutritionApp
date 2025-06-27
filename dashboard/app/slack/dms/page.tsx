@@ -1,15 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 // Helper to fetch DM users (conversations.list with types=im)
-async function fetchDMUsers() {
-  const res = await fetch("/api/get-dms");
+async function fetchDMUsers(email?: string | null) {
+  const url = email
+    ? `/api/get-dms?email=${encodeURIComponent(email)}`
+    : "/api/get-dms";
+
+  const res = await fetch(url);
   if (!res.ok) {
     const errorData = await res.json();
     throw new Error(errorData.error || "Failed to fetch DMs");
   }
   const data = await res.json();
-  return data.channels || []; // Extract channels array with fallback
+  return {
+    channels: data.channels || [],
+    targetUser: data.targetUser || null,
+  };
 }
 
 // Helper to fetch DM history for a channel
@@ -59,6 +67,9 @@ async function sendDM(channel: string, text: string) {
 }
 
 const DMsPage = () => {
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get("email");
+
   const [dmUsers, setDmUsers] = useState<any[]>([]);
   const [selectedDm, setSelectedDm] = useState<any | null>(null);
   const [dmHistory, setDmHistory] = useState<any[]>([]);
@@ -72,17 +83,23 @@ const DMsPage = () => {
   useEffect(() => {
     setLoadingDms(true);
     setError(null);
-    fetchDMUsers()
-      .then((channels) => {
+    fetchDMUsers(emailParam)
+      .then(({ channels, targetUser }) => {
         console.log("Fetched DM channels:", channels);
         setDmUsers(channels);
+
+        // If we have a specific user to select, do so
+        if (targetUser) {
+          console.log("Auto-selecting user by email:", targetUser);
+          setSelectedDm(targetUser);
+        }
       })
       .catch((err) => {
         console.error("Error fetching DMs:", err);
         setError(err.message);
       })
       .finally(() => setLoadingDms(false));
-  }, []);
+  }, [emailParam]);
 
   // Fetch DM history when a DM is selected
   useEffect(() => {
@@ -139,7 +156,9 @@ const DMsPage = () => {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Direct Messages</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        {emailParam ? `Chat with ${emailParam}` : "Direct Messages"}
+      </h1>
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -150,6 +169,13 @@ const DMsPage = () => {
           >
             ×
           </button>
+        </div>
+      )}
+
+      {/* Show message if email was provided but user not found */}
+      {emailParam && !selectedDm && !loadingDms && (
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+          No Slack user found with email: {emailParam}
         </div>
       )}
 
@@ -177,7 +203,9 @@ const DMsPage = () => {
                     <div className="font-medium">
                       {dm.username || "Unknown User"}
                     </div>
-                    <div className="text-sm text-gray-500">ID: {dm.id}</div>
+                    <div className="text-sm text-gray-500">
+                      Email: {dm.email}
+                    </div>
                   </li>
                 ))
               )}
