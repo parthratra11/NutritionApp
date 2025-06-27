@@ -97,6 +97,7 @@ export default function LoginScreen() {
                 setEmail('');
                 setPassword('');
                 setAcceptPolicy(false);
+                navigation.navigate('Address');
               }
             }
           ]
