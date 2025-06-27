@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   View,
   Text,
-  Button,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -11,13 +10,25 @@ import {
   SafeAreaView,
   Pressable,
   Platform,
+  Image,
+  ScrollView,
+  Animated,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-// Firestore imports
 import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import Slider from '@react-native-community/slider';
+
+// Import assets
+const UserImage = require('../assets/User.png');
+const GreetRectangle = require('../assets/GreetRectangle.png');
+const HomeIcon = require('../assets/home.png');
+const ChatIcon = require('../assets/chat.png');
+const AddIcon = require('../assets/add.png');
+const WorkoutIcon = require('../assets/workout.png');
+const NavRectangle = require('../assets/NavRectangle.png');
 
 const metrics = ['Sleep Quality', 'Mood', 'Hunger Level'];
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -45,10 +56,16 @@ const DailyCheckInForm = () => {
   const [hip, setHip] = useState('');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [showWaistHip, setShowWaistHip] = useState(true);
-  const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null); // <-- add this
+  const [firstEntryDate, setFirstEntryDate] = useState(null);
+  const [userFullName, setUserFullName] = useState('');
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef(null);
 
   useEffect(() => {
     const yesterday = getYesterday();
@@ -122,6 +139,58 @@ const DailyCheckInForm = () => {
 
     checkAlreadySubmitted();
   }, [user?.email, day]);
+
+  // Fetch user full name
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.email) return;
+      try {
+        const intakeFormRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const intakeFormSnap = await getDoc(intakeFormRef);
+        
+        if (intakeFormSnap.exists()) {
+          setUserFullName(intakeFormSnap.data().fullName);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, [user?.email]);
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        
+        // Clear existing timeout
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+
+        // Show navbar when scrolling
+        Animated.timing(navOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+
+        // Hide navbar after 2 seconds of no scrolling
+        scrollTimeout.current = setTimeout(() => {
+          Animated.timing(navOpacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        }, 2000);
+
+        lastScrollY.current = currentScrollY;
+      },
+    }
+  );
 
   const handleSelect = (metric, value) => {
     setFormData((prev) => ({
@@ -248,170 +317,330 @@ const DailyCheckInForm = () => {
     }
   };
 
+ const renderGreeting = () => (
+  <View style={styles.bannerContainer}>
+    <Image source={GreetRectangle} style={styles.bannerBg} />
+    <View style={styles.bannerContent}>
+      <View>
+        <Text style={styles.bannerSubTitle}>Keeping Moving Today!</Text>
+        <Text style={styles.bannerTitle}>
+          Hi, <Text style={{ fontWeight: 'bold' }}>{userFullName || 'User'}</Text>!
+        </Text>
+      </View>
+      <Image source={UserImage} style={styles.bannerUserImage} />
+    </View>
+  </View>
+);
+
+  const renderWeightSection = () => (
+    <View style={styles.cardContainer}>
+      <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Weight</Text>
+      <TextInput
+        style={[styles.weightInput, isDarkMode && styles.inputDark]}
+        placeholder="Enter your weight"
+        placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+        value={weight}
+        onChangeText={setWeight}
+        keyboardType="numeric"
+        editable={!alreadySubmitted}
+      />
+    </View>
+  );
+
+  const renderMeasurementsSection = () => (
+    showWaistHip && (
+      <View style={styles.measurementsContainer}>
+        <View style={[styles.measurementCard, isDarkMode && styles.cardDark]}>
+          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Waist Circumference</Text>
+          <TextInput
+            style={[styles.measurementInput, isDarkMode && styles.inputDark]}
+            placeholder="cm"
+            placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+            value={waist}
+            onChangeText={setWaist}
+            keyboardType="numeric"
+            editable={!alreadySubmitted}
+          />
+        </View>
+        <View style={[styles.measurementCard, isDarkMode && styles.cardDark]}>
+          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Hip Circumference</Text>
+          <TextInput
+            style={[styles.measurementInput, isDarkMode && styles.inputDark]}
+            placeholder="cm"
+            placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
+            value={hip}
+            onChangeText={setHip}
+            keyboardType="numeric"
+            editable={!alreadySubmitted}
+          />
+        </View>
+      </View>
+    )
+  );
+
+  const renderMetricCard = (metric) => {
+    const currentValue = formData[metric] || 1;
+
+    const renderSlider = (metric) => {
+      return (
+        <View style={styles.sliderContainer}>
+          <Slider
+            style={styles.slider}
+            minimumValue={1}
+            maximumValue={5}
+            step={1}
+            value={currentValue}
+            onValueChange={(value) => !alreadySubmitted && handleSelect(metric, Math.round(value))}
+            minimumTrackTintColor="#6366f1"
+            maximumTrackTintColor="#e5e7eb"
+            thumbStyle={styles.sliderThumbStyle}
+            trackStyle={styles.sliderTrackStyle}
+            disabled={alreadySubmitted}
+          />
+        </View>
+      );
+    };
+
+    return (
+      <View key={metric} style={[styles.cardContainer, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>{metric}</Text>
+
+        {renderSlider(metric)}
+
+        {metric === 'Sleep Quality' && (
+          <View style={styles.sliderEmojiLabels}>
+            <Text style={styles.sliderLabel}>😴</Text>
+            <Text style={styles.sliderLabel}>😐</Text>
+            <Text style={styles.sliderLabel}>😊</Text>
+          </View>
+        )}
+
+        {metric === 'Mood' && (
+          <View style={styles.sliderEmojiLabels}>
+            <Text style={styles.sliderLabel}>😡</Text>
+            <Text style={styles.sliderLabel}>😔</Text>
+            <Text style={styles.sliderLabel}>😐</Text>
+            <Text style={styles.sliderLabel}>😊</Text>
+            <Text style={styles.sliderLabel}>😍</Text>
+          </View>
+        )}
+
+        {metric === 'Hunger Level' && (
+          <View style={styles.hungerLabels}>
+            <Text style={[styles.hungerLabel, isDarkMode && styles.textDark]}>Starving</Text>
+            <Text style={[styles.hungerLabel, isDarkMode && styles.textDark]}>Satisfied</Text>
+            <Text style={[styles.hungerLabel, isDarkMode && styles.textDark]}>Stuffed</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderBottomNav = () => (
+    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
+      <Image source={NavRectangle} style={styles.bottomNavBg} />
+      <View style={styles.bottomNavContent}>
+        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+          <Image source={HomeIcon} style={styles.bottomNavIcon} />
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Add')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={AddIcon} style={styles.bottomNavIcon} />
+            <View style={styles.activeEclipse} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Chat')} style={styles.navItem}>
+          <Image source={ChatIcon} style={styles.bottomNavIcon} />
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
+          <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
-      <View style={[styles.header, isDarkMode && styles.headerDark]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-        </Pressable>
-        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>
-          Daily Check-in: {day}
-        </Text>
-        <View style={styles.headerButton} /> {/* Empty view for spacing */}
-      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {renderGreeting()}
+        {renderWeightSection()}
+        {renderMeasurementsSection()}
+        {metrics.map((metric) => renderMetricCard(metric))}
 
-      <View style={[styles.container, isDarkMode && styles.containerDark]}>
-        <Text style={[styles.label, isDarkMode && styles.textDark]}>Weight</Text>
-        <TextInput
-          style={[styles.input, isDarkMode && styles.inputDark]}
-          placeholder="Enter your weight"
-          placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
-          value={weight}
-          onChangeText={setWeight}
-          keyboardType="numeric"
-          editable={!alreadySubmitted}
-        />
-        {/* Only show waist/hip if not already filled this week */}
-        {showWaistHip && (
-          <>
-            <Text style={[styles.label, isDarkMode && styles.textDark]}>
-              Waist Circumference (cm)
-            </Text>
-            <TextInput
-              style={[styles.input, isDarkMode && styles.inputDark]}
-              placeholder="Enter your waist circumference"
-              placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
-              value={waist}
-              onChangeText={setWaist}
-              keyboardType="numeric"
-              editable={!alreadySubmitted}
-            />
-            <Text style={[styles.label, isDarkMode && styles.textDark]}>
-              Hip Circumference (cm)
-            </Text>
-            <TextInput
-              style={[styles.input, isDarkMode && styles.inputDark]}
-              placeholder="Enter your hip circumference"
-              placeholderTextColor={isDarkMode ? '#aaa' : '#888'}
-              value={hip}
-              onChangeText={setHip}
-              keyboardType="numeric"
-              editable={!alreadySubmitted}
-            />
-          </>
-        )}
-        {metrics.map((metric) => (
-          <View key={metric} style={styles.inputGroup}>
-            <Text style={[styles.label, isDarkMode && styles.textDark]}>{metric}</Text>
-            <View style={styles.checkboxRow}>
-              {[1, 2, 3, 4, 5].map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  style={[
-                    styles.checkbox,
-                    formData[metric] === num && styles.checkboxSelected,
-                    isDarkMode && styles.checkboxDark,
-                    isDarkMode && formData[metric] === num && styles.checkboxSelectedDark,
-                  ]}
-                  onPress={() => !alreadySubmitted && handleSelect(metric, num)}
-                  disabled={alreadySubmitted}>
-                  <Text
-                    style={[
-                      styles.checkboxText,
-                      formData[metric] === num && styles.checkboxTextSelected,
-                      isDarkMode && styles.textDark,
-                      isDarkMode && formData[metric] === num && styles.checkboxTextSelectedDark,
-                    ]}>
-                    {num}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
-        <Button
-          title={alreadySubmitted ? 'Already Submitted' : 'Submit Check-in'}
+        <Pressable
+          style={[styles.submitButton, alreadySubmitted && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={alreadySubmitted}
-        />
-        {alreadySubmitted && (
-          <Text style={{ color: 'red', marginTop: 10 }}>You have already submitted for {day}.</Text>
-        )}
-      </View>
+        >
+          <Text style={styles.submitButtonText}>
+            {alreadySubmitted ? 'Already Submitted' : 'Submit Check-in'}
+          </Text>
+        </Pressable>
+      </ScrollView>
+      {renderBottomNav()}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
     flex: 1,
     backgroundColor: '#fff',
   },
   containerDark: {
     backgroundColor: '#111827',
   },
-  heading: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    marginTop: 20,
+  bannerContainer: {
+    height: 280,
+    marginBottom: -80,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
-  header: {
+  bannerBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    top: 0,
+    left: 0,
+  },
+  bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-    width: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 50,
+    height: '100%',
   },
-  headerDark: {
-    borderBottomColor: '#374151',
-    backgroundColor: '#111827',
+  bannerSubTitle: {
+    color: 'black',
+    fontSize: 13,
+    marginBottom: 2,
+    opacity: 0.85,
   },
-  headerButton: {
-    padding: 8,
-    width: 40,
+  bannerTitle: {
+    color: 'black',
+    fontSize: 26,
+    fontWeight: '400',
+    marginBottom: 10,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-    color: '#000000',
+  bannerUserImage: {
+    width: 73,
+    height: 75,
+    borderRadius: 50,
+    borderWidth: 0,
+    borderColor: '#fff',
+    backgroundColor: '#eee',
+    marginBottom:55
   },
-  input: {
-    height: 48,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-    backgroundColor: '#fff',
+  cardContainer: {
+    backgroundColor: '#f8fafc',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    padding: 20,
+    borderRadius: 16,
+  },
+  cardDark: {
+    backgroundColor: '#1f2937',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#000',
-  },
-  inputDark: {
-    backgroundColor: '#22223b',
-    borderColor: '#444',
-    color: '#fff',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   textDark: {
     color: '#fff',
   },
+  weightInput: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  inputDark: {
+    backgroundColor: '#374151',
+    color: '#fff',
+  },
+  measurementsContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    gap: 8,
+  },
+  measurementCard: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 16,
+  },
+  measurementInput: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  sliderContainer: {
+    marginVertical: 16,
+    paddingHorizontal: 10,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderThumbStyle: {
+    backgroundColor: '#6366f1',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sliderTrackStyle: {
+    height: 6,
+    borderRadius: 3,
+  },
+  sliderEmojiLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingHorizontal: 12,
+  },
+  sliderLabel: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  hungerLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingHorizontal: 12,
+  },
+  hungerLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+  },
   checkboxRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 5,
+    marginVertical: 16,
   },
   checkbox: {
     width: 40,
@@ -421,11 +650,10 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 4,
     backgroundColor: '#f3f4f6',
   },
   checkboxDark: {
-    backgroundColor: '#22223b',
+    backgroundColor: '#374151',
     borderColor: '#444',
   },
   checkboxSelected: {
@@ -446,6 +674,75 @@ const styles = StyleSheet.create({
   },
   checkboxTextSelectedDark: {
     color: '#fff',
+  },
+  submitButton: {
+    backgroundColor: '#6366f1',
+    marginHorizontal: 16,
+    marginVertical: 24,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submittedText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  bottomNavContainer: {
+    height: 45,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomNavBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'stretch',
+  },
+  bottomNavContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeEclipse: {
+    position: 'absolute',
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: '#BABABA',
+    opacity: 0.6,
+    top: -3.5,
+    left: -3.5,
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+    zIndex: 2,
   },
 });
 

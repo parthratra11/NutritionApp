@@ -31,7 +31,7 @@ export default function AuthNavigator() {
           <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
-          <Stack.Screen name="Reports" component={ReportScreen} />
+          <Stack.Screen name="Reports" component={ReportScreen} options={{headerShown:false}}/>
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen name="Steps" component={StepScreen} />
           <Stack.Screen

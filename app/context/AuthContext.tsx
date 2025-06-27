@@ -51,9 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login function
   const login = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    if (!userCredential.user.emailVerified) {
-      throw { code: 'auth/email-not-verified' };
-    }
+    // Removed email verification check
     setUser(userCredential.user);
     await storeCredentials(email, password);
   };
@@ -68,12 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     restoreAuthState();
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      // Only set user if email is verified
-      if (firebaseUser && firebaseUser.emailVerified) {
-        setUser(firebaseUser);
-      } else {
-        setUser(null);
-      }
+      // Set user regardless of email verification
+      setUser(firebaseUser);
     });
 
     return unsubscribe;

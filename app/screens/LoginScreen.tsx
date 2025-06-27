@@ -26,11 +26,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Font from 'expo-font';
 import { useEffect } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig.js';
 
 export default function LoginScreen() {
   const { isDarkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState(''); // Add this
+  const [phoneNumber, setPhoneNumber] = useState(''); // Add this
   //const [isSignup, setIsSignup] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptPolicy, setAcceptPolicy] = useState(false);
@@ -46,32 +50,64 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    if (isSignup && !acceptPolicy) {
-      Alert.alert('Required', 'You must accept the Privacy Policy to sign up.');
-      return;
+    
+    if (isSignup) {
+      if (!fullName || !phoneNumber) {
+        Alert.alert('Error', 'Please fill in all fields');
+        return;
+      }
+      if (!acceptPolicy) {
+        Alert.alert('Required', 'You must accept the Privacy Policy to sign up.');
+        return;
+      }
     }
 
     try {
       if (isSignup) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
+        
+        // Save user data to Firestore
+        try {
+          await setDoc(doc(db, 'intakeForms', email), {
+            fullName,
+            phoneNumber,
+            email,
+            createdAt: new Date().toISOString(),
+            userId: userCredential.user.uid
+          });
+        } catch (dbError) {
+          console.error('Error saving user data:', dbError);
+          Alert.alert(
+            'Warning',
+            'Account created but failed to save additional information. Please update your profile later.'
+          );
+        }
+
         Alert.alert(
-          'Verify Email',
-          'Account created! Please check your email and verify your address before logging in.'
+          'Success',
+          'Account created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsSignup(false);
+                // Clear the form
+                setFullName('');
+                setPhoneNumber('');
+                setEmail('');
+                setPassword('');
+                setAcceptPolicy(false);
+              }
+            }
+          ]
         );
-        setIsSignup(false);
       } else {
         await login(email, password);
         Alert.alert('Success', 'Logged in successfully');
       }
-    } catch (error) {
+    } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {
         Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
-      } else if (error.code === 'auth/email-not-verified') {
-        Alert.alert(
-          'Email Not Verified',
-          'Please verify your email address before logging in. Check your inbox for a verification email.'
-        );
       } else if (
         !isSignup &&
         (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password')
@@ -122,15 +158,35 @@ export default function LoginScreen() {
           >
             <View style={styles.container}>
               <Text style={styles.title}>{isSignup ? 'Signup' : 'Login'}</Text>
+              {isSignup && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Full Name"
+                  placeholderTextColor="#B6C3D1"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                />
+              )}
               <TextInput
                 style={styles.input}
-                placeholder={isSignup ? 'Email' : 'Phone/ Email'}
+                placeholder="Email"
                 placeholderTextColor="#B6C3D1"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+              {isSignup && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Phone Number"
+                  placeholderTextColor="#B6C3D1"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                />
+              )}
               <View style={styles.inputPasswordContainer}>
                 <TextInput
                   style={[styles.input, { marginBottom: 0, flex: 1 }]}
