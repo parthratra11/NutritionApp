@@ -114,6 +114,28 @@ export default function ClientOverview() {
             Workout
           </button>
         </div>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={() =>
+              router.push(`/${params.email}/workout/edit-template`)
+            }
+            className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600"
+          >
+            Edit Workout Template
+          </button>
+        </div>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={() =>
+              router.push(
+                `/slack/dms?email=${encodeURIComponent(client.email)}`
+              )
+            }
+            className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600"
+          >
+            Contact via Slack
+          </button>
+        </div>
       </div>
     </div>
   );

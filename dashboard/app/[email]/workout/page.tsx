@@ -231,7 +231,20 @@ export default function WorkoutDashboard() {
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!workoutData) return <div className="p-6">No workout data found</div>;
+  if (!workoutData)
+    return (
+      <div className="p-6">
+        <div className="flex gap-4">
+          <Link
+            href={`/${params.email}/workout/edit-template`}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Edit Template
+          </Link>
+        </div>
+        No workout data found
+      </div>
+    );
 
   const sessionData = organizeBySession(workoutData);
 
@@ -283,6 +296,12 @@ export default function WorkoutDashboard() {
           <p className="text-gray-600">Training Split: {trainingType}</p>
         </div>
         <div className="flex gap-4">
+          <Link
+            href={`/${params.email}/workout/edit-template`}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Edit Template
+          </Link>
           <Link
             href={`/${params.email}`}
             className="text-blue-600 hover:text-blue-800"

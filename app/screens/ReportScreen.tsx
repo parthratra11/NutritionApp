@@ -148,22 +148,10 @@ export default function ReportScreen() {
     const { labels, data, colors } = processDataForMetric(metric);
     if (data.length === 0) return null;
 
-    const getColorForMetric = (opacity = 1) => {
-      const baseColor =
-        {
-          'Sleep Quality': '#6366f1', // Indigo
-          Mood: '#ec4899', // Pink
-          'Hunger Level': '#14b8a6', // Teal
-        }[metric] || '#8b5cf6'; // Default Purple
-
-      return isDarkMode ? `rgba(${hexToRgb(baseColor)}, ${opacity})` : baseColor;
-    };
-
     return (
-      <View
-        style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
+      <View style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
         <Text style={[styles.chartTitle, isDarkMode && styles.textDark]}>
-          {metric} ({data[data.length - 1]}/5)
+          {metric}
         </Text>
         <LineChart
           data={{
@@ -171,7 +159,7 @@ export default function ReportScreen() {
             datasets: [
               {
                 data,
-                color: getColorForMetric,
+                color: (opacity = 1) => (isDarkMode ? `rgba(59, 130, 246, ${opacity})` : '#3b82f6'),
                 strokeWidth: 3,
               },
             ],
@@ -183,20 +171,18 @@ export default function ReportScreen() {
             backgroundGradientFrom: isDarkMode ? '#1f2937' : '#f8fafc',
             backgroundGradientTo: isDarkMode ? '#1f2937' : '#f8fafc',
             decimalPlaces: 0,
-            color: getColorForMetric,
-            labelColor: () => (isDarkMode ? '#9ca3af' : '#64748b'),
-            style: {
-              borderRadius: 16,
-            },
+            color: (opacity = 1) => (isDarkMode ? `rgba(59, 130, 246, ${opacity})` : '#3b82f6'),
+            labelColor: (opacity = 1) => (isDarkMode ? `rgba(156, 163, 175, ${opacity})` : `rgba(100, 116, 139, ${opacity})`),
             propsForBackgroundLines: {
-              strokeDasharray: '', // Solid lines
+              strokeDasharray: '',
               stroke: isDarkMode ? '#374151' : '#e2e8f0',
               strokeWidth: 1,
             },
             propsForDots: {
               r: '5',
               strokeWidth: '2',
-              stroke: getColorForMetric(1),
+              stroke: '#3b82f6',
+              fill: isDarkMode ? '#1f2937' : '#f8fafc'
             },
             yAxisInterval: 1,
             yAxisSuffix: '',
@@ -220,7 +206,7 @@ export default function ReportScreen() {
     return (
       <View style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
         <Text style={[styles.chartTitle, isDarkMode && styles.textDark]}>
-          Weight ({data[data.length - 1]} kg)
+          Weight
         </Text>
         <LineChart
           data={{
@@ -335,7 +321,7 @@ export default function ReportScreen() {
             <Image source={AddIcon} style={styles.bottomNavIcon} />
           </View>
         </Pressable>
-        <Pressable onPress={() => navigation.navigate('Chat')} style={styles.navItem}>
+        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={ChatIcon} style={styles.bottomNavIcon} />
           </View>

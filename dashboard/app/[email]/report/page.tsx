@@ -53,6 +53,8 @@ export default function ReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [isWeekDropdownOpen, setIsWeekDropdownOpen] = useState(false);
+  const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
+  const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
 
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
@@ -124,7 +126,35 @@ export default function ReportPage() {
   const calculateAverages = () => {
     if (!weeklyData) return [];
 
-    return Object.entries(weeklyData)
+    let entries = Object.entries(weeklyData);
+
+    // Filter data based on selected comparison period
+    if (comparisonPeriod !== "all") {
+      const now = new Date();
+      const cutoffDate = new Date();
+
+      switch (comparisonPeriod) {
+        case "monthly":
+          cutoffDate.setMonth(now.getMonth() - 1);
+          break;
+        case "quarterly":
+          cutoffDate.setMonth(now.getMonth() - 3);
+          break;
+        case "yearly":
+          cutoffDate.setFullYear(now.getFullYear() - 1);
+          break;
+        default:
+          // Default is "all", no filtering needed
+          break;
+      }
+
+      entries = entries.filter(([_, data]) => {
+        const weekStartDate = getWeekStartDate(data);
+        return weekStartDate && weekStartDate >= cutoffDate;
+      });
+    }
+
+    return entries
       .map(([week, data]) => {
         const weights = Object.entries(data)
           .filter(
@@ -615,6 +645,66 @@ export default function ReportPage() {
         </>
       ) : (
         <div className="grid gap-6">
+          {/* Period Selection Dropdown */}
+          <div className="flex justify-end mb-2">
+            <div className="relative">
+              <button
+                onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-48"
+              >
+                <span>
+                  {comparisonPeriod === "all"
+                    ? "All Time"
+                    : comparisonPeriod === "yearly"
+                    ? "Past Year"
+                    : comparisonPeriod === "quarterly"
+                    ? "Past Quarter"
+                    : "Past Month"}
+                </span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 transition-transform ${
+                    isPeriodDropdownOpen ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {isPeriodDropdownOpen && (
+                <div className="absolute z-10 mt-1 w-48 bg-white rounded-lg shadow-lg overflow-hidden">
+                  {[
+                    { id: "all", label: "All Time" },
+                    { id: "yearly", label: "Past Year" },
+                    { id: "quarterly", label: "Past Quarter" },
+                    { id: "monthly", label: "Past Month" },
+                  ].map((period) => (
+                    <button
+                      key={period.id}
+                      onClick={() => {
+                        setComparisonPeriod(period.id);
+                        setIsPeriodDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                        comparisonPeriod === period.id ? "bg-blue-100" : ""
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Progress Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weight & Measurements Chart */}

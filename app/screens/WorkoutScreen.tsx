@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -23,7 +23,11 @@ import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
+const HomeIcon = require('../assets/home.png');
+const ChatIcon = require('../assets/chat.png');
+const AddIcon = require('../assets/add.png');
+const WorkoutIcon = require('../assets/workout.png');
+const NavRectangle = require('../assets/NavRectangle.png');
 type Set = {
   id: string;
   weight: string;
@@ -218,7 +222,10 @@ export default function WorkoutScreen() {
   const [workoutName, setWorkoutName] = useState(`Workout - ${today}`);
   const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null);
   const { user } = useAuth(); // Make sure you have user context
-
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef(null);
   // Fetch or set firstEntryDate on mount
   useEffect(() => {
     const fetchFirstEntryDate = async () => {
@@ -289,6 +296,36 @@ export default function WorkoutScreen() {
     });
     setModalVisible(true);
   };
+
+  const handleScroll = Animated.event(
+  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+  {
+    useNativeDriver: false,
+    listener: (event) => {
+      const currentScrollY = event.nativeEvent.contentOffset.y;
+      
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      Animated.timing(navOpacity, {
+        toValue: 1,
+        duration: 50,
+        useNativeDriver: true,
+      }).start();
+
+      scrollTimeout.current = setTimeout(() => {
+        Animated.timing(navOpacity, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }).start();
+      }, 2000);
+
+      lastScrollY.current = currentScrollY;
+    },
+  }
+);
 
   // Add to existing JSX, right after the workoutName TextInput
   const timePickerSection = (
@@ -775,6 +812,34 @@ export default function WorkoutScreen() {
       )}
     </Pressable>
   );
+  const renderBottomNav = () => (
+  <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
+    <Image source={NavRectangle} style={styles.bottomNavBg} />
+    <View style={styles.bottomNavContent}>
+      <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={HomeIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={AddIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={ChatIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
+          <View style={styles.activeEclipse} />
+        </View>
+      </Pressable>
+    </View>
+  </Animated.View>
+);
 
   // Update your return statement to include the new modal and use the clickable session indicator
   return (
@@ -799,11 +864,13 @@ export default function WorkoutScreen() {
         </View>
 
         <KeyboardAwareScrollView
-          style={styles.scrollView}
-          enableOnAndroid={true}
-          enableAutomaticScroll={true}
-          extraScrollHeight={100}
-          keyboardShouldPersistTaps="handled">
+         style={styles.scrollView}
+  enableOnAndroid={true}
+  enableAutomaticScroll={true}
+  extraScrollHeight={100}
+  keyboardShouldPersistTaps="handled"
+  onScroll={handleScroll}
+  scrollEventThrottle={16}>
           <TextInput
             value={workoutName}
             onChangeText={setWorkoutName}
@@ -949,12 +1016,14 @@ export default function WorkoutScreen() {
             <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
           </Pressable>
         </KeyboardAwareScrollView>
+        {renderBottomNav()}
       </SafeAreaView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -1457,6 +1526,56 @@ const styles = StyleSheet.create({
   sessionDetailLabelDark: {
     color: '#9ca3af',
   },
+    bottomNavContainer: {
+    height: 45,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomNavBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'stretch',
+    bottom: 0,
+    left: 0,
+  },
+  bottomNavContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeEclipse: {
+    position: 'absolute',
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: '#BABABA',
+    opacity: 0.6,
+    top: -3.5,
+    left: -3.5,
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+    zIndex:2,
+  }
 
   // ... rest of existing styles ...
 });

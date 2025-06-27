@@ -1,9 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Button, TextInput, FlatList, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  Button,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Pressable,
+  Image,
+  StyleSheet,
+  SafeAreaView
+} from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAuthRequest, makeRedirectUri, ResponseType } from 'expo-auth-session';
+import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
+
+// Add these asset imports
+const HomeIcon = require('../assets/home.png');
+const ChatIcon = require('../assets/chat.png');
+const AddIcon = require('../assets/add.png');
+const WorkoutIcon = require('../assets/workout.png');
+const NavRectangle = require('../assets/NavRectangle.png');
 
 // 🔐 Slack credentials from environment
 const slackTeamId = process.env.SLACK_TEAM_ID!;
@@ -27,11 +48,18 @@ const discovery = {
 const slackWorkspaceDomain = 'nutritionappglobal.slack.com';
 
 export default function SlackScreen() {
+  const navigation = useNavigation();
   const [slackToken, setSlackToken] = useState<string | null>(null);
   const [dmChannel, setDmChannel] = useState<string>('');
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Add navbar state
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef(null);
 
   // 🔑 Set up Slack OAuth request
   const [request, response, promptAsync] = useAuthRequest(
@@ -191,44 +219,208 @@ export default function SlackScreen() {
     initSlack(slackToken); // refresh messages
   };
 
+  // Add this function after your state declarations
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+
+        Animated.timing(navOpacity, {
+          toValue: 1,
+          duration: 50,
+          useNativeDriver: true,
+        }).start();
+
+        scrollTimeout.current = setTimeout(() => {
+          Animated.timing(navOpacity, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }).start();
+        }, 2000);
+
+        lastScrollY.current = currentScrollY;
+      },
+    }
+  );
+
+  // Add this function with your other functions
+  const renderBottomNav = () => (
+    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
+      <Image source={NavRectangle} style={styles.bottomNavBg} />
+      <View style={styles.bottomNavContent}>
+        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={HomeIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={AddIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Chat')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={ChatIcon} style={styles.bottomNavIcon} />
+            <View style={styles.activeEclipse} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      {!slackToken ? (
-        <>
-          <Text style={{ marginBottom: 12, textAlign: 'center' }}>
-            Workspace: {slackWorkspaceDomain}
-          </Text>
-          <Button title="Login with Slack" onPress={handleSlackLogin} disabled={!request} />
-        </>
-      ) : (
-        <>
-          {loading && <ActivityIndicator />}
-          <FlatList
-            data={messages}
-            keyExtractor={(_, i) => String(i)}
-            renderItem={({ item }) => (
-              <View style={{ padding: 8, borderBottomWidth: 1, borderColor: '#ddd' }}>
-                <Text style={{ fontWeight: 'bold' }}>{item.username || item.user}</Text>
-                <Text>{item.text}</Text>
-              </View>
-            )}
-            contentContainerStyle={{ paddingBottom: 12 }}
-          />
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type a message"
-            style={{
-              borderWidth: 1,
-              borderColor: '#ccc',
-              padding: 8,
-              marginTop: 12,
-              borderRadius: 6,
-            }}
-          />
-          <Button title="Send" onPress={send} />
-        </>
-      )}
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {!slackToken ? (
+          <View style={styles.loginContainer}>
+            <Text style={styles.workspaceText}>
+              Workspace: {slackWorkspaceDomain}
+            </Text>
+            <Button title="Login with Slack" onPress={handleSlackLogin} disabled={!request} />
+          </View>
+        ) : (
+          <>
+            {loading && <ActivityIndicator style={styles.loader} />}
+            <FlatList
+              data={messages}
+              keyExtractor={(_, i) => String(i)}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              renderItem={({ item }) => (
+                <View style={styles.messageItem}>
+                  <Text style={styles.messageUser}>{item.username || item.user}</Text>
+                  <Text style={styles.messageText}>{item.text}</Text>
+                </View>
+              )}
+              contentContainerStyle={styles.messagesList}
+            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="Type a message"
+                style={styles.textInput}
+              />
+              <Button title="Send" onPress={send} />
+            </View>
+          </>
+        )}
+      </View>
+      {renderBottomNav()}
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  workspaceText: {
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  messagesList: {
+    paddingBottom: 12,
+  },
+  messageItem: {
+    padding: 8,
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+  },
+  messageUser: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  messageText: {
+    fontSize: 14,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 8,
+    borderRadius: 6,
+  },
+  bottomNavContainer: {
+    height: 45,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomNavBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'stretch',
+    bottom: 0,
+    left: 0,
+  },
+  bottomNavContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeEclipse: {
+    position: 'absolute',
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: '#BABABA',
+    opacity: 0.6,
+    top: -3.5,
+    left: -3.5,
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+    zIndex: 2,
+  },
+});

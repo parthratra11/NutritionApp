@@ -115,10 +115,13 @@ const StepScreen = () => {
     try {
       setLoading(true);
       const endTime = new Date();
+      // Set startTime to today at midnight
       const startTime = new Date(endTime);
-      startTime.setDate(endTime.getDate() - 1); // Last 24 hours
+      startTime.setHours(0, 0, 0, 0);
 
-      console.log(`Fetching data from ${startTime.toISOString()} to ${endTime.toISOString()}`);
+      console.log(
+        `Fetching data for today: ${startTime.toISOString()} to ${endTime.toISOString()}`
+      );
 
       const grantedPerms = await HealthConnectLibrary.getGrantedPermissions();
       if (
@@ -264,7 +267,7 @@ const StepScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Health Data (Last 24h)</Text>
+      <Text style={styles.title}>Health Data (Today)</Text>
       {loading ? (
         <ActivityIndicator size="large" />
       ) : (
