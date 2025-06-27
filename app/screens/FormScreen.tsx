@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Alert,
   ImageBackground,
+  ActivityIndicator,
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -6529,34 +6530,60 @@ const StrikeAPoseScreen: React.FC<{
       ...prev,
       photos,
     }));
-  }, [photos]);
+  }, [photos, setFormData]);
 
   const pickImages = async () => {
     try {
+      // Request permissions first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
         selectionLimit: 4,
+        allowsEditing: false,
       });
+
       if (!result.canceled && result.assets) {
-        const selected = result.assets.map((asset) => ({
+        const selected = result.assets.map((asset, index) => ({
           uri: asset.uri,
-          name: asset.fileName || asset.uri.split('/').pop() || 'photo.jpg',
+          name: asset.fileName || `photo_${index + 1}.jpg`,
         }));
         setPhotos(selected);
+        Alert.alert('Success', `${selected.length} photo(s) selected successfully!`);
       }
-    } catch (e) {
-      alert('Could not pick images');
+    } catch (error) {
+      console.error('Error picking images:', error);
+      Alert.alert('Error', 'Could not pick images. Please try again.');
     }
   };
 
   const handleFinalSubmit = async () => {
-    setUploading(true);
-    const success = await handleSubmit();
-    setUploading(false);
-    if (success) {
-      navigation.navigate('Welcome');
+    try {
+      setUploading(true);
+      const success = await handleSubmit();
+      if (success) {
+        Alert.alert(
+          'Success!',
+          'Your intake form has been submitted successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Welcome')
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      Alert.alert('Error', 'Failed to submit form. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -6573,6 +6600,7 @@ const StrikeAPoseScreen: React.FC<{
         end={{ x: 0.3, y: 1 }}
         locations={[0, 1]}
       />
+      
       {/* Progress Bar */}
       <View
         style={{
@@ -6586,16 +6614,31 @@ const StrikeAPoseScreen: React.FC<{
           style={{ height: '100%', backgroundColor: '#E11D48', borderRadius: 3, width: '100%' }}
         />
       </View>
-      <View
-        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
-        <ImageBackground
-          source={IntroRectangle}
-          style={[
-            introStyles.card,
-            {
+
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          {/* Title */}
+          <Text
+            style={{
+              color: '#fff',
+              fontSize: 38,
+              fontWeight: 'bold',
+              textAlign: 'center',
+              marginBottom: 20,
+              marginTop: 40,
+            }}>
+            Strike a Pose! <Ionicons name="camera" size={40} color="#fff" />
+          </Text>
+
+          {/* Main Content Card */}
+          <ImageBackground
+            source={IntroRectangle}
+            style={[
+              introStyles.card,
+              {
               width: '113%',
               marginLeft: 16,
-              top: 520,
+              marginTop: 110,
               marginHorizontal: 10,
               borderTopLeftRadius: 32,
               borderTopRightRadius: 32,
@@ -6603,79 +6646,142 @@ const StrikeAPoseScreen: React.FC<{
               borderBottomRightRadius: 0,
               overflow: 'hidden',
               alignSelf: 'center',
-              height: 550,
+              minHeight: 550,
               justifyContent: 'center',
-            },
-          ]}
-          imageStyle={{
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-            resizeMode: 'stretch',
-          }}>
-          <Text
-            style={{
-              color: '#232946',
-              fontSize: 15,
-              textAlign: 'center',
-              marginBottom: 0,
-              top: 210,
-              fontWeight: '500',
+              },
+            ]}
+            imageStyle={{
+              borderRadius: 32,
+              resizeMode: 'stretch',
             }}>
-            Please upload at least four full-body pictures (wearing shorts that don’t cover your
-            knees): front, both sides, and back.{'\n'}
-            Shirtless if male or a vest if female. Your natural relaxed posture.
-          </Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#bfc3c7',
-              borderRadius: 10,
-              width: 60,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 0,
-              top: 250,
-            }}
-            onPress={pickImages}
-            disabled={uploading}>
-            <Ionicons name="cloud-upload-outline" size={28} color="#232946" />
-          </TouchableOpacity>
-          {photos.length > 0 && (
-            <Text style={{ color: '#232946', marginBottom: 10, fontSize: 13, textAlign: 'center' }}>
-              {photos.length} photo{photos.length > 1 ? 's' : ''} attached
-            </Text>
-          )}
+            
+            <View style={{ paddingVertical: 32, paddingHorizontal: 18, alignItems: 'center' }}>
+              <Text
+                style={{
+                  color: '#232946',
+                  fontSize: 15,
+                  textAlign: 'center',
+                  marginBottom: 60,
+                  fontWeight: '500',
+                  lineHeight: 20,
+                }}>
+                Please upload at least four full-body pictures (wearing shorts that don't cover your
+                knees): front, both sides, and back.{'\n'}
+                Shirtless if male or a vest if female. Your natural relaxed posture.
+              </Text>
 
-          <Image
-            source={require('../assets/boy.png')}
-            style={{ width: 500, height: 450, left: 125, marginTop: 160, resizeMode: 'contain' }}
-          />
+              {/* Upload Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#3b82f6',
+                  borderRadius: 12,
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  marginBottom: 15,
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
+                onPress={pickImages}
+                disabled={uploading}>
+                <Ionicons name="cloud-upload-outline" size={24} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+                  {photos.length > 0 ? 'Change Photos' : 'Upload Photos'}
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#D3D3D3',
-              borderRadius: 14,
-              paddingVertical: 12,
-              paddingHorizontal: 38,
-              marginTop: 8,
-              alignItems: 'center',
-              width: 140,
-              bottom: 260,
-              right: 13,
-              alignSelf: 'center',
-              opacity: uploading ? 0.7 : 1,
-            }}
-            onPress={handleFinalSubmit}
-            disabled={uploading || hasSubmitted}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 17 }}>
-              {uploading ? 'Submitting...' : 'Submit'}
-            </Text>
-          </TouchableOpacity>
-        </ImageBackground>
-      </View>
-      {/* Two IntroBottom images at the bottom of the screen */}
+              {/* Photo Count Display */}
+              {photos.length > 0 && (
+                <View style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: 8,
+                  padding: 10,
+                  marginBottom: 15,
+                }}>
+                  <Text style={{ 
+                    color: '#232946', 
+                    fontSize: 14, 
+                    textAlign: 'center',
+                    fontWeight: '600' 
+                  }}>
+                    ✅ {photos.length} photo{photos.length > 1 ? 's' : ''} selected
+                  </Text>
+                </View>
+              )}
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: hasSubmitted ? '#9ca3af' : '#d3d3d3',
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  paddingHorizontal: 32,
+                  alignItems: 'center',
+                  marginTop: 10,
+                  opacity: (uploading || hasSubmitted) ? 0.7 : 1,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
+                onPress={handleFinalSubmit}
+                disabled={uploading || hasSubmitted}>
+                {uploading ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                      Submitting...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                    {hasSubmitted ? 'Already Submitted' : 'Submit Form'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ImageBackground>
+
+          {/* Decorative Images */}
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-around', 
+            alignItems: 'center',
+            width: '120%',
+            
+            top: -310,
+            right:80
+          }}>
+            <Image
+              source={require('../assets/boy.png')}
+              style={{ 
+                width: 300, 
+                height: 480, 
+                resizeMode: 'stretch',
+                opacity: 0.8, 
+                marginRight: 45,
+              }}
+            />
+            <Image
+              source={require('../assets/girl.png')}
+              style={{ 
+                width: 150, 
+                height: 380, 
+                resizeMode: 'stretch',
+                opacity: 0.8 
+              }}
+            />
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Bottom decorative images */}
       <Image
         source={IntroBottom}
         style={{
@@ -6706,21 +6812,6 @@ const StrikeAPoseScreen: React.FC<{
           tintColor: '#ffff',
         }}
       />
-
-      <Image
-        source={require('../assets/girl.png')}
-        style={{ width: 300, height: 390, right: 100, marginTop: 450, resizeMode: 'contain' }}
-      />
-      <Text
-        style={{
-          color: '#fff',
-          fontSize: 38,
-          fontWeight: 'bold',
-          textAlign: 'center',
-          bottom: 700,
-        }}>
-        Strike a Pose! <Ionicons name="camera" size={40} color="#fff" />
-      </Text>
     </SafeAreaView>
   );
 };
@@ -6886,6 +6977,7 @@ const IntakeForm: React.FC<{ navigation: NavigationProp<RootStackParamList> }> =
   return (
     <FormContext.Provider value={{ formData, setFormData, hasSubmitted, handleSubmit }}>
       <Stack.Navigator
+      
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: isDarkMode ? '#111827' : '#ffffff' },
