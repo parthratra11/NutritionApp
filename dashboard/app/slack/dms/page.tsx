@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 // Helper to fetch DM users (conversations.list with types=im)
@@ -66,7 +66,8 @@ async function sendDM(channel: string, text: string) {
   return data;
 }
 
-const DMsPage = () => {
+// Component that uses useSearchParams - wrapped in Suspense
+const DMsContent = () => {
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email");
 
@@ -286,6 +287,31 @@ const DMsPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Loading fallback component
+const DMsLoading = () => (
+  <div className="p-4 max-w-6xl mx-auto">
+    <h1 className="text-2xl font-bold mb-4">Direct Messages</h1>
+    <div className="flex gap-8 h-96">
+      <div className="w-1/3 border-r pr-4">
+        <h2 className="font-semibold mb-2">Your DMs</h2>
+        <p className="text-gray-500">Loading...</p>
+      </div>
+      <div className="flex-1 flex items-center justify-center text-gray-500">
+        <p>Loading DMs...</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Main component that wraps DMsContent in Suspense
+const DMsPage = () => {
+  return (
+    <Suspense fallback={<DMsLoading />}>
+      <DMsContent />
+    </Suspense>
   );
 };
 
