@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -23,7 +23,11 @@ import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
+const HomeIcon = require('../assets/home.png');
+const ChatIcon = require('../assets/chat.png');
+const AddIcon = require('../assets/add.png');
+const WorkoutIcon = require('../assets/workout.png');
+const NavRectangle = require('../assets/NavRectangle.png');
 type Set = {
   id: string;
   weight: string;
@@ -207,6 +211,8 @@ export default function WorkoutScreen() {
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [availableExercises, setAvailableExercises] = useState<string[]>([]);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionExercises, setSessionExercises] = useState([]);
 
   const today = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -216,7 +222,10 @@ export default function WorkoutScreen() {
   const [workoutName, setWorkoutName] = useState(`Workout - ${today}`);
   const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null);
   const { user } = useAuth(); // Make sure you have user context
-
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef(null);
   // Fetch or set firstEntryDate on mount
   useEffect(() => {
     const fetchFirstEntryDate = async () => {
@@ -287,6 +296,36 @@ export default function WorkoutScreen() {
     });
     setModalVisible(true);
   };
+
+  const handleScroll = Animated.event(
+  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+  {
+    useNativeDriver: false,
+    listener: (event) => {
+      const currentScrollY = event.nativeEvent.contentOffset.y;
+      
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      Animated.timing(navOpacity, {
+        toValue: 1,
+        duration: 50,
+        useNativeDriver: true,
+      }).start();
+
+      scrollTimeout.current = setTimeout(() => {
+        Animated.timing(navOpacity, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }).start();
+      }, 2000);
+
+      lastScrollY.current = currentScrollY;
+    },
+  }
+);
 
   // Add to existing JSX, right after the workoutName TextInput
   const timePickerSection = (
@@ -462,14 +501,18 @@ export default function WorkoutScreen() {
         return;
       }
 
-      const exercisesRef = doc(db, 'ExerciseTemplates', `Training-3x`);
+      const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
       const docSnap = await getDoc(exercisesRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
         const sessionExercises = data[`Session ${session}`] || {};
+        
+        // Filter out only the exercise objects (not strings or null values)
         const exerciseNames = Object.keys(sessionExercises).filter(
-          (key) => sessionExercises[key] !== null && sessionExercises[key] !== undefined
+          (key) => sessionExercises[key] !== null && 
+                  sessionExercises[key] !== undefined && 
+                  typeof sessionExercises[key] === 'object'
         );
 
         // Create initial exercises array with one empty set each
@@ -655,6 +698,150 @@ export default function WorkoutScreen() {
     setExercises(newExercises);
   };
 
+  // Update the fetchSessionExercises function
+  const fetchSessionExercises = async (session: string) => {
+    if (!session || session === 'rest') return;
+
+    try {
+      const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
+      const docSnap = await getDoc(exercisesRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const sessionData = data[`Session ${session}`] || {};
+        
+        // Convert the session data to an array format for display
+        const exercisesList = Object.entries(sessionData)
+          .filter(([key, value]) => value !== null && value !== undefined && typeof value === 'object')
+          .map(([exerciseName, details]) => ({
+            name: exerciseName,
+            sets: details?.Sets || 'N/A',
+            reps: details?.Reps || 'N/A',
+            // Remove restTime field
+          }));
+
+        setSessionExercises(exercisesList);
+        setShowSessionModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching session exercises:', error);
+      Alert.alert('Error', 'Failed to load session exercises');
+    }
+  };
+
+  // Update the session details modal component
+  const sessionDetailsModal = (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showSessionModal}
+      onRequestClose={() => setShowSessionModal(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.sessionModalContent, isDarkMode && styles.modalContentDark]}>
+          <Pressable
+            style={styles.modalCloseButton}
+            onPress={() => setShowSessionModal(false)}>
+            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
+          </Pressable>
+
+          <Text style={[styles.sessionModalTitle, isDarkMode && styles.textDark]}>
+            Session {currentSession}
+          </Text>
+
+          <ScrollView style={styles.sessionExercisesList}>
+            {sessionExercises.map((exercise, index) => (
+              <View key={index} style={[styles.sessionExerciseCard, isDarkMode && styles.sessionExerciseCardDark]}>
+                <View style={styles.sessionExerciseHeader}>
+                  <View style={styles.sessionExerciseIndicator} />
+                  <Text style={[styles.sessionExerciseName, isDarkMode && styles.textDark]}>
+                    {exercise.name}
+                  </Text>
+                </View>
+
+                <View style={styles.sessionExerciseDetails}>
+                  <View style={styles.sessionDetailItem}>
+                    <Text style={[styles.sessionDetailValue, isDarkMode && styles.textDark]}>
+                      {exercise.sets}
+                    </Text>
+                    <Text style={[styles.sessionDetailLabel, isDarkMode && styles.sessionDetailLabelDark]}>
+                      Sets
+                    </Text>
+                  </View>
+
+                  <View style={styles.sessionDetailItem}>
+                    <Text style={[styles.sessionDetailValue, isDarkMode && styles.textDark]}>
+                      {exercise.reps}
+                    </Text>
+                    <Text style={[styles.sessionDetailLabel, isDarkMode && styles.sessionDetailLabelDark]}>
+                      Reps
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Removed the Start Workout button and its onPress logic */}
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Update the session indicator to be clickable
+  const sessionIndicatorSection = (
+    <Pressable
+      onPress={() => currentSession && currentSession !== 'rest' && fetchSessionExercises(currentSession)}
+      style={[
+        styles.sessionIndicator,
+        isDarkMode && styles.sessionIndicatorDark,
+        currentSession && currentSession !== 'rest' && styles.sessionIndicatorClickable,
+      ]}>
+      <Text style={[styles.sessionLabel, isDarkMode && styles.sessionLabelDark]}>
+        Today's Session:
+      </Text>
+      <Text style={styles.sessionValue}>
+        {currentSession === 'rest' ? 'Rest Day' : `Session ${currentSession}`}
+      </Text>
+      {currentSession && currentSession !== 'rest' && (
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={isDarkMode ? '#9ca3af' : '#6b7280'}
+          style={styles.sessionChevron}
+        />
+      )}
+    </Pressable>
+  );
+  const renderBottomNav = () => (
+  <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
+    <Image source={NavRectangle} style={styles.bottomNavBg} />
+    <View style={styles.bottomNavContent}>
+      <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={HomeIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={AddIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={ChatIcon} style={styles.bottomNavIcon} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
+        <View style={styles.iconContainer}>
+          <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
+          <View style={styles.activeEclipse} />
+        </View>
+      </Pressable>
+    </View>
+  </Animated.View>
+);
+
+  // Update your return statement to include the new modal and use the clickable session indicator
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
@@ -677,11 +864,13 @@ export default function WorkoutScreen() {
         </View>
 
         <KeyboardAwareScrollView
-          style={styles.scrollView}
-          enableOnAndroid={true}
-          enableAutomaticScroll={true}
-          extraScrollHeight={100}
-          keyboardShouldPersistTaps="handled">
+         style={styles.scrollView}
+  enableOnAndroid={true}
+  enableAutomaticScroll={true}
+  extraScrollHeight={100}
+  keyboardShouldPersistTaps="handled"
+  onScroll={handleScroll}
+  scrollEventThrottle={16}>
           <TextInput
             value={workoutName}
             onChangeText={setWorkoutName}
@@ -690,14 +879,7 @@ export default function WorkoutScreen() {
             placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
           />
 
-          <View style={[styles.sessionIndicator, isDarkMode && styles.sessionIndicatorDark]}>
-            <Text style={[styles.sessionLabel, isDarkMode && styles.sessionLabelDark]}>
-              Current Session:
-            </Text>
-            <Text style={styles.sessionValue}>
-              {currentSession === 'rest' ? 'Rest Day' : `Session ${currentSession}`}
-            </Text>
-          </View>
+          {sessionIndicatorSection}
 
           <TextInput
             value={workoutNote}
@@ -711,6 +893,7 @@ export default function WorkoutScreen() {
           {timePickerSection}
           {exerciseSelectionModal}
           {exerciseModal}
+          {sessionDetailsModal}
 
           {exercises.map((exercise, exerciseIndex) => (
             <View
@@ -833,12 +1016,14 @@ export default function WorkoutScreen() {
             <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
           </Pressable>
         </KeyboardAwareScrollView>
+        {renderBottomNav()}
       </SafeAreaView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -1213,6 +1398,28 @@ const styles = StyleSheet.create({
   sessionLabel: {
     fontSize: 16,
     fontWeight: '500',
+    backgroundColor: '#f3f4f6',
+    color: '#9ca3af',
+    opacity: 0.7,
+  },
+  disabledButton: {
+    opacity: 0.5,
+    backgroundColor: '#e5e7eb',
+  },
+  sessionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  sessionIndicatorDark: {
+    backgroundColor: '#1f2937', // Dark mode background
+  },
+  sessionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
     color: '#4b5563',
   },
   sessionLabelDark: {
@@ -1234,4 +1441,141 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 4,
   },
+  sessionIndicatorClickable: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  sessionChevron: {
+    marginLeft: 'auto',
+  },
+  sessionModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  sessionModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    marginTop: 10,
+    color: '#000000',
+  },
+  sessionExercisesList: {
+    maxHeight: 400,
+  },
+  sessionExerciseCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sessionExerciseCardDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+  sessionExerciseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sessionExerciseIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#3b82f6',
+    marginRight: 12,
+  },
+  sessionExerciseName: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+    color: '#000000',
+  },
+  sessionExerciseDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  sessionDetailItem: {
+    alignItems: 'center',
+  },
+  sessionDetailValue: {
+    fontSize: 15,
+    
+    color: '#000000',
+    marginBottom: 4,
+  },
+  sessionDetailLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sessionDetailLabelDark: {
+    color: '#9ca3af',
+  },
+    bottomNavContainer: {
+    height: 45,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomNavBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'stretch',
+    bottom: 0,
+    left: 0,
+  },
+  bottomNavContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeEclipse: {
+    position: 'absolute',
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: '#BABABA',
+    opacity: 0.6,
+    top: -3.5,
+    left: -3.5,
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+    zIndex:2,
+  }
+
+  // ... rest of existing styles ...
 });
