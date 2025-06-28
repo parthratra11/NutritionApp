@@ -192,7 +192,7 @@ const initialFormState: FormData = {
   typicalDiet: '',
   currentTraining: '',
   measurementSystem: '', // <-- Add this
-  strengthCompetency: '',
+  strengthCompetency: 1,
   strengthCompetencyComments: '',
   skinfoldCalipers: '',
   hasMyoTape: false,
@@ -6829,58 +6829,90 @@ const IntakeForm: React.FC<{ navigation: NavigationProp<RootStackParamList> }> =
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
-  useEffect(() => {
-    const checkExistingForm = async () => {
-      if (!user?.email) return;
-
-      try {
-        setIsLoading(true);
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setFormData({ ...initialFormState, ...(docSnap.data() as DocumentData) });
-          setHasSubmitted(true);
-        }
-      } catch (error) {
-        console.error('Error checking existing form:', error);
-        Alert.alert('Error', 'Failed to load existing form data.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkExistingForm();
-  }, [user?.email]);
-
-  const handleSubmit = async (): Promise<boolean> => {
-    if (!user?.email) {
-      Alert.alert('Error', 'Please login first');
-      return false;
-    }
-
-    if (hasSubmitted) {
-      Alert.alert('Already Submitted', 'You have already submitted the intake form.');
-      return false;
-    }
+useEffect(() => {
+  const checkExistingForm = async () => {
+    if (!user?.email) return;
 
     try {
-      const formDataToSubmit = {
-        ...formData,
-        email: user.email.toLowerCase(),
-        timestamp: new Date(),
-      };
+      setIsLoading(true);
+      const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+      const docSnap = await getDoc(docRef);
 
-      await setDoc(doc(db, 'intakeForms', user.email.toLowerCase()), formDataToSubmit);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Only consider it submitted if it has actual form data beyond just basic signup info
+        // Check for specific form fields that indicate completion
+        const hasFormData = data.measurementSystem || 
+                           data.height || 
+                           data.weight || 
+                           data.age || 
+                           data.strengthTrainingExperience ||
+                           data.goal1 ||
+                           data.photos;
 
-      setHasSubmitted(true);
-      return true;
+        if (hasFormData) {
+          setFormData({ ...initialFormState, ...(data as DocumentData) });
+          setHasSubmitted(true);
+        } else {
+          // Just basic signup data, not a completed form
+          setFormData({ 
+            ...initialFormState, 
+            email: user.email,
+            fullName: data.fullName || '',
+            phoneNumber: data.phoneNumber || ''
+          });
+          setHasSubmitted(false);
+        }
+      }
     } catch (error) {
-      console.error('Error adding document:', error);
-      Alert.alert('Error', 'Failed to submit form. Please try again.');
-      return false;
+      console.error('Error checking existing form:', error);
+      Alert.alert('Error', 'Failed to load existing form data.');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  checkExistingForm();
+}, [user?.email]);
+
+const handleSubmit = async (): Promise<boolean> => {
+  if (!user?.email) {
+    Alert.alert('Error', 'Please login first');
+    return false;
+  }
+
+  if (hasSubmitted) {
+    Alert.alert('Already Submitted', 'You have already submitted the intake form.');
+    return false;
+  }
+
+  try {
+    // Create a clean object without undefined values
+    const cleanFormData = Object.entries(formData).reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+
+    const formDataToSubmit = {
+      ...cleanFormData,
+      email: user.email.toLowerCase(),
+      timestamp: new Date(),
+      isSignupOnly: false, // Mark as completed form
+      formCompleted: true // Add completion flag
+    };
+
+    await setDoc(doc(db, 'intakeForms', user.email.toLowerCase()), formDataToSubmit);
+
+    setHasSubmitted(true);
+    return true;
+  } catch (error) {
+    console.error('Error adding document:', error);
+    Alert.alert('Error', 'Failed to submit form. Please try again.');
+    return false;
+  }
+};
 
   if (isLoading) {
     return (
@@ -6890,89 +6922,7 @@ const IntakeForm: React.FC<{ navigation: NavigationProp<RootStackParamList> }> =
     );
   }
 
-  const screens = [
-    {
-      name: 'MeasurementSystem',
-      title: 'Preferred Measurement System',
-      fields: [],
-      nextScreen: 'Address',
-      progress: 0.12,
-    },
-    {
-      name: 'Address',
-      title: 'Address Details',
-      fields: [
-        { name: 'street', label: 'Street and house number', options: {} },
-        { name: 'postalCode', label: 'Postal code', options: {} },
-        { name: 'city', label: 'City', options: {} },
-        { name: 'country', label: 'Country', options: {} },
-      ],
-      nextScreen: 'PersonalInfo',
-      progress: 0.08,
-    },
-    {
-      name: 'PersonalInfo',
-      title: 'Personal Information',
-      fields: [
-        { name: 'fullName', label: 'Full name', options: {} },
-        { name: 'age', label: 'Age', options: { keyboardType: 'numeric' } },
-      ],
-      nextScreen: 'StrengthLevel',
-      progress: 0.16,
-    },
-
-    {
-      name: 'Goals',
-      title: 'Your Goals',
-      fields: [],
-      nextScreen: 'Misc',
-      progress: 0.32,
-    },
-    {
-      name: 'Misc',
-      title: 'Miscellaneous',
-      fields: [],
-      nextScreen: 'Lifestyle',
-      progress: 0.4,
-    },
-
-    {
-      name: 'currentProgram',
-      title: 'Current Program',
-      fields: [],
-      nextScreen: 'StrikeAPose',
-      progress: 0.8,
-    },
-    {
-      name: 'strikeAPose',
-      title: 'Strike a Pose',
-      fields: [
-        {
-          name: 'photoFront' as any, // TODO: Not linked to Firestore, safe to ignore
-          label: 'Front Photo (Optional)',
-          options: { multiline: true },
-        },
-        {
-          name: 'photoBack' as any, // TODO: Not linked to Firestore, safe to ignore
-          label: 'Back Photo (Optional)',
-          options: { multiline: true },
-        },
-        {
-          name: 'photoSideLeft' as any, // TODO: Not linked to Firestore, safe to ignore
-          label: 'Side Left Photo (Optional)',
-          options: { multiline: true },
-        },
-        {
-          name: 'photoSideRight' as any, // TODO: Not linked to Firestore, safe to ignore
-          label: 'Side Right Photo (Optional)',
-          options: { multiline: true },
-        },
-      ],
-      isLast: true,
-      progress: 1.0,
-      // TODO: Add 4 photo uploads (front, back, side-left, side-right) using Expo ImagePicker
-    },
-  ];
+  
 
   return (
     <FormContext.Provider value={{ formData, setFormData, hasSubmitted, handleSubmit }}>
@@ -7018,21 +6968,8 @@ const IntakeForm: React.FC<{ navigation: NavigationProp<RootStackParamList> }> =
         <Stack.Screen name="TypicalDiet" component={TypicalDietScreen} />
         <Stack.Screen name="CurrentProgram" component={CurrentProgramScreen} />
         <Stack.Screen name="StrikeAPose" component={StrikeAPoseScreen} />
-        {screens
-          .filter((s) => s.name !== 'MeasurementSystem')
-          .map((screen) => (
-            <Stack.Screen
-              key={screen.name}
-              name={screen.name as keyof RootStackParamList}
-              component={FormScreen}
-              initialParams={{
-                nextScreen: screen.nextScreen,
-                isLast: screen.isLast || false,
-                progress: screen.progress,
-              }}
-            />
-          ))}
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        
       </Stack.Navigator>
     </FormContext.Provider>
   );
