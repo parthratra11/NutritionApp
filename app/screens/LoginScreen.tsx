@@ -66,14 +66,15 @@ export default function LoginScreen() {
       if (isSignup) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Save user data to Firestore
+        // Save user data to Firestore with a flag indicating it's just signup data
         try {
           await setDoc(doc(db, 'intakeForms', email), {
             fullName,
             phoneNumber,
             email,
             createdAt: new Date().toISOString(),
-            userId: userCredential.user.uid
+            userId: userCredential.user.uid,
+            isSignupOnly: true // Add this flag to distinguish from completed forms
           });
         } catch (dbError) {
           console.error('Error saving user data:', dbError);
