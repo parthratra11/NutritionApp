@@ -40,7 +40,7 @@ interface ClientInfo {
   email: string;
   age: string;
   height: string;
-  startingWeight: string;
+  weight: string;
   goals: string;
 }
 
@@ -311,10 +311,10 @@ export default function ReportPage() {
   if (!weeklyData) return <div className="p-6">No data found</div>;
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* Client Info Header */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
             <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
@@ -327,7 +327,7 @@ export default function ReportPage() {
             <h3 className="text-sm font-medium text-gray-500">
               Starting Weight
             </h3>
-            <p className="text-lg">{clientInfo?.startingWeight} kg</p>
+            <p className="text-lg">{clientInfo?.weight} kg</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Height</h3>
@@ -341,9 +341,9 @@ export default function ReportPage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Progress Report</h1>
-        <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h1 className="text-xl md:text-2xl font-bold">Progress Report</h1>
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setViewMode("weekly")}
             className={`px-4 py-2 rounded-lg ${
@@ -362,7 +362,7 @@ export default function ReportPage() {
           </button>
           <Link
             href={`/${params.email}`}
-            className="text-blue-1200 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800"
           >
             Back to Client Overview
           </Link>
@@ -374,9 +374,9 @@ export default function ReportPage() {
           <div className="mb-6 relative">
             <button
               onClick={() => setIsWeekDropdownOpen(!isWeekDropdownOpen)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-64"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-64"
             >
-              <span>
+              <span className="truncate">
                 {selectedWeek}{" "}
                 {selectedWeek && weeklyData[selectedWeek]
                   ? `(${getWeekDates(weeklyData[selectedWeek])})`
@@ -384,7 +384,7 @@ export default function ReportPage() {
               </span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className={`h-5 w-5 transition-transform ${
+                className={`h-5 w-5 transition-transform flex-shrink-0 ${
                   isWeekDropdownOpen ? "rotate-180" : ""
                 }`}
                 fill="none"
@@ -401,7 +401,7 @@ export default function ReportPage() {
             </button>
 
             {isWeekDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-64 bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto">
+              <div className="absolute z-10 mt-1 w-full sm:w-64 bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto">
                 {Object.entries(weeklyData)
                   .filter(([week]) => week !== "firstEntryDate")
                   .sort((a, b) => {
@@ -438,7 +438,7 @@ export default function ReportPage() {
                 <h3 className="text-lg font-semibold mb-2">
                   Week {selectedWeek} Measurements
                 </h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {weeklyData[selectedWeek]?.waist && (
                     <div>
                       <span className="text-gray-500">Waist:</span>
@@ -471,173 +471,181 @@ export default function ReportPage() {
               </div>
             )}
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Week {selectedWeek}
-                  </th>
-                  {days.map((day) => {
-                    const dayData =
-                      selectedWeek && weeklyData[selectedWeek]?.[day];
-                    const dateStr = dayData
-                      ? formatDate(dayData.timestamp)
-                      : "";
-                    return (
-                      <th
-                        key={day}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        <div>{day}</div>
-                        <div className="text-xs font-normal text-gray-400">
-                          {dateStr}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {metrics.map((metric) => (
-                  <tr key={metric}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {metric}
-                    </td>
+          <div className="overflow-auto">
+            <div className="min-w-[800px]">
+              <table className="min-w-full divide-y divide-gray-200 border">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Week {selectedWeek}
+                    </th>
                     {days.map((day) => {
                       const dayData =
                         selectedWeek && weeklyData[selectedWeek]?.[day];
-                      let value = "";
-                      let colorClass = "";
-
-                      if (dayData) {
-                        if (metric === "Weight") {
-                          value = dayData.weight;
-                        } else {
-                          // Access the metrics directly using the exact key names
-                          const metricKey = metric as keyof DayData;
-                          const metricData = dayData[metricKey];
-                          if (
-                            metricData &&
-                            typeof metricData === "object" &&
-                            "value" in metricData
-                          ) {
-                            value =
-                              metricData.value != null
-                                ? metricData.value.toString()
-                                : "";
-                            colorClass = getColorClass(metricData.color);
-                          }
-                        }
-                      }
-
+                      const dateStr = dayData
+                        ? formatDate(dayData.timestamp)
+                        : "";
                       return (
-                        <td
-                          key={`${day}-${metric}`}
-                          className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${colorClass}`}
+                        <th
+                          key={day}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          {value || "-"}
-                        </td>
+                          <div>{day}</div>
+                          <div className="text-xs font-normal text-gray-400">
+                            {dateStr}
+                          </div>
+                        </th>
                       );
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {metrics.map((metric) => (
+                    <tr key={metric}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {metric}
+                      </td>
+                      {days.map((day) => {
+                        const dayData =
+                          selectedWeek && weeklyData[selectedWeek]?.[day];
+                        let value = "";
+                        let colorClass = "";
+
+                        if (dayData) {
+                          if (metric === "Weight") {
+                            value = dayData.weight;
+                          } else {
+                            // Access the metrics directly using the exact key names
+                            const metricKey = metric as keyof DayData;
+                            const metricData = dayData[metricKey];
+                            if (
+                              metricData &&
+                              typeof metricData === "object" &&
+                              "value" in metricData
+                            ) {
+                              value =
+                                metricData.value != null
+                                  ? metricData.value.toString()
+                                  : "";
+                              colorClass = getColorClass(metricData.color);
+                            }
+                          }
+                        }
+
+                        return (
+                          <td
+                            key={`${day}-${metric}`}
+                            className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${colorClass}`}
+                          >
+                            {value || "-"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+
           {/* Daily Progress Charts */}
           <div className="mt-8 grid gap-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily Weight & Measurements Chart */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
                   Daily Weight Progress
                 </h2>
-                <div className="h-[420px]">
-                  <Tooltip content={<CustomTooltip />} />
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={days.map((day) => {
-                        const dayData =
-                          selectedWeek && weeklyData[selectedWeek]?.[day];
-                        return {
-                          day,
-                          date: dayData ? formatDate(dayData.timestamp) : "",
-                          weight: dayData?.weight
-                            ? parseFloat(dayData.weight)
-                            : null,
-                        };
-                      })}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="day"
-                        height={60}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="weight"
-                        stroke="#2563eb"
-                        name="Weight (kg)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="h-[420px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={days.map((day) => {
+                          const dayData =
+                            selectedWeek && weeklyData[selectedWeek]?.[day];
+                          return {
+                            day,
+                            date: dayData ? formatDate(dayData.timestamp) : "",
+                            weight: dayData?.weight
+                              ? parseFloat(dayData.weight)
+                              : null,
+                          };
+                        })}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="day"
+                          height={60}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="weight"
+                          stroke="#2563eb"
+                          name="Weight (kg)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
               {/* Daily Well-being Metrics Chart */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
                   Daily Well-being Metrics
                 </h2>
-                <div className="h-[420px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={days.map((day) => {
-                        const dayData =
-                          selectedWeek && weeklyData[selectedWeek]?.[day];
-                        return {
-                          day,
-                          date: dayData ? formatDate(dayData.timestamp) : "",
-                          sleep: dayData?.["Sleep Quality"]?.value || null,
-                          mood: dayData?.Mood?.value || null,
-                          hunger: dayData?.["Hunger Level"]?.value || null,
-                        };
-                      })}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="day"
-                        height={60}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="sleep"
-                        stroke="#4ade80"
-                        name="Sleep Quality"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="mood"
-                        stroke="#f59e0b"
-                        name="Mood"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="hunger"
-                        stroke="#ef4444"
-                        name="Hunger Level"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="h-[420px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={days.map((day) => {
+                          const dayData =
+                            selectedWeek && weeklyData[selectedWeek]?.[day];
+                          return {
+                            day,
+                            date: dayData ? formatDate(dayData.timestamp) : "",
+                            sleep: dayData?.["Sleep Quality"]?.value || null,
+                            mood: dayData?.Mood?.value || null,
+                            hunger: dayData?.["Hunger Level"]?.value || null,
+                          };
+                        })}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="day"
+                          height={60}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis domain={[0, 5]} />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="sleep"
+                          stroke="#4ade80"
+                          name="Sleep Quality"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="mood"
+                          stroke="#f59e0b"
+                          name="Mood"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="hunger"
+                          stroke="#ef4444"
+                          name="Hunger Level"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
@@ -650,7 +658,7 @@ export default function ReportPage() {
             <div className="relative">
               <button
                 onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-48"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-48"
               >
                 <span>
                   {comparisonPeriod === "all"
@@ -680,7 +688,7 @@ export default function ReportPage() {
               </button>
 
               {isPeriodDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-48 bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="absolute z-10 mt-1 w-full sm:w-48 bg-white rounded-lg shadow-lg overflow-hidden">
                   {[
                     { id: "all", label: "All Time" },
                     { id: "yearly", label: "Past Year" },
@@ -708,231 +716,270 @@ export default function ReportPage() {
           {/* Progress Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weight & Measurements Chart */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
                 Weight & Measurements Progress
               </h2>
-              <div className="h-[420px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={calculateAverages()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
-                    <YAxis yAxisId="weight" orientation="left" />
-                    <YAxis yAxisId="measurements" orientation="right" />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      yAxisId="weight"
-                      type="monotone"
-                      dataKey="avgWeight"
-                      stroke="#2563eb"
-                      name="Average Weight (kg)"
-                    />
-                    <Line
-                      yAxisId="measurements"
-                      type="monotone"
-                      dataKey="waist"
-                      stroke="#ec4899"
-                      name="Waist (cm)"
-                    />
-                    <Line
-                      yAxisId="measurements"
-                      type="monotone"
-                      dataKey="hip"
-                      stroke="#8b5cf6"
-                      name="Hip (cm)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="h-[420px] overflow-x-auto">
+                <div className="min-w-[500px] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={calculateAverages()}
+                      margin={{ right: 30, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="week"
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis yAxisId="weight" orientation="left" />
+                      <YAxis yAxisId="measurements" orientation="right" />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        yAxisId="weight"
+                        type="monotone"
+                        dataKey="avgWeight"
+                        stroke="#2563eb"
+                        name="Average Weight (kg)"
+                      />
+                      <Line
+                        yAxisId="measurements"
+                        type="monotone"
+                        dataKey="waist"
+                        stroke="#ec4899"
+                        name="Waist (cm)"
+                      />
+                      <Line
+                        yAxisId="measurements"
+                        type="monotone"
+                        dataKey="hip"
+                        stroke="#8b5cf6"
+                        name="Hip (cm)"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Waist-Hip Ratio Chart */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Waist-Hip Ratio</h2>
-              <div className="h-[420px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={calculateAverages()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0.6, 1.0]} />
-                    <Tooltip content={<WaistHipTooltip />} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="waistHipRatio"
-                      stroke="#9333ea"
-                      name="Waist-Hip Ratio"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                Waist-Hip Ratio
+              </h2>
+              <div className="h-[420px] overflow-x-auto">
+                <div className="min-w-[500px] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={calculateAverages()}
+                      margin={{ right: 30, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="week"
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis domain={[0.6, 1.0]} />
+                      <Tooltip content={<WaistHipTooltip />} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="waistHipRatio"
+                        stroke="#9333ea"
+                        name="Waist-Hip Ratio"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Well-being Metrics Chart */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Well-being Metrics</h2>
-              <div className="h-[420px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={calculateAverages()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" height={60} tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0, 5]} />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="avgSleep"
-                      stroke="#4ade80"
-                      name="Sleep Quality"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="avgMood"
-                      stroke="#f59e0b"
-                      name="Mood"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="avgHunger"
-                      stroke="#ef4444"
-                      name="Hunger Level"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                Well-being Metrics
+              </h2>
+              <div className="h-[420px] overflow-x-auto">
+                <div className="min-w-[500px] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={calculateAverages()}
+                      margin={{ right: 30, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="week"
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis domain={[0, 5]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="avgSleep"
+                        stroke="#4ade80"
+                        name="Sleep Quality"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="avgMood"
+                        stroke="#f59e0b"
+                        name="Mood"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="avgHunger"
+                        stroke="#ef4444"
+                        name="Hunger Level"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Progress Table */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Week
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Weight (kg)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Weight Change
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Waist (cm)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Hip (cm)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    W/H Ratio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Sleep
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Mood
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Avg Hunger
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {calculateAverages().map((weekData, index, array) => {
-                  const previousWeek = index > 0 ? array[index - 1] : null;
-                  const weightChange =
-                    previousWeek?.avgWeight && weekData.avgWeight
-                      ? (
-                          parseFloat(weekData.avgWeight) -
-                          parseFloat(previousWeek.avgWeight)
-                        ).toFixed(1)
-                      : null;
-
-                  return (
-                    <tr key={weekData.week}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium">
-                        {weekData.week}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {weekData.weekDates}
-                      </td>
-                      <td className="px-6 py-4">{weekData.avgWeight || "-"}</td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`px-2 py-1 rounded-full inline-block ${
-                            weightChange
-                              ? parseFloat(weightChange) < 0
-                                ? "bg-green-100 text-green-800"
-                                : parseFloat(weightChange) > 0
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                              : ""
-                          }`}
-                        >
-                          {weightChange
-                            ? `${weightChange > 0 ? "+" : ""}${weightChange} kg`
-                            : "-"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{weekData.waist || "-"}</td>
-                      <td className="px-6 py-4">{weekData.hip || "-"}</td>
-                      <td className="px-6 py-4">
-                        {weekData.waistHipRatio || "-"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgSleep
-                              ? parseFloat(weekData.avgSleep) >= 4
-                                ? "bg-green-100 text-green-800"
-                                : parseFloat(weekData.avgSleep) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                              : ""
-                          }`}
-                        >
-                          {weekData.avgSleep || "-"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgMood
-                              ? parseFloat(weekData.avgMood) >= 4
-                                ? "bg-green-100 text-green-800"
-                                : parseFloat(weekData.avgMood) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                              : ""
-                          }`}
-                        >
-                          {weekData.avgMood || "-"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`px-2 py-1 rounded-full inline-block ${
-                            weekData.avgHunger
-                              ? parseFloat(weekData.avgHunger) >= 4
-                                ? "bg-red-100 text-red-800"
-                                : parseFloat(weekData.avgHunger) >= 3
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-green-100 text-green-800"
-                              : ""
-                          }`}
-                        >
-                          {weekData.avgHunger || "-"}
-                        </div>
-                      </td>
+          <div className="overflow-auto">
+            <div className="min-w-[900px]">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Week
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Dates
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Avg Weight (kg)
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Weight Change
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Waist (cm)
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Hip (cm)
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        W/H Ratio
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Avg Sleep
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Avg Mood
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Avg Hunger
+                      </th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {calculateAverages().map((weekData, index, array) => {
+                      const previousWeek = index > 0 ? array[index - 1] : null;
+                      const weightChange =
+                        previousWeek?.avgWeight && weekData.avgWeight
+                          ? (
+                              parseFloat(weekData.avgWeight) -
+                              parseFloat(previousWeek.avgWeight)
+                            ).toFixed(1)
+                          : null;
+
+                      return (
+                        <tr key={weekData.week}>
+                          <td className="px-6 py-4 whitespace-nowrap font-medium">
+                            {weekData.week}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {weekData.weekDates}
+                          </td>
+                          <td className="px-6 py-4">
+                            {weekData.avgWeight || "-"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div
+                              className={`px-2 py-1 rounded-full inline-block ${
+                                weightChange
+                                  ? parseFloat(weightChange) < 0
+                                    ? "bg-green-100 text-green-800"
+                                    : parseFloat(weightChange) > 0
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
+                                  : ""
+                              }`}
+                            >
+                              {weightChange
+                                ? `${
+                                    weightChange > 0 ? "+" : ""
+                                  }${weightChange} kg`
+                                : "-"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">{weekData.waist || "-"}</td>
+                          <td className="px-6 py-4">{weekData.hip || "-"}</td>
+                          <td className="px-6 py-4">
+                            {weekData.waistHipRatio || "-"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div
+                              className={`px-2 py-1 rounded-full inline-block ${
+                                weekData.avgSleep
+                                  ? parseFloat(weekData.avgSleep) >= 4
+                                    ? "bg-green-100 text-green-800"
+                                    : parseFloat(weekData.avgSleep) >= 3
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
+                                  : ""
+                              }`}
+                            >
+                              {weekData.avgSleep || "-"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div
+                              className={`px-2 py-1 rounded-full inline-block ${
+                                weekData.avgMood
+                                  ? parseFloat(weekData.avgMood) >= 4
+                                    ? "bg-green-100 text-green-800"
+                                    : parseFloat(weekData.avgMood) >= 3
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
+                                  : ""
+                              }`}
+                            >
+                              {weekData.avgMood || "-"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div
+                              className={`px-2 py-1 rounded-full inline-block ${
+                                weekData.avgHunger
+                                  ? parseFloat(weekData.avgHunger) >= 4
+                                    ? "bg-red-100 text-red-800"
+                                    : parseFloat(weekData.avgHunger) >= 3
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800"
+                                  : ""
+                              }`}
+                            >
+                              {weekData.avgHunger || "-"}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -56,19 +56,19 @@ export default function ClientOverview() {
   if (!client) return <div className="p-6">No client data found</div>;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Client Overview</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h1 className="text-xl md:text-2xl font-bold">Client Overview</h1>
         <Link href="/" className="text-blue-600 hover:text-blue-800">
           Back to Dashboard
         </Link>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 md:gap-6">
         {/* Quick Overview Card */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">{client.fullName}</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-gray-600">Age: {client.age}</p>
               <p className="text-gray-600">Weight: {client.weight}</p>
@@ -82,56 +82,46 @@ export default function ClientOverview() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <button
             onClick={() => router.push(`/${params.email}/details`)}
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 w-full"
           >
             View Full Details
           </button>
-        </div>
-        <div className="flex justify-end space-x-4">
           <button
             onClick={() => router.push(`/${params.email}/nutrition`)}
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 w-full"
           >
             Nutrition
           </button>
-        </div>
-        <div className="flex justify-end space-x-4">
           <button
             onClick={() => router.push(`/${params.email}/report`)}
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 w-full"
           >
             Reports
           </button>
-        </div>
-        <div className="flex justify-end space-x-4">
           <button
             onClick={() => router.push(`/${params.email}/workout`)}
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 w-full"
           >
             Workout
           </button>
-        </div>
-        <div className="flex justify-end space-x-4">
           <button
             onClick={() =>
               router.push(`/${params.email}/workout/edit-template`)
             }
-            className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600"
+            className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 w-full"
           >
             Edit Workout Template
           </button>
-        </div>
-        <div className="flex justify-end space-x-4">
           <button
             onClick={() =>
               router.push(
                 `/slack/dms?email=${encodeURIComponent(client.email)}`
               )
             }
-            className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600"
+            className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 w-full"
           >
             Contact via Slack
           </button>

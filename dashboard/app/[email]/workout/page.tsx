@@ -288,14 +288,14 @@ export default function WorkoutDashboard() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Workout Progress</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Workout Progress</h1>
           <p className="text-gray-600">Training Split: {trainingType}</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
           <Link
             href={`/${params.email}/workout/edit-template`}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
@@ -312,7 +312,7 @@ export default function WorkoutDashboard() {
       </div>
 
       {/* Session Filter */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setSelectedSession("all")}
           className={`px-4 py-2 rounded-lg ${
@@ -345,39 +345,15 @@ export default function WorkoutDashboard() {
       ).map(([session, exercises]) => (
         <div key={session} className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Session {session}</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border rounded-lg">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
-                    Exercise
-                  </th>
-                  {/* Get unique dates across all exercises */}
-                  {Array.from(
-                    new Set(
-                      Object.values(exercises)
-                        .flatMap((exercise) => Object.keys(exercise))
-                        .sort(
-                          (a, b) =>
-                            new Date(b).getTime() - new Date(a).getTime()
-                        )
-                    )
-                  ).map((date) => (
-                    <th
-                      key={date}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
-                    >
-                      {date}
+          <div className="overflow-auto">
+            <div className="min-w-[800px]">
+              <table className="min-w-full bg-white border rounded-lg">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
+                      Exercise
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {Object.entries(exercises).map(([exercise, dates]) => (
-                  <tr key={exercise} className="hover:bg-gray-50">
-                    <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
-                      {exercise}
-                    </td>
+                    {/* Get unique dates across all exercises */}
                     {Array.from(
                       new Set(
                         Object.values(exercises)
@@ -387,43 +363,69 @@ export default function WorkoutDashboard() {
                               new Date(b).getTime() - new Date(a).getTime()
                           )
                       )
-                    ).map((date) => {
-                      const data = dates[date];
-                      return (
-                        <td
-                          key={date}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                        >
-                          {data ? (
-                            <div>
-                              {data.sets.map((set, index) => (
-                                <div
-                                  key={set.id}
-                                  className={`text-xs ${
-                                    set.completed
-                                      ? "text-green-600"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  {set.weight}kg × {set.reps}
-                                </div>
-                              ))}
-                              {data.duration && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {data.duration}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                      );
-                    })}
+                    ).map((date) => (
+                      <th
+                        key={date}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
+                      >
+                        {date}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {Object.entries(exercises).map(([exercise, dates]) => (
+                    <tr key={exercise} className="hover:bg-gray-50">
+                      <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
+                        {exercise}
+                      </td>
+                      {Array.from(
+                        new Set(
+                          Object.values(exercises)
+                            .flatMap((exercise) => Object.keys(exercise))
+                            .sort(
+                              (a, b) =>
+                                new Date(b).getTime() - new Date(a).getTime()
+                            )
+                        )
+                      ).map((date) => {
+                        const data = dates[date];
+                        return (
+                          <td
+                            key={date}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
+                            {data ? (
+                              <div>
+                                {data.sets.map((set, index) => (
+                                  <div
+                                    key={set.id}
+                                    className={`text-xs ${
+                                      set.completed
+                                        ? "text-green-600"
+                                        : "text-gray-500"
+                                    }`}
+                                  >
+                                    {set.weight}kg × {set.reps}
+                                  </div>
+                                ))}
+                                {data.duration && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {data.duration}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           {/* Progress Charts
           <div className="mt-6 bg-white p-6 rounded-lg shadow">

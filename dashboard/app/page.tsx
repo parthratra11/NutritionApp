@@ -44,14 +44,16 @@ export default function Home() {
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Client Dashboard</h1>
-      <div className="grid gap-4">
+    <div className="p-4 md:p-6">
+      <h1 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6">
+        Client Dashboard
+      </h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {intakeForms.map((form) => (
           <div
             key={form.email}
             className="border rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => router.push(`/${encodeURIComponent(form.email)}`)} // Remove /details
+            onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
           >
             <h2 className="font-semibold">Name: {form.fullName}</h2>
             <p className="text-gray-600">Email: {form.email}</p>
@@ -61,7 +63,7 @@ export default function Home() {
           </div>
         ))}
         {intakeForms.length === 0 && (
-          <p className="text-gray-500">No intake forms found.</p>
+          <p className="text-gray-500 col-span-full">No intake forms found.</p>
         )}
       </div>
     </div>
