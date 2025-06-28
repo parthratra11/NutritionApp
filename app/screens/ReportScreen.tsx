@@ -512,8 +512,8 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -10 }],
   },
   bannerContainer: {
-    height: 200,
-    marginBottom: -50,
+    height: 280,
+    marginBottom: -80,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
