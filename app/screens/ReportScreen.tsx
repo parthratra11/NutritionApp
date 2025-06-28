@@ -113,7 +113,7 @@ export default function ReportScreen() {
             ],
           }}
           width={Math.max(screenWidth - 40, days.length * 60)}
-          height={180}
+          height={150}
           chartConfig={{
             backgroundColor: '#f5f5f5',
             backgroundGradientFrom: '#f5f5f5',
@@ -131,6 +131,9 @@ export default function ReportScreen() {
               strokeWidth: 1,
               stroke: '#e0e0e0',
             },
+            paddingRight: 15,
+            paddingTop: 10,
+            paddingBottom: 10,
           }}
           bezier
           style={styles.chart}
@@ -158,7 +161,7 @@ export default function ReportScreen() {
             ],
           }}
           width={Math.max(screenWidth - 40, days.length * 60)}
-          height={180}
+          height={160}
           chartConfig={{
             backgroundColor: '#f5f5f5',
             backgroundGradientFrom: '#f5f5f5',
@@ -166,14 +169,21 @@ export default function ReportScreen() {
             decimalPlaces: 0,
             color: (opacity = 1) => `rgba(14, 65, 148, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(70, 70, 70, ${opacity})`,
-            barPercentage: 0.7,
+            barPercentage: 0.6,
             barRadius: 5,
             fillShadowGradient: '#1a56db',
             fillShadowGradientOpacity: 1,
+            paddingRight: 15,
+            paddingTop: 10,
+            paddingBottom: 20,
+            formatYLabel: (value) => `${value}`,
           }}
           style={styles.chart}
           showValuesOnTopOfBars={true}
           fromZero
+          verticalLabelRotation={0}
+          withInnerLines={false}
+          yAxisInterval={1}
         />
       </ScrollView>
       <TouchableOpacity style={styles.infoButton}>
@@ -200,7 +210,7 @@ export default function ReportScreen() {
             ],
           }}
           width={Math.max(screenWidth - 40, days.length * 60)}
-          height={180}
+          height={150}
           chartConfig={{
             backgroundColor: '#f5f5f5',
             backgroundGradientFrom: '#f5f5f5',
@@ -218,6 +228,9 @@ export default function ReportScreen() {
               strokeWidth: 1,
               stroke: '#e0e0e0',
             },
+            paddingRight: 15,
+            paddingTop: 10,
+            paddingBottom: 10,
           }}
           bezier
           style={styles.chart}
@@ -247,7 +260,7 @@ export default function ReportScreen() {
             ],
           }}
           width={Math.max(screenWidth - 40, days.length * 60)}
-          height={180}
+          height={150}
           chartConfig={{
             backgroundColor: '#f5f5f5',
             backgroundGradientFrom: '#f5f5f5',
@@ -268,6 +281,9 @@ export default function ReportScreen() {
             yAxisSuffix: '',
             yAxisMin: 0,
             yAxisMax: 10,
+            paddingRight: 15,
+            paddingTop: 10,
+            paddingBottom: 10,
           }}
           bezier
           style={styles.chart}
@@ -285,7 +301,12 @@ export default function ReportScreen() {
         <Text style={styles.cardTitleRight}>Mood</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ padding: 10, width: Math.max(screenWidth - 40, days.length * 60) }}>
+        <View
+          style={{
+            padding: 10,
+            paddingBottom: 15,
+            width: Math.max(screenWidth - 40, days.length * 60),
+          }}>
           {days.map((day, index) => (
             <View key={day} style={styles.moodRow}>
               <Text style={styles.moodDay}>{day}</Text>
@@ -416,8 +437,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 20,
     marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 15,
+    marginBottom: 15,
+    padding: 12,
+    paddingBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -428,15 +450,15 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 5,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
   cardTitleRight: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#777',
     textAlign: 'right',
@@ -444,7 +466,8 @@ const styles = StyleSheet.create({
   },
   chart: {
     borderRadius: 16,
-    marginVertical: 8,
+    marginVertical: 5,
+    paddingBottom: 5,
   },
   infoButton: {
     position: 'absolute',
@@ -460,8 +483,8 @@ const styles = StyleSheet.create({
   moodRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 30,
-    marginVertical: 5,
+    height: 25,
+    marginVertical: 3,
   },
   moodDay: {
     width: 40,
