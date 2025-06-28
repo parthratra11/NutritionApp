@@ -1,11 +1,23 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions, Image, SafeAreaView, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  Animated,
+  TouchableOpacity,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { LineChart,BarChart } from 'react-native-chart-kit';
+import { LineChart, BarChart, ScatterChart } from 'react-native-chart-kit';
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { Feather } from '@expo/vector-icons';
 
 // Import assets
 const UserImage = require('../assets/User.png');
@@ -16,30 +28,24 @@ const AddIcon = require('../assets/add.png');
 const WorkoutIcon = require('../assets/workout.png');
 const NavRectangle = require('../assets/NavRectangle.png');
 
-const hexToRgb = (hex) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-    : '0, 0, 0';
-};
-
 export default function ReportScreen() {
   const navigation = useNavigation();
   const { isDarkMode } = useTheme();
   const { user } = useAuth();
   const [weeklyData, setWeeklyData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [stepsData] = useState(() => {
-    // Generate random steps data between 2000 and 10000
-    return Array(7)
-      .fill(0)
-      .map(() => Math.floor(Math.random() * 8000) + 2000);
-  });
   const [userFullName, setUserFullName] = useState('');
   const scrollY = useRef(new Animated.Value(0)).current;
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
+
+  // Sample data for demonstration
+  const [stepsData] = useState([8200, 8500, 9100, 9300, 9600, 9800, 8600]);
+  const [weightData] = useState([752, 748, 745, 740, 745, 742, 738]);
+  const [sleepData] = useState([7.5, 7.2, 6.8, 6.5, 6.7, 7.8, 8.1]);
+  const [hungerData] = useState([3, 2, 4, 5, 6, 6.5, 7]);
+  const [moodData] = useState([4, 5, 6, 5, 7, 8, 6]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,183 +77,77 @@ export default function ReportScreen() {
     fetchData();
   }, [user?.email]);
 
-  const processDataForMetric = (metric) => {
-    if (!weeklyData) return { labels: [], data: [], colors: [] };
-
-    const labels = [];
-    const data = [];
-    const colors = [];
-
-    Object.keys(weeklyData)
-      .filter((key) => key.startsWith('week'))
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((weekKey) => {
-        const weekData = weeklyData[weekKey];
-        Object.keys(weekData)
-          .filter((day) =>
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(
-              day
-            )
-          )
-          .forEach((day) => {
-            const dayData = weekData[day];
-            if (dayData[metric]?.value) {
-              labels.push(`${weekKey}-${day}`);
-              data.push(dayData[metric].value);
-              colors.push(dayData[metric].color || '#000000');
-            }
-          });
-      });
-
-    return { labels, data, colors };
-  };
-
-  const processWeightData = () => {
-    if (!weeklyData) return { labels: [], data: [] };
-
-    const labels = [];
-    const data = [];
-
-    Object.keys(weeklyData)
-      .filter((key) => key.startsWith('week'))
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((weekKey) => {
-        const weekData = weeklyData[weekKey];
-        Object.keys(weekData)
-          .filter((day) =>
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(
-              day
-            )
-          )
-          .forEach((day) => {
-            if (weekData[day]?.weight) {
-              labels.push(`${weekKey}-${day}`);
-              data.push(parseFloat(weekData[day].weight));
-            }
-          });
-      });
-
-    return { labels, data };
-  };
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const screenWidth = Dimensions.get('window').width;
 
   const renderGreeting = () => (
-  <View style={styles.bannerContainer}>
-    <Image source={GreetRectangle} style={styles.bannerBg} />
-    <View style={styles.bannerContent}>
-      <View>
-        <Text style={styles.bannerSubTitle}>Keeping Moving Today!</Text>
-        <Text style={styles.bannerTitle}>
-          Hi, <Text style={{ fontWeight: 'bold' }}>{userFullName || 'User'}</Text>!
-        </Text>
+    <View style={styles.bannerContainer}>
+      <Image source={GreetRectangle} style={styles.bannerBg} />
+      <View style={styles.bannerContent}>
+        <View>
+          <Text style={styles.bannerSubTitle}>Keeping Moving Today!</Text>
+          <Text style={styles.bannerTitle}>
+            Hi, <Text style={{ fontWeight: 'bold' }}>{userFullName || 'Aria'}</Text>!
+          </Text>
+        </View>
+        <Image source={UserImage} style={styles.bannerUserImage} />
       </View>
-      <Image source={UserImage} style={styles.bannerUserImage} />
     </View>
-  </View>
-);
-  const renderChart = (metric) => {
-    const { labels, data, colors } = processDataForMetric(metric);
-    if (data.length === 0) return null;
+  );
 
-    return (
-      <View style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
-        <Text style={[styles.chartTitle, isDarkMode && styles.textDark]}>
-          {metric}
-        </Text>
+  const renderWeightChart = () => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>Weight</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <LineChart
           data={{
-            labels: labels.map((l) => l.split('-')[1].substring(0, 3)),
+            labels: days,
             datasets: [
               {
-                data,
-                color: (opacity = 1) => (isDarkMode ? `rgba(59, 130, 246, ${opacity})` : '#3b82f6'),
-                strokeWidth: 3,
+                data: weightData,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                strokeWidth: 2,
               },
             ],
           }}
-          width={Dimensions.get('window').width - 40}
-          height={220}
+          width={Math.max(screenWidth - 40, days.length * 60)}
+          height={180}
           chartConfig={{
-            backgroundColor: 'transparent',
-            backgroundGradientFrom: isDarkMode ? '#1f2937' : '#f8fafc',
-            backgroundGradientTo: isDarkMode ? '#1f2937' : '#f8fafc',
+            backgroundColor: '#f5f5f5',
+            backgroundGradientFrom: '#f5f5f5',
+            backgroundGradientTo: '#f5f5f5',
             decimalPlaces: 0,
-            color: (opacity = 1) => (isDarkMode ? `rgba(59, 130, 246, ${opacity})` : '#3b82f6'),
-            labelColor: (opacity = 1) => (isDarkMode ? `rgba(156, 163, 175, ${opacity})` : `rgba(100, 116, 139, ${opacity})`),
-            propsForBackgroundLines: {
-              strokeDasharray: '',
-              stroke: isDarkMode ? '#374151' : '#e2e8f0',
-              strokeWidth: 1,
-            },
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(70, 70, 70, ${opacity})`,
             propsForDots: {
-              r: '5',
+              r: '6',
               strokeWidth: '2',
-              stroke: '#3b82f6',
-              fill: isDarkMode ? '#1f2937' : '#f8fafc'
+              stroke: '#000',
+              fill: '#000',
             },
-            yAxisInterval: 1,
-            yAxisSuffix: '',
-            yAxisMinValue: 0,
-            yAxisMaxValue: 5,
-          }}
-          style={styles.chart}
-          bezier
-        />
-        <Text style={[styles.chartSubtitle, isDarkMode && styles.textDark]}>
-          Last updated: {new Date(weeklyData.timestamp).toLocaleDateString()}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderWeightChart = () => {
-    const { labels, data } = processWeightData();
-    if (data.length === 0) return null;
-
-    return (
-      <View style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
-        <Text style={[styles.chartTitle, isDarkMode && styles.textDark]}>
-          Weight
-        </Text>
-        <LineChart
-          data={{
-            labels: labels.map((l) => l.split('-')[1].substring(0, 3)),
-            datasets: [
-              {
-                data,
-                color: (opacity = 1) => (isDarkMode ? `rgba(249, 115, 22, ${opacity})` : '#f97316'), // Orange
-                strokeWidth: 3,
-              },
-            ],
-          }}
-          width={Dimensions.get('window').width - 40}
-          height={220}
-          chartConfig={{
-            backgroundColor: 'transparent',
-            backgroundGradientFrom: isDarkMode ? '#1f2937' : '#f8fafc',
-            backgroundGradientTo: isDarkMode ? '#1f2937' : '#f8fafc',
-            decimalPlaces: 1,
-            color: (opacity = 1) => (isDarkMode ? `rgba(249, 115, 22, ${opacity})` : '#f97316'),
-            labelColor: () => (isDarkMode ? '#9ca3af' : '#64748b'),
-            style: { borderRadius: 16 },
             propsForBackgroundLines: {
-              strokeDasharray: '',
-              stroke: isDarkMode ? '#374151' : '#e2e8f0',
               strokeWidth: 1,
+              stroke: '#e0e0e0',
             },
           }}
-          style={styles.chart}
           bezier
+          style={styles.chart}
         />
+      </ScrollView>
+      <TouchableOpacity style={styles.infoButton}>
+        <Feather name="info" size={16} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStepsChart = () => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>Steps</Text>
       </View>
-    );
-  };
-
-  const renderStepsChart = () => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    return (
-      <View style={[styles.chartContainer, { backgroundColor: isDarkMode ? '#1f2937' : '#f8fafc' }]}>
-        <Text style={[styles.chartTitle, isDarkMode && styles.textDark]}>Steps</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <BarChart
           data={{
             labels: days,
@@ -257,54 +157,192 @@ export default function ReportScreen() {
               },
             ],
           }}
-          width={Dimensions.get('window').width - 40}
-          height={220}
+          width={Math.max(screenWidth - 40, days.length * 60)}
+          height={180}
           chartConfig={{
-            backgroundColor: 'transparent',
-            backgroundGradientFrom: isDarkMode ? '#1f2937' : '#f8fafc',
-            backgroundGradientTo: isDarkMode ? '#1f2937' : '#f8fafc',
+            backgroundColor: '#f5f5f5',
+            backgroundGradientFrom: '#f5f5f5',
+            backgroundGradientTo: '#f5f5f5',
             decimalPlaces: 0,
-            color: (opacity = 1) => (isDarkMode ? `rgba(59, 130, 246, ${opacity})` : '#3b82f6'), // Blue
-            labelColor: () => (isDarkMode ? '#9ca3af' : '#64748b'),
-            style: { borderRadius: 16 },
+            color: (opacity = 1) => `rgba(14, 65, 148, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(70, 70, 70, ${opacity})`,
             barPercentage: 0.7,
+            barRadius: 5,
+            fillShadowGradient: '#1a56db',
+            fillShadowGradientOpacity: 1,
           }}
           style={styles.chart}
           showValuesOnTopOfBars={true}
+          fromZero
         />
+      </ScrollView>
+      <TouchableOpacity style={styles.infoButton}>
+        <Feather name="info" size={16} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderSleepChart = () => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitleRight}>Sleep</Text>
       </View>
-    );
-  };
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <LineChart
+          data={{
+            labels: days,
+            datasets: [
+              {
+                data: sleepData,
+                color: (opacity = 1) => `rgba(25, 47, 89, ${opacity})`,
+                strokeWidth: 2,
+              },
+            ],
+          }}
+          width={Math.max(screenWidth - 40, days.length * 60)}
+          height={180}
+          chartConfig={{
+            backgroundColor: '#f5f5f5',
+            backgroundGradientFrom: '#f5f5f5',
+            backgroundGradientTo: '#f5f5f5',
+            decimalPlaces: 1,
+            color: (opacity = 1) => `rgba(25, 47, 89, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(70, 70, 70, ${opacity})`,
+            propsForDots: {
+              r: (dataPoint) => dataPoint * 1.5, // Scale circle size by sleep hours
+              strokeWidth: '1',
+              stroke: '#192f59',
+              fill: '#192f59',
+            },
+            propsForBackgroundLines: {
+              strokeWidth: 1,
+              stroke: '#e0e0e0',
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
+      </ScrollView>
+      <TouchableOpacity style={styles.infoButton}>
+        <Feather name="info" size={16} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
 
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    {
-      useNativeDriver: false,
-      listener: (event) => {
-        const currentScrollY = event.nativeEvent.contentOffset.y;
-        
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
-        }
+  const renderHungerChart = () => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>Hunger</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <LineChart
+          data={{
+            labels: days,
+            datasets: [
+              {
+                data: hungerData,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                strokeWidth: 2,
+              },
+            ],
+          }}
+          width={Math.max(screenWidth - 40, days.length * 60)}
+          height={180}
+          chartConfig={{
+            backgroundColor: '#f5f5f5',
+            backgroundGradientFrom: '#f5f5f5',
+            backgroundGradientTo: '#f5f5f5',
+            decimalPlaces: 1,
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(70, 70, 70, ${opacity})`,
+            propsForDots: {
+              r: '6',
+              strokeWidth: '2',
+              stroke: '#000',
+              fill: '#000',
+            },
+            propsForBackgroundLines: {
+              strokeWidth: 1,
+              stroke: '#e0e0e0',
+            },
+            yAxisSuffix: '',
+            yAxisMin: 0,
+            yAxisMax: 10,
+          }}
+          bezier
+          style={styles.chart}
+        />
+      </ScrollView>
+      <TouchableOpacity style={styles.infoButton}>
+        <Feather name="info" size={16} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
 
+  const renderMoodChart = () => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitleRight}>Mood</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ padding: 10, width: Math.max(screenWidth - 40, days.length * 60) }}>
+          {days.map((day, index) => (
+            <View key={day} style={styles.moodRow}>
+              <Text style={styles.moodDay}>{day}</Text>
+              <View style={styles.moodLine}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.moodDot, { opacity: i < moodData[index] ? 1 : 0.2 }]}
+                  />
+                ))}
+                <View
+                  style={[
+                    styles.moodBubble,
+                    {
+                      left: `${moodData[index] * 10}%`,
+                      width: moodData[index] * 2 + 10,
+                      height: moodData[index] * 2 + 10,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+      <TouchableOpacity style={styles.infoButton}>
+        <Feather name="info" size={16} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+    useNativeDriver: false,
+    listener: (event) => {
+      const currentScrollY = event.nativeEvent.contentOffset.y;
+
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      Animated.timing(navOpacity, {
+        toValue: 1,
+        duration: 50,
+        useNativeDriver: true,
+      }).start();
+
+      scrollTimeout.current = setTimeout(() => {
         Animated.timing(navOpacity, {
-          toValue: 1,
-          duration: 50,
+          toValue: 0,
+          duration: 100,
           useNativeDriver: true,
         }).start();
+      }, 2000);
 
-        scrollTimeout.current = setTimeout(() => {
-          Animated.timing(navOpacity, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: true,
-          }).start();
-        }, 2000);
-
-        lastScrollY.current = currentScrollY;
-      },
-    }
-  );
+      lastScrollY.current = currentScrollY;
+    },
+  });
 
   const renderBottomNav = () => (
     <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
@@ -344,18 +382,20 @@ export default function ReportScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? '#111827' : '#fff' }}>
-      <ScrollView 
-        style={{ flex: 1 }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+      <ScrollView
+        style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-      >
+        contentContainerStyle={styles.scrollViewContent}>
         {renderGreeting()}
-        {renderWeightChart()}
-        {renderStepsChart && renderStepsChart()}
-        {renderChart('Sleep Quality')}
-        {renderChart('Hunger Level')}
-        {renderChart('Mood')}
+        <View style={styles.cardsContainer}>
+          {renderWeightChart()}
+          {renderStepsChart()}
+          {renderSleepChart()}
+          {renderHungerChart()}
+          {renderMoodChart()}
+        </View>
       </ScrollView>
       {renderBottomNav()}
     </SafeAreaView>
@@ -363,73 +403,94 @@ export default function ReportScreen() {
 }
 
 const styles = StyleSheet.create({
-  chartContainer: {
-    marginVertical: 16,
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 24,
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 80,
+  },
+  cardsContainer: {
+    paddingTop: 0,
+  },
+  cardContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 15,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    shadowRadius: 8,
     elevation: 5,
+    position: 'relative',
   },
-  chartTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-    textAlign: 'center',
-    color: '#000000',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  chartSubtitle: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#94a3b8',
-    marginTop: 12,
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cardTitleRight: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#777',
+    textAlign: 'right',
+    alignSelf: 'flex-end',
   },
   chart: {
     borderRadius: 16,
     marginVertical: 8,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  contentContainer: {
-    alignItems: 'center',
+  infoButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
-    paddingVertical: 20,
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
-  containerDark: {
-    backgroundColor: '#111827',
+  moodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 30,
+    marginVertical: 5,
   },
-  title: {
-    marginBottom: 16,
-    fontSize: 24,
-    color: '#000000',
+  moodDay: {
+    width: 40,
+    fontSize: 14,
+    color: '#666',
   },
-  textDark: {
-    color: '#ffffff',
+  moodLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#e0e0e0',
+    flexDirection: 'row',
+    position: 'relative',
+    marginLeft: 10,
   },
-  button: {
-    backgroundColor: '#e5e7eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  moodDot: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#e0e0e0',
   },
-  buttonDark: {
-    backgroundColor: '#374151',
-  },
-  buttonText: {
-    fontWeight: 'bold',
-    color: '#000000',
+  moodBubble: {
+    position: 'absolute',
+    backgroundColor: '#192f59',
+    borderRadius: 50,
+    top: -10,
+    transform: [{ translateX: -10 }],
   },
   bannerContainer: {
-    height: 280,
-    marginBottom: -55,
+    height: 200,
+    marginBottom: -50,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
@@ -446,32 +507,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingBottom: 50,
+    paddingBottom: 75,
     height: '100%',
   },
   bannerSubTitle: {
     color: 'black',
-    fontSize: 13,
-    marginBottom: 2,
+    fontSize: 12,
+    marginBottom: 0,
     opacity: 0.85,
   },
   bannerTitle: {
     color: 'black',
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '400',
     marginBottom: 10,
   },
   bannerUserImage: {
-    width: 73,
-    height: 75,
-    borderRadius: 50,
-    borderWidth: 0,
+    width: 80,
+    height: 80,
+    marginBottom: 20,
+    borderRadius: 40,
+    borderWidth: 2,
     borderColor: '#fff',
     backgroundColor: '#eee',
-    marginBottom:55
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f2f5',
+  },
+  containerDark: {
+    backgroundColor: '#111827',
+  },
+  title: {
+    marginBottom: 16,
+    fontSize: 24,
+    color: '#000000',
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  textDark: {
+    color: '#ffffff',
   },
   bottomNavContainer: {
-    height: 45,
+    height: 55,
     justifyContent: 'flex-end',
     alignItems: 'center',
     position: 'absolute',
