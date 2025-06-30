@@ -1,309 +1,122 @@
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   Pressable,
-  TextInput,
-  ScrollView,
-  Animated,
   StyleSheet,
-  Modal,
+  ScrollView,
   Image,
-  Platform,
-  Alert,
+  SafeAreaView,
+  Animated,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useState, useEffect,useRef } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../context/ThemeContext';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Ionicons, Feather } from '@expo/vector-icons';
+
+// Import assets
 const HomeIcon = require('../assets/home.png');
 const ChatIcon = require('../assets/chat.png');
 const AddIcon = require('../assets/add.png');
 const WorkoutIcon = require('../assets/workout.png');
+const NutritionIcon = require('../assets/nutrition.png');
 const NavRectangle = require('../assets/NavRectangle.png');
-type Set = {
-  id: string;
-  weight: string;
-  reps: string;
-  completed: boolean;
-};
-
-type BodyPart = 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core';
-
-type ExerciseOption = {
-  id: string;
-  name: string;
-  bodyPart: BodyPart;
-  description: string;
-  muscleGroups: string[];
-  instructions: string[];
-};
-
-type ExerciseDetails = {
-  name: string;
-  description: string;
-  muscleGroups: string[];
-  instructions: string[];
-};
-
-type ExpandedSections = {
-  [key: string]: boolean;
-};
-
-type Exercise = {
-  id: string;
-  name: string;
-  sets: Set[];
-  previousWeight?: string;
-  previousReps?: string;
-};
-const EXERCISES_DB: ExerciseOption[] = [
-  // Chest exercises
-  {
-    id: '1',
-    name: 'Barbell Bench Press',
-    bodyPart: 'Chest',
-    description: 'A compound exercise that primarily targets the chest muscles.',
-    muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-    instructions: ['...'],
-  },
-  {
-    id: '2',
-    name: 'Dumbbell Flyes',
-    bodyPart: 'Chest',
-    description: 'An isolation exercise for chest development.',
-    muscleGroups: ['Chest'],
-    instructions: ['...'],
-  },
-  // Back exercises
-  {
-    id: '3',
-    name: 'Barbell Row',
-    bodyPart: 'Back',
-    description: 'A compound pulling exercise for back development.',
-    muscleGroups: ['Back', 'Biceps'],
-    instructions: ['...'],
-  },
-  // Legs exercises
-  {
-    id: '4',
-    name: 'Squat (Barbell)',
-    bodyPart: 'Legs',
-    description: 'A compound exercise for lower body.',
-    muscleGroups: ['Quadriceps', 'Hamstrings', 'Glutes'],
-    instructions: ['...'],
-  },
-  // Miscellaneous
-  {
-    id: '5',
-    name: 'Plank',
-    bodyPart: 'Miscellaneous',
-    description: 'Core stabilization exercise.',
-    muscleGroups: ['Core', 'Shoulders'],
-    instructions: ['...'],
-  },
-];
-
-const getSessionForDay = (dayIndex: number): string | null => {
-  // Training split: A-B-C-rest-A-B-rest (starting Monday)
-  const schedule = ['A', 'B', 'C', 'rest', 'A', 'B', 'rest'];
-  return schedule[dayIndex];
-};
-
-// Modify the getCurrentSession function
-const getCurrentSession = async (userEmail: string): Promise<string | null> => {
-  const docRef = doc(db, 'Workout', userEmail.toLowerCase());
-  const docSnap = await getDoc(docRef);
-
-  if (!docSnap.exists()) {
-    return 'A'; // Start with Session A if no previous workouts
-  }
-
-  const data = docSnap.data();
-  let lastCompletedSession = 'rest';
-
-  // Find the last completed session
-  const weekKeys = Object.keys(data)
-    .filter((key) => key.startsWith('week'))
-    .sort();
-  if (weekKeys.length > 0) {
-    const lastWeek = data[weekKeys[weekKeys.length - 1]];
-    const dayKeys = Object.keys(lastWeek).filter((key) => key !== 'firstEntryDate');
-    if (dayKeys.length > 0) {
-      const lastDay = lastWeek[dayKeys[dayKeys.length - 1]];
-      // Get session from the workout name or data
-      const sessionMatch = lastDay.workoutName.match(/Session ([ABC])/i);
-      if (sessionMatch) {
-        lastCompletedSession = sessionMatch[1];
-      }
-    }
-  }
-
-  // Determine next session based on the training split
-  const sessionOrder = ['A', 'B', 'C', 'rest', 'A', 'B', 'rest'];
-  const lastIndex = sessionOrder.indexOf(lastCompletedSession);
-  const nextIndex = (lastIndex + 1) % sessionOrder.length;
-  return sessionOrder[nextIndex];
-};
-
-// Add this function at the top level
-const autoSubmitRestDay = async (
-  userEmail: string,
-  session: string,
-  firstEntryDate: string | null
-) => {
-  if (session !== 'rest' || !firstEntryDate) return;
-
-  const docRef = doc(db, 'Workout', userEmail.toLowerCase());
-  const docSnap = await getDoc(docRef);
-
-  let data = docSnap.exists() ? docSnap.data() : {};
-  const { weekKey, dayKey } = getWeekAndDayKey(firstEntryDate);
-
-  // Check if already submitted
-  if (data[weekKey]?.[dayKey]) return;
-
-  // Create rest day entry
-  data[weekKey] = data[weekKey] || {};
-  data[weekKey][dayKey] = {
-    workoutName: 'Rest Day',
-    workoutNote: 'Automatically logged rest day',
-    startTime: new Date().toISOString(),
-    endTime: new Date().toISOString(),
-    exercises: [],
-    isRestDay: true,
-    timestamp: new Date().toISOString(),
-  };
-
-  // Update database
-  await setDoc(docRef, data, { merge: true });
-};
-
+const TrainingArrow = require('../assets/TrainingArrow.png'); // Add this line
 export default function WorkoutScreen() {
   const navigation = useNavigation();
   const { isDarkMode } = useTheme();
-  const [showExerciseModal, setShowExerciseModal] = useState(false);
-  const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null);
-  const [workoutStartTime, setWorkoutStartTime] = useState<Date>(new Date());
-  const [workoutEndTime, setWorkoutEndTime] = useState<Date | null>(null);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState<ExerciseDetails | null>(null);
-  const [workoutNote, setWorkoutNote] = useState('');
-  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    Chest: false,
-    Back: false,
-    Legs: false,
-    Shoulders: false,
-    Arms: false,
-    Core: false,
-    Miscellaneous: false,
-  });
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [currentSession, setCurrentSession] = useState<string | null>(null);
-  const [availableExercises, setAvailableExercises] = useState<string[]>([]);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  const [showSessionModal, setShowSessionModal] = useState(false);
-  const [sessionExercises, setSessionExercises] = useState([]);
-
-  const today = new Date().toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const [workoutName, setWorkoutName] = useState(`Workout - ${today}`);
-  const [firstEntryDate, setFirstEntryDate] = useState<string | null>(null);
-  const { user } = useAuth(); // Make sure you have user context
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [sessionData, setSessionData] = useState(null);
+  const [currentSession, setCurrentSession] = useState('A');
+  const [userFullName, setUserFullName] = useState('');
   const scrollY = useRef(new Animated.Value(0)).current;
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
-  // Fetch or set firstEntryDate on mount
+  const screenWidth = Dimensions.get('window').width;
+  const [steps, setSteps] = useState(9000);
+  const [stepsGoal, setStepsGoal] = useState(10000);
+  const [exerciseData, setExerciseData] = useState([]);
+
   useEffect(() => {
-    const fetchFirstEntryDate = async () => {
-      if (!user?.email) {
-        setFirstEntryDate(null);
-        return;
-      }
-      const docRef = doc(db, 'Workout', user.email.toLowerCase());
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().firstEntryDate) {
-        setFirstEntryDate(docSnap.data().firstEntryDate);
-      } else {
-        setFirstEntryDate(null);
-      }
-    };
-    fetchFirstEntryDate();
-  }, [user?.email]);
+    const fetchData = async () => {
+      if (!user?.email) return;
 
-  // Check if workout was already submitted today
-  useEffect(() => {
-    const checkTodaySubmission = async () => {
-      if (!user?.email || !firstEntryDate) return;
+      try {
+        // Fetch session data from Firebase
+        const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
+        const docSnap = await getDoc(exercisesRef);
 
-      const { weekKey, dayKey } = getWeekAndDayKey(firstEntryDate);
-      const docRef = doc(db, 'Workout', user.email.toLowerCase());
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data[weekKey]?.[dayKey]) {
-          setAlreadySubmitted(true);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const sessionKey = `Session ${currentSession}`;
+          const sessionExercises = data[sessionKey] || {};
+          
+          // Format exercise data for display like in the original code
+          const formattedExercises = Object.entries(sessionExercises)
+            .filter(([key, value]) => value !== null && value !== undefined && typeof value === 'object')
+            .map(([exerciseName, details]) => ({
+              name: exerciseName,
+              sets: details?.Sets || '0',
+             
+              repRange: details?.Reps|| '0',
+            }));
+          
+          setExerciseData(formattedExercises);
+          setSessionData(data[sessionKey]);
         }
+
+        // Fetch user's full name if needed
+        const intakeFormRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const intakeFormSnap = await getDoc(intakeFormRef);
+
+        if (intakeFormSnap.exists()) {
+          setUserFullName(intakeFormSnap.data().fullName);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkTodaySubmission();
-  }, [user?.email, firstEntryDate]);
+    fetchData();
+  }, [user?.email, currentSession]);
 
-  // Helper to get week and day key based on firstEntryDate (like in NutritionScreen)
-  function getDaysBetween(date1: Date, date2: Date) {
-    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
-    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
-    return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
-  }
-
-  function getWeekAndDayKey(firstEntryDate: string) {
+  // Get current date and week days
+  const getCurrentWeekDates = () => {
     const today = new Date();
-    const start = new Date(firstEntryDate);
-    const daysSinceFirst = getDaysBetween(start, today);
-    const weekNum = Math.floor(daysSinceFirst / 7) + 1;
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayName = dayNames[today.getDay()];
-    return { weekKey: `week${weekNum}`, dayKey: dayName };
-  }
-
-  const handleExercisePress = (exercise: Exercise) => {
-    // This is mock data - you should replace with actual exercise details
-    setSelectedExercise({
-      name: exercise.name,
-      description: 'This is a compound exercise that targets multiple muscle groups.',
-      muscleGroups: ['Quadriceps', 'Hamstrings', 'Glutes', 'Core'],
-      instructions: [
-        'Stand with feet shoulder-width apart',
-        'Keep your back straight',
-        'Bend knees and lower your body',
-        'Return to starting position',
-      ],
-    });
-    setModalVisible(true);
+    const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dates = [];
+    
+    // Get days of current week (Sunday to Saturday)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(today.getDate() - today.getDay() + i);
+      dates.push({
+        day: dayLetters[i],
+        date: date.getDate().toString(),
+        isToday: date.toDateString() === today.toDateString()
+      });
+    }
+    
+    return dates;
   };
 
-  const handleScroll = Animated.event(
-  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-  {
+  const weekDates = getCurrentWeekDates();
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+
+  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
     useNativeDriver: false,
     listener: (event) => {
       const currentScrollY = event.nativeEvent.contentOffset.y;
-      
+
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
@@ -324,1216 +137,473 @@ export default function WorkoutScreen() {
 
       lastScrollY.current = currentScrollY;
     },
-  }
-);
+  });
 
-  // Add to existing JSX, right after the workoutName TextInput
-  const timePickerSection = (
-    <View style={styles.timeSection}>
-      <Pressable
-        style={[styles.timeButton, isDarkMode && styles.timeButtonDark]}
-        onPress={() => setShowStartPicker(true)}>
-        <Text style={[styles.timeButtonText, isDarkMode && styles.textDark]}>
-          Start: {workoutStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </Pressable>
-      <Pressable
-        style={[styles.timeButton, isDarkMode && styles.timeButtonDark]}
-        onPress={() => setShowEndPicker(true)}>
-        <Text style={[styles.timeButtonText, isDarkMode && styles.textDark]}>
-          End:{' '}
-          {workoutEndTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ||
-            '--:--'}
-        </Text>
-      </Pressable>
-      {showStartPicker && (
-        <DateTimePicker
-          value={workoutStartTime}
-          mode="time"
-          is24Hour={true}
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowStartPicker(false);
-            if (selectedDate) setWorkoutStartTime(selectedDate);
-          }}
-        />
-      )}
-      {showEndPicker && (
-        <DateTimePicker
-          value={workoutEndTime || new Date()}
-          mode="time"
-          is24Hour={true}
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowEndPicker(false);
-            if (selectedDate) setWorkoutEndTime(selectedDate);
-          }}
-        />
-      )}
-    </View>
-  );
-
-  // Add exercise details modal
-  const exerciseModal = (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={modalVisible}
-      onRequestClose={() => setModalVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
-          <Pressable style={styles.modalCloseButton} onPress={() => setModalVisible(false)}>
-            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          </Pressable>
-
-          {selectedExercise && (
-            <ScrollView>
-              <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
-                {selectedExercise.name}
-              </Text>
-
-              <Image
-                source={require('../assets/placeholder/gym.jpeg')}
-                style={styles.exerciseImage}
-                resizeMode="cover"
-              />
-
-              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>Description</Text>
-              <Text style={[styles.modalText, isDarkMode && styles.textDark]}>
-                {selectedExercise.description}
-              </Text>
-
-              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>
-                Muscle Groups
-              </Text>
-              {selectedExercise.muscleGroups.map((muscle, index) => (
-                <Text key={index} style={[styles.modalText, isDarkMode && styles.textDark]}>
-                  • {muscle}
-                </Text>
-              ))}
-
-              <Text style={[styles.modalSubtitle, isDarkMode && styles.textDark]}>
-                Instructions
-              </Text>
-              {selectedExercise.instructions.map((instruction, index) => (
-                <Text key={index} style={[styles.modalText, isDarkMode && styles.textDark]}>
-                  {index + 1}. {instruction}
-                </Text>
-              ))}
-            </ScrollView>
-          )}
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <View style={styles.headerContent}>
+        <View>
+          <Text style={styles.headerTitle}>Time to level up.</Text>
+          <Text style={styles.headerTitle}>Let's move!</Text>
+          <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
         </View>
       </View>
-    </Modal>
-  );
-
-  // Update the addSet function to not copy previous set's values
-  const addSet = (exerciseId: string) => {
-    setExercises(
-      exercises.map((exercise) => {
-        if (exercise.id === exerciseId) {
-          return {
-            ...exercise,
-            sets: [
-              ...exercise.sets,
-              {
-                id: Date.now().toString(),
-                weight: '', // Empty string instead of copying previous set's weight
-                reps: '', // Empty string instead of copying previous set's reps
-                completed: false,
-              },
-            ],
-          };
-        }
-        return exercise;
-      })
-    );
-  };
-
-  const addExercise = (exercise: ExerciseOption) => {
-    setExercises([
-      ...exercises,
-      {
-        id: Date.now().toString(),
-        name: exercise.name,
-        sets: [
-          {
-            id: Date.now().toString(),
-            weight: '',
-            reps: '',
-            completed: false,
-          },
-        ],
-      },
-    ]);
-    setShowExerciseModal(false);
-  };
-
-  const toggleSetCompletion = (exerciseId: string, setId: string) => {
-    setExercises(
-      exercises.map((exercise) => {
-        if (exercise.id === exerciseId) {
-          return {
-            ...exercise,
-            sets: exercise.sets.map((set) =>
-              set.id === setId ? { ...set, completed: !set.completed } : set
-            ),
-          };
-        }
-        return exercise;
-      })
-    );
-  };
-
-  // Modify your useEffect that fetches exercises
-  useEffect(() => {
-    const fetchExercises = async () => {
-      if (!user?.email) return;
-
-      const session = await getCurrentSession(user.email);
-      setCurrentSession(session);
-
-      // Auto-submit rest day
-      if (session === 'rest') {
-        setAvailableExercises([]);
-        await autoSubmitRestDay(user.email, session, firstEntryDate);
-        setAlreadySubmitted(true);
-        return;
-      }
-
-      const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
-      const docSnap = await getDoc(exercisesRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const sessionExercises = data[`Session ${session}`] || {};
-        
-        // Filter out only the exercise objects (not strings or null values)
-        const exerciseNames = Object.keys(sessionExercises).filter(
-          (key) => sessionExercises[key] !== null && 
-                  sessionExercises[key] !== undefined && 
-                  typeof sessionExercises[key] === 'object'
-        );
-
-        // Create initial exercises array with one empty set each
-        const initialExercises = exerciseNames.map((name) => ({
-          id: Date.now().toString() + Math.random(),
-          name: name,
-          sets: [
-            {
-              id: Date.now().toString() + Math.random(),
-              weight: '',
-              reps: '',
-              completed: false,
-            },
-          ],
-        }));
-
-        setExercises(initialExercises);
-        setAvailableExercises(exerciseNames);
-      }
-    };
-
-    fetchExercises();
-  }, [user?.email, firstEntryDate]);
-
-  // Modify your exercise selection modal content
-  const exerciseSelectionModal = (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={showExerciseModal}
-      onRequestClose={() => setShowExerciseModal(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
-          <Pressable style={styles.modalCloseButton} onPress={() => setShowExerciseModal(false)}>
-            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          </Pressable>
-
-          <ScrollView>
-            <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
-              {currentSession === 'rest' ? 'Rest Day' : "Today's Exercises"}
-            </Text>
-
-            {currentSession === 'rest' ? (
-              <Text style={[styles.modalText, isDarkMode && styles.textDark]}>
-                Today is a rest day. Take time to recover!
-              </Text>
+      
+      {/* Calendar Week View */}
+      <View style={styles.calendarContainer}>
+        {weekDates.map((item, index) => (
+          <TouchableOpacity 
+            key={index} 
+            style={[
+              styles.dayContainer,
+              item.isToday && styles.todayContainer
+            ]}
+          >
+            <Text style={[
+              styles.dayLetter,
+              item.isToday && styles.todayText
+            ]}>{item.day}</Text>
+            
+            {item.isToday ? (
+              <View style={styles.todayDateCircle}>
+                <Text style={[styles.dayNumber, styles.todayText]}>
+                  {item.date}
+                </Text>
+              </View>
             ) : (
-              <View style={styles.exerciseList}>
-                {availableExercises.map((exerciseName, index) => (
-                  <Pressable
-                    key={index}
-                    style={[styles.exerciseOption, isDarkMode && styles.exerciseOptionDark]}
-                    onPress={() =>
-                      addExercise({
-                        id: Date.now().toString(),
-                        name: exerciseName,
-                        bodyPart: 'Custom',
-                        description: '',
-                        muscleGroups: [],
-                        instructions: [],
-                      })
-                    }>
-                    <Text style={[styles.exerciseOptionText, isDarkMode && styles.textDark]}>
-                      {exerciseName}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              <Text style={styles.dayNumber}>{item.date}</Text>
             )}
-          </ScrollView>
-        </View>
+          </TouchableOpacity>
+        ))}
       </View>
-    </Modal>
-  );
-
-  // Save workout function
-  const saveWorkout = async () => {
-    if (!user?.email) {
-      Alert.alert('Error', 'Please login first');
-      return;
-    }
-
-    if (alreadySubmitted) {
-      Alert.alert('Already Submitted', 'You have already logged a workout for today');
-      return;
-    }
-
-    let docRef = doc(db, 'Workout', user.email.toLowerCase());
-    let docSnap = await getDoc(docRef);
-
-    let data: { [key: string]: any } = {};
-    let entryDate = firstEntryDate;
-
-    if (docSnap.exists()) {
-      data = docSnap.data();
-      if (!data.firstEntryDate) {
-        const today = new Date();
-        entryDate = today.toISOString().slice(0, 10);
-        data.firstEntryDate = entryDate;
-        setFirstEntryDate(entryDate);
-      } else {
-        entryDate = data.firstEntryDate;
-      }
-    } else {
-      const today = new Date();
-      entryDate = today.toISOString().slice(0, 10);
-      data.firstEntryDate = entryDate;
-      setFirstEntryDate(entryDate);
-    }
-
-    const { weekKey, dayKey } = getWeekAndDayKey(entryDate);
-
-    // Prepare workout data to store
-    data[weekKey] = data[weekKey] || {};
-    data[weekKey][dayKey] = {
-      workoutName,
-      workoutNote,
-      startTime: workoutStartTime.toISOString(),
-      endTime: workoutEndTime ? workoutEndTime.toISOString() : null,
-      exercises: exercises.map((ex) => ({
-        name: ex.name,
-        sets: ex.sets,
-      })),
-      timestamp: new Date().toISOString(),
-    };
-
-    await setDoc(docRef, data, { merge: true });
-    setAlreadySubmitted(true);
-    Alert.alert('Success', 'Workout saved!');
-  };
-
-  // Modify handleSetChange to automatically check completion
-  const handleSetChange = (
-    exerciseIndex: number,
-    setIndex: number,
-    field: string,
-    value: string
-  ) => {
-    const newExercises = [...exercises];
-    const currentSet = newExercises[exerciseIndex].sets[setIndex];
-    currentSet[field] = value;
-
-    // Automatically mark set as completed if both weight and reps have values
-    currentSet.completed = !!(currentSet.weight && currentSet.reps);
-
-    setExercises(newExercises);
-  };
-
-  // Add these functions inside your WorkoutScreen component
-  const deleteExercise = (exerciseIndex: number) => {
-    Alert.alert(
-      'Delete Exercise',
-      'Are you sure you want to delete this exercise and all its sets?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            const newExercises = [...exercises];
-            newExercises.splice(exerciseIndex, 1);
-            setExercises(newExercises);
-          },
-        },
-      ]
-    );
-  };
-
-  const deleteSet = (exerciseIndex: number, setIndex: number) => {
-    const newExercises = [...exercises];
-    const exercise = newExercises[exerciseIndex];
-
-    // Don't delete if it's the only set
-    if (exercise.sets.length === 1) {
-      Alert.alert('Cannot Delete', 'Exercise must have at least one set');
-      return;
-    }
-
-    exercise.sets.splice(setIndex, 1);
-    setExercises(newExercises);
-  };
-
-  // Update the fetchSessionExercises function
-  const fetchSessionExercises = async (session: string) => {
-    if (!session || session === 'rest') return;
-
-    try {
-      const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
-      const docSnap = await getDoc(exercisesRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const sessionData = data[`Session ${session}`] || {};
-        
-        // Convert the session data to an array format for display
-        const exercisesList = Object.entries(sessionData)
-          .filter(([key, value]) => value !== null && value !== undefined && typeof value === 'object')
-          .map(([exerciseName, details]) => ({
-            name: exerciseName,
-            sets: details?.Sets || 'N/A',
-            reps: details?.Reps || 'N/A',
-            // Remove restTime field
-          }));
-
-        setSessionExercises(exercisesList);
-        setShowSessionModal(true);
-      }
-    } catch (error) {
-      console.error('Error fetching session exercises:', error);
-      Alert.alert('Error', 'Failed to load session exercises');
-    }
-  };
-
-  // Update the session details modal component
-  const sessionDetailsModal = (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={showSessionModal}
-      onRequestClose={() => setShowSessionModal(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.sessionModalContent, isDarkMode && styles.modalContentDark]}>
-          <Pressable
-            style={styles.modalCloseButton}
-            onPress={() => setShowSessionModal(false)}>
-            <Ionicons name="close" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          </Pressable>
-
-          <Text style={[styles.sessionModalTitle, isDarkMode && styles.textDark]}>
-            Session {currentSession}
-          </Text>
-
-          <ScrollView style={styles.sessionExercisesList}>
-            {sessionExercises.map((exercise, index) => (
-              <View key={index} style={[styles.sessionExerciseCard, isDarkMode && styles.sessionExerciseCardDark]}>
-                <View style={styles.sessionExerciseHeader}>
-                  <View style={styles.sessionExerciseIndicator} />
-                  <Text style={[styles.sessionExerciseName, isDarkMode && styles.textDark]}>
-                    {exercise.name}
-                  </Text>
-                </View>
-
-                <View style={styles.sessionExerciseDetails}>
-                  <View style={styles.sessionDetailItem}>
-                    <Text style={[styles.sessionDetailValue, isDarkMode && styles.textDark]}>
-                      {exercise.sets}
-                    </Text>
-                    <Text style={[styles.sessionDetailLabel, isDarkMode && styles.sessionDetailLabelDark]}>
-                      Sets
-                    </Text>
-                  </View>
-
-                  <View style={styles.sessionDetailItem}>
-                    <Text style={[styles.sessionDetailValue, isDarkMode && styles.textDark]}>
-                      {exercise.reps}
-                    </Text>
-                    <Text style={[styles.sessionDetailLabel, isDarkMode && styles.sessionDetailLabelDark]}>
-                      Reps
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Removed the Start Workout button and its onPress logic */}
-        </View>
-      </View>
-    </Modal>
-  );
-
-  // Update the session indicator to be clickable
-  const sessionIndicatorSection = (
-    <Pressable
-      onPress={() => currentSession && currentSession !== 'rest' && fetchSessionExercises(currentSession)}
-      style={[
-        styles.sessionIndicator,
-        isDarkMode && styles.sessionIndicatorDark,
-        currentSession && currentSession !== 'rest' && styles.sessionIndicatorClickable,
-      ]}>
-      <Text style={[styles.sessionLabel, isDarkMode && styles.sessionLabelDark]}>
-        Today's Session:
-      </Text>
-      <Text style={styles.sessionValue}>
-        {currentSession === 'rest' ? 'Rest Day' : `Session ${currentSession}`}
-      </Text>
-      {currentSession && currentSession !== 'rest' && (
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color={isDarkMode ? '#9ca3af' : '#6b7280'}
-          style={styles.sessionChevron}
-        />
-      )}
-    </Pressable>
-  );
-  const renderBottomNav = () => (
-  <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-    <Image source={NavRectangle} style={styles.bottomNavBg} />
-    <View style={styles.bottomNavContent}>
-      <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
-        <View style={styles.iconContainer}>
-          <Image source={HomeIcon} style={styles.bottomNavIcon} />
-        </View>
-      </Pressable>
-      <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
-        <View style={styles.iconContainer}>
-          <Image source={AddIcon} style={styles.bottomNavIcon} />
-        </View>
-      </Pressable>
-      <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
-        <View style={styles.iconContainer}>
-          <Image source={ChatIcon} style={styles.bottomNavIcon} />
-        </View>
-      </Pressable>
-      <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-        <View style={styles.iconContainer}>
-          <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-          <View style={styles.activeEclipse} />
-        </View>
-      </Pressable>
     </View>
-  </Animated.View>
+  );
+
+  const renderTodaysAim = () => (
+    <View style={styles.aimCard}>
+      <View style={styles.aimHeader}>
+        <View style={styles.aimIconContainer}>
+          <Ionicons name="analytics-outline" size={22} color="#fff" />
+        </View>
+        <Text style={styles.aimTitle}>Today's Aim</Text>
+        <Feather name="chevron-right" size={20} color="#fff" />
+      </View>
+      <Text style={styles.aimSubtitle}>Movement Variability</Text>
+    </View>
+  );
+
+  const renderStepsCard = () => (
+    <View style={styles.stepsCard}>
+      <View style={styles.stepsIconContainer}>
+        <Ionicons name="footsteps-outline" size={22} color="#fff" />
+      </View>
+      
+      <View style={styles.stepsContent}>
+        <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
+        <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
+      </View>
+    </View>
+  );
+
+  const renderPrepTimeCard = () => (
+    <View style={styles.prepCard}>
+      <View style={styles.prepContent}>
+        <Ionicons name="timer-outline" size={24} color="#fff" />
+        <View style={styles.prepTextContainer}>
+          <Text style={styles.prepTitle}>Prep time.</Text>
+          <Text style={styles.prepTitle}>Warm Up!</Text>
+          <Feather name="chevron-right" size={20} color="#fff" style={styles.prepArrow} />
+        </View>
+      </View>
+    </View>
+  );
+
+ const renderTraining = () => (
+  <View style={styles.trainingSection}>
+    <View style={styles.trainingHeader}>
+      <Text style={styles.trainingTitle}>Training</Text>
+      <Image source={TrainingArrow} style={styles.trainingArrowImage} />
+    </View>
+    
+    <View style={styles.sessionCard}>
+      <View style={styles.sessionHeader}>
+        <Text style={styles.sessionTitle}>Session {currentSession}</Text>
+        <TouchableOpacity style={styles.startButton}>
+          <Text style={styles.startButtonText}>Start Workout</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.exercisesList}>
+        {exerciseData.map((exercise, index) => (
+          <View key={index} style={styles.exerciseRow}>
+            <View style={styles.exerciseInfo}>
+              <View style={styles.bulletPoint} />
+              <Text style={styles.exerciseName}>{exercise.name}</Text>
+            </View>
+            <Text style={styles.exerciseSets}>{exercise.sets}</Text>
+            <Text style={styles.exerciseRepRange}>{exercise.repRange} </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  </View>
 );
 
-  // Update your return statement to include the new modal and use the clickable session indicator
-  return (
-    <>
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-      <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
-        <View style={[styles.header, isDarkMode && styles.headerDark]}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          </Pressable>
-
-          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Log Workout</Text>
-
-          <Pressable
-            style={[styles.finishButton, alreadySubmitted && styles.finishButtonDisabled]}
-            onPress={saveWorkout}
-            disabled={alreadySubmitted}>
-            <Text style={styles.finishButtonText}>
-              {alreadySubmitted ? 'Already Submitted' : 'Finish'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <KeyboardAwareScrollView
-         style={styles.scrollView}
-  enableOnAndroid={true}
-  enableAutomaticScroll={true}
-  extraScrollHeight={100}
-  keyboardShouldPersistTaps="handled"
-  onScroll={handleScroll}
-  scrollEventThrottle={16}>
-          <TextInput
-            value={workoutName}
-            onChangeText={setWorkoutName}
-            style={[styles.workoutNameInput, isDarkMode && styles.inputDark]}
-            placeholder="Workout Name"
-            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
-          />
-
-          {sessionIndicatorSection}
-
-          <TextInput
-            value={workoutNote}
-            onChangeText={setWorkoutNote}
-            style={[styles.workoutNoteInput, isDarkMode && styles.inputDark]}
-            placeholder="Workout note"
-            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
-            multiline
-          />
-
-          {timePickerSection}
-          {exerciseSelectionModal}
-          {exerciseModal}
-          {sessionDetailsModal}
-
-          {exercises.map((exercise, exerciseIndex) => (
-            <View
-              key={exerciseIndex}
-              style={[styles.exerciseCard, isDarkMode && styles.exerciseCardDark]}>
-              <Pressable
-                onPress={() => !alreadySubmitted && handleExercisePress(exercise)}
-                disabled={alreadySubmitted}>
-                <Text
-                  style={[
-                    styles.exerciseName,
-                    isDarkMode && styles.textDark,
-                    alreadySubmitted && styles.disabledText,
-                  ]}>
-                  {exercise.name}
-                </Text>
-              </Pressable>
-
-              <View style={styles.setHeader}>
-                <Text style={styles.setHeaderText}>Set</Text>
-                <Text style={styles.setHeaderText}>kg</Text>
-                <Text style={styles.setHeaderText}>Reps</Text>
-                <View style={styles.setHeaderSpacer} />
-              </View>
-
-              {exercise.sets.map((set, setIndex) => (
-                <View
-                  key={setIndex}
-                  style={[
-                    styles.setRow,
-                    set.completed && styles.completedSetRow,
-                    isDarkMode && set.completed && styles.completedSetRowDark,
-                  ]}>
-                  <View style={styles.setNumberContainer}>
-                    <Text style={[styles.setNumber, isDarkMode && styles.textDark]}>
-                      Set {setIndex + 1}
-                    </Text>
-                  </View>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      isDarkMode && styles.inputDark,
-                      alreadySubmitted && styles.disabledInput,
-                    ]}
-                    placeholder="Weight"
-                    placeholderTextColor={isDarkMode ? '#666' : '#999'}
-                    value={set.weight}
-                    onChangeText={(value) =>
-                      !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'weight', value)
-                    }
-                    keyboardType="numeric"
-                    editable={!alreadySubmitted}
-                  />
-                  <TextInput
-                    style={[
-                      styles.input,
-                      isDarkMode && styles.inputDark,
-                      alreadySubmitted && styles.disabledInput,
-                    ]}
-                    placeholder="Reps"
-                    placeholderTextColor={isDarkMode ? '#666' : '#999'}
-                    value={set.reps}
-                    onChangeText={(value) =>
-                      !alreadySubmitted && handleSetChange(exerciseIndex, setIndex, 'reps', value)
-                    }
-                    keyboardType="numeric"
-                    editable={!alreadySubmitted}
-                  />
-                  {!alreadySubmitted && (
-                    <Pressable
-                      onPress={() => deleteSet(exerciseIndex, setIndex)}
-                      style={styles.deleteSetButton}>
-                      <Ionicons name="remove-circle" size={24} color="#ef4444" />
-                    </Pressable>
-                  )}
-                </View>
-              ))}
-
-              <View style={styles.exerciseActions}>
-                <Pressable
-                  onPress={() => addSet(exercise.id)}
-                  style={[
-                    styles.addSetButton,
-                    isDarkMode && styles.addSetButtonDark,
-                    alreadySubmitted && styles.disabledButton,
-                  ]}
-                  disabled={alreadySubmitted}>
-                  <Text
-                    style={[
-                      styles.addSetButtonText,
-                      isDarkMode && styles.textDark,
-                      alreadySubmitted && styles.disabledText,
-                    ]}>
-                    Add Set
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => deleteExercise(exerciseIndex)}
-                  style={[
-                    styles.deleteButton,
-                    alreadySubmitted && styles.disabledButton,
-                  ]}
-                  disabled={alreadySubmitted}>
-                  <Ionicons
-                    name="trash-outline"
-                    size={20}
-                    color={alreadySubmitted ? '#9ca3af' : '#ef4444'}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          ))}
-
-          {/* Disable Add Exercise button when submitted */}
-          <Pressable
-            onPress={() => setShowExerciseModal(true)}
-            style={[styles.addExerciseButton, alreadySubmitted && styles.disabledButton]}
-            disabled={alreadySubmitted}>
-            <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-          </Pressable>
-        </KeyboardAwareScrollView>
-        {renderBottomNav()}
-      </SafeAreaView>
-    </>
+  const renderBottomNav = () => (
+    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
+      <Image source={NavRectangle} style={styles.bottomNavBg} />
+      <View style={styles.bottomNavContent}>
+        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={HomeIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={AddIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Nutrition')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={NutritionIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={ChatIcon} style={styles.bottomNavIcon} />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
+          <View style={styles.iconContainer}>
+            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
+            <View style={styles.activeEclipse} />
+          </View>
+        </Pressable>
+      </View>
+    </Animated.View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+return (
+  <SafeAreaView style={styles.safeArea}>
+    <ScrollView
+      style={styles.scrollView}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={styles.scrollViewContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {renderHeader()}
+      
+      <View style={styles.content}>
+        {/* First row with two cards side by side */}
+        <View style={styles.cardRow}>
+          {renderTodaysAim()}
+          {renderPrepTimeCard()}
+        </View>
+        
+        {/* Second row with steps card */}
+        {renderStepsCard()}
+        
+        {renderTraining()}
+      </View>
+    </ScrollView>
+    {renderBottomNav()}
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
-  
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f5f5f5', // Updated to match ReportScreen
   },
-  containerDark: {
-    backgroundColor: '#111827',
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 8, // Add more padding for notch
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-    width: '100%',
-  },
-  headerDark: {
-    borderBottomColor: '#374151',
-    backgroundColor: '#111827',
-  },
-  categoryContainer: {
-    marginBottom: 8,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-  },
-  categoryHeaderDark: {
-    backgroundColor: '#374151',
-  },
-  categoryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  exerciseList: {
-    paddingLeft: 16,
-    marginTop: 8,
-  },
-  exerciseOption: {
-    padding: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  exerciseOptionDark: {
-    backgroundColor: '#1f2937',
-    borderColor: '#374151',
-  },
-  exerciseOptionText: {
-    fontSize: 16,
-    color: '#000000',
-  },
-  timeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  timeButton: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-  timeButtonDark: {
-    backgroundColor: '#374151',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#081A2F',
   },
-  modalContent: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalContentDark: {
-    backgroundColor: '#1f2937',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    zIndex: 1,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    marginRight: 24,
-  },
-  modalSubtitle: {
+  loadingText: {
+    color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 8,
-    lineHeight: 24,
-  },
-  exerciseImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  containerDark: {
-    backgroundColor: '#111827',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-    width: '100%',
-  },
-  headerDark: {
-    borderBottomColor: '#374151',
-    backgroundColor: '#111827',
-  },
-  headerButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-    color: '#000000',
-  },
-  cancelButton: {
-    padding: 8,
-  },
-  cancelButtonText: {
-    color: '#ef4444',
-    fontWeight: 'bold',
-  },
-  finishButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  finishButtonDisabled: {
-    backgroundColor: '#9ca3af',
-    opacity: 0.7,
-  },
-  finishButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,
-    padding: 16,
   },
-  workoutNameInput: {
-    fontSize: 20,
+  scrollViewContent: {
+    paddingBottom: 80,
+  },
+  headerContainer: {
+    backgroundColor: '#081A2F',
+    paddingTop: 20,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
+  },
+  headerContent: {
+    flexDirection: 'row',            // Changed to match ReportScreen
+    justifyContent: 'space-between', // Changed to match ReportScreen
+    alignItems: 'flex-start',        // Changed to match ReportScreen
+    marginBottom: 30,                // Changed to match ReportScreen
+    top: 20
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 28,
     fontWeight: 'bold',
-    backgroundColor: '#f3f4f6',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 16,
+    lineHeight: 38,
   },
-  workoutNoteInput: {
-    backgroundColor: '#f3f4f6',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 24,
+  dateText: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.7,
+    marginTop: 10,
   },
-  exerciseCard: {
-    backgroundColor: '#ffffff',
+  calendarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  dayContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+    minWidth: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  todayContainer: {
+    backgroundColor: '#2A3F5F',
+    borderWidth: 0,
+  },
+  dayLetter: {
+    color: '#fff',
+    fontSize: 12,
+    marginBottom: 5,
+    opacity: 0.7,
+  },
+  dayNumber: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  todayText: {
+    color: '#fff',
+    opacity: 1,
+  },
+
+  content: {
+    backgroundColor: '#f5f5f5', // Updated to match ReportScreen
+    padding: 20,
+    flex: 1,
+    marginTop: 0, // Removed negative margin
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+    alignItems: 'flex-start', // Change to stretch for equal heights
+  },
+  aimCard: {
+    backgroundColor: '#081A2F',
+    borderRadius: 16,
     padding: 16,
+    flex: 1,
+    marginRight: 10,
+    height: undefined, // Remove fixed height
+  },
+  aimHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  aimIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  exerciseCardDark: {
-    backgroundColor: '#1f2937',
-  },
-  exerciseName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  setHeader: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  setHeaderText: {
-    flex: 1,
-    color: '#6b7280',
-  },
-  setHeaderSpacer: {
-    width: 40,
-  },
-  setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12, // Increased margin
-    padding: 8, // Increased padding
-    borderRadius: 8,
-    backgroundColor: '#f9fafb', // Light background for better visibility
-  },
-  setRowDark: {
-    backgroundColor: '#1f2937',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-    padding: 12, // Increased padding
-    borderRadius: 8,
-    marginHorizontal: 4,
-    color: '#000000',
-    fontSize: 16, // Increased font size
-    borderWidth: 1, // Add border
-    borderColor: '#e5e7eb',
-    minWidth: 80, // Ensure minimum width
-  },
-  inputDark: {
-    backgroundColor: '#374151',
-    color: '#ffffff',
-    borderColor: '#4b5563',
-  },
-  textDark: {
-    color: '#ffffff',
-  },
-  checkButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exerciseActions: {
-    flexDirection: 'row',
-    marginTop: 16,
-  },
-  addSetButton: {
-    flex: 1,
-    backgroundColor: '#e5e7eb',
     padding: 8,
-    borderRadius: 8,
     marginRight: 8,
   },
-  addSetButtonDark: {
-    backgroundColor: '#374151',
-  },
-  addSetButtonText: {
-    textAlign: 'center',
-  },
-  deleteButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-  },
-  addExerciseButton: {
-    backgroundColor: '#3b82f6',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  addExerciseButtonText: {
-    color: '#ffffff',
+  aimTitle: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'center',
-  },
-
-  timeButton: {
     flex: 1,
-    backgroundColor: '#fff3e0', // Light orangish background
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: 'center',
   },
-
-  timeButtonDark: {
-    backgroundColor: '#422006', // Darker orange for dark mode
-  },
-
-  setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    padding: 4,
-    borderRadius: 6,
-  },
-
-  completedSetRow: {
-    backgroundColor: '#dcfce7', // Light green for light mode
-  },
-  completedSetRowDark: {
-    backgroundColor: '#064e3b', // Darker green for dark mode
-  },
-
-  setNumberContainer: {
-    minWidth: 60, // Ensure minimum width
-    marginRight: 8, // Add margin
-  },
-  setNumber: {
-    fontSize: 16, // Increased font size
-    color: '#4b5563',
-    fontWeight: '500', // Medium weight for better visibility
-  },
-
-  // Update timeButtonText color for better contrast on orange background
-  timeButtonText: {
-    fontSize: 16,
-    color: '#783c04', // Darker text for contrast on orange
-  },
-
-  disabledText: {
-    color: '#9ca3af',
-  },
-  disabledInput: {
-    backgroundColor: '#f3f4f6',
-    color: '#9ca3af',
+  aimSubtitle: {
+    color: '#fff',
+    fontSize: 14,
     opacity: 0.7,
   },
-  disabledButton: {
-    opacity: 0.5,
-    backgroundColor: '#e5e7eb',
-  },
-  sessionIndicator: {
+  stepsCard: {
+    backgroundColor: '#C7312B',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    
+    width: '50%', // Full width 
+    top:-75
   },
-  sessionIndicatorDark: {
-    backgroundColor: '#1f2937', // Dark mode background
+  stepsIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 8,
+    marginRight: 16,
   },
-  sessionLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    backgroundColor: '#f3f4f6',
-    color: '#9ca3af',
-    opacity: 0.7,
+  stepsContent: {
+    flex: 1,
   },
-  disabledButton: {
-    opacity: 0.5,
-    backgroundColor: '#e5e7eb',
+  stepsCount: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: 'bold',
   },
-  sessionIndicator: {
+  stepsGoal: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  prepCard: {
+    backgroundColor: '#081A2F',
+    borderRadius: 16,
+    padding: 16,
+    flex: 1,
+    justifyContent: 'center',
+    height: 180, // Remove fixed height
+  },
+  prepContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
   },
-  sessionIndicatorDark: {
-    backgroundColor: '#1f2937', // Dark mode background
+  prepTextContainer: {
+    flex: 1,
+    marginLeft: 12,
   },
-  sessionLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#4b5563',
-  },
-  sessionLabelDark: {
-    color: '#9ca3af', // Lighter text for dark mode
-  },
-  sessionValue: {
+  prepTitle: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#3b82f6', // Keep blue color for consistency
-    marginLeft: 8,
+    lineHeight: 24,
   },
-  exerciseName: {
+  prepArrow: {
+    position: 'absolute',
+    right: 50,
+    top: 60,
+    height: 50, 
+  },
+  trainingSection: {
+    marginTop: -28,
+  },
+  trainingHeader: {
+    position: 'relative',
+    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  trainingTitle: {
+    color: '#fff',
+    fontSize: 40,
+    fontWeight: 'bold',
+    zIndex: 2,
+    position: 'relative',
+  },
+  trainingArrowImage: {
+    position: 'absolute',
+    right: 70,
+    top: -20,
+    width: 380, // Adjust width as needed
+    height: 97, // Adjust height as needed
+    resizeMode: 'stretch',
+    zIndex: 1,
+  },
+  sessionCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 40,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sessionTitle: {
+    color: '#000000',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#3b82f6', // Keep blue color for interactive elements
   },
-  deleteSetButton: {
-    padding: 8,
-    marginLeft: 4,
+  startButton: {
+    backgroundColor: '#C7312B',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    width: 127,
+    right: 70,
   },
-  sessionIndicatorClickable: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  sessionChevron: {
-    marginLeft: 'auto',
-  },
-  sessionModalContent: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  sessionModalTitle: {
-    fontSize: 24,
+  startButtonText: {
+    color: '#fff',
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+  },
+  exercisesList: {
     marginTop: 10,
-    color: '#000000',
+    left:-10
   },
-  sessionExercisesList: {
-    maxHeight: 400,
-  },
-  sessionExerciseCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  sessionExerciseCardDark: {
-    backgroundColor: '#1f2937',
-    borderColor: '#374151',
-  },
-  sessionExerciseHeader: {
+  exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  sessionExerciseIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#3b82f6',
-    marginRight: 12,
-  },
-  sessionExerciseName: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    color: '#000000',
-  },
-  sessionExerciseDetails: {
+  exerciseInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  sessionDetailItem: {
     alignItems: 'center',
+    flex: 2,
   },
-  sessionDetailValue: {
-    fontSize: 15,
-    
+  bulletPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#000000',
+    marginRight: 30,
+  },
+  exerciseName: {
     color: '#000000',
-    marginBottom: 4,
-  },
-  sessionDetailLabel: {
     fontSize: 12,
-    color: '#6b7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    flex: 1,
   },
-  sessionDetailLabelDark: {
-    color: '#9ca3af',
+  exerciseSets: {
+    color: '#000000',
+    fontSize: 14,
+    textAlign: 'center',
+    width: 30,
+    marginHorizontal: 5,
+    
   },
-    bottomNavContainer: {
-    height: 45,
+  exerciseRepRange: {
+    color: '#000000',
+    fontSize: 13,
+    textAlign: 'right',
+    flex: 1,
+  },
+  bottomNavContainer: {
+    height: 55,
     justifyContent: 'flex-end',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 20,
+    left: 12,
+    right: 12,
   },
   bottomNavBg: {
     position: 'absolute',
@@ -1565,7 +635,7 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 17.5,
-    backgroundColor: '#BABABA',
+    backgroundColor: '#C7312B',
     opacity: 0.6,
     top: -3.5,
     left: -3.5,
@@ -1574,8 +644,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     resizeMode: 'contain',
-    zIndex:2,
+    zIndex: 2,
   }
-
-  // ... rest of existing styles ...
 });
