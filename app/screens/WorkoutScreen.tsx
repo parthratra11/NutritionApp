@@ -48,28 +48,44 @@ export default function WorkoutScreen() {
       if (!user?.email) return;
 
       try {
-        // Fetch session data from Firebase
-        const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
-        const docSnap = await getDoc(exercisesRef);
+        // First, try to fetch user-specific workout template
+        const userWorkoutRef = doc(db, 'WorkoutTemplates', user.email.toLowerCase());
+        const userWorkoutSnap = await getDoc(userWorkoutRef);
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const sessionKey = `Session ${currentSession}`;
-          const sessionExercises = data[sessionKey] || {};
-          
-          // Format exercise data for display like in the original code
-          const formattedExercises = Object.entries(sessionExercises)
-            .filter(([key, value]) => value !== null && value !== undefined && typeof value === 'object')
-            .map(([exerciseName, details]) => ({
-              name: exerciseName,
-              sets: details?.Sets || '0',
-             
-              repRange: details?.Reps|| '0',
-            }));
-          
-          setExerciseData(formattedExercises);
-          setSessionData(data[sessionKey]);
+        let data;
+        // Check if user has a custom workout template
+        if (userWorkoutSnap.exists()) {
+          data = userWorkoutSnap.data();
+        } else {
+          // If no custom template exists, use the default template
+          const exercisesRef = doc(db, 'ExerciseTemplates', 'Training-3x');
+          const docSnap = await getDoc(exercisesRef);
+
+          if (docSnap.exists()) {
+            data = docSnap.data();
+          } else {
+            console.log('No workout templates found');
+            setLoading(false);
+            return;
+          }
         }
+
+        const sessionKey = `Session ${currentSession}`;
+        const sessionExercises = data[sessionKey] || {};
+
+        // Format exercise data for display like in the original code
+        const formattedExercises = Object.entries(sessionExercises)
+          .filter(
+            ([key, value]) => value !== null && value !== undefined && typeof value === 'object'
+          )
+          .map(([exerciseName, details]) => ({
+            name: exerciseName,
+            sets: details?.Sets || '0',
+            repRange: details?.Reps || '0',
+          }));
+
+        setExerciseData(formattedExercises);
+        setSessionData(data[sessionKey]);
 
         // Fetch user's full name if needed
         const intakeFormRef = doc(db, 'intakeForms', user.email.toLowerCase());
@@ -93,7 +109,7 @@ export default function WorkoutScreen() {
     const today = new Date();
     const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     const dates = [];
-    
+
     // Get days of current week (Sunday to Saturday)
     for (let i = 0; i < 7; i++) {
       const date = new Date();
@@ -101,10 +117,10 @@ export default function WorkoutScreen() {
       dates.push({
         day: dayLetters[i],
         date: date.getDate().toString(),
-        isToday: date.toDateString() === today.toDateString()
+        isToday: date.toDateString() === today.toDateString(),
       });
     }
-    
+
     return dates;
   };
 
@@ -148,27 +164,18 @@ export default function WorkoutScreen() {
           <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
         </View>
       </View>
-      
+
       {/* Calendar Week View */}
       <View style={styles.calendarContainer}>
         {weekDates.map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={[
-              styles.dayContainer,
-              item.isToday && styles.todayContainer
-            ]}
-          >
-            <Text style={[
-              styles.dayLetter,
-              item.isToday && styles.todayText
-            ]}>{item.day}</Text>
-            
+          <TouchableOpacity
+            key={index}
+            style={[styles.dayContainer, item.isToday && styles.todayContainer]}>
+            <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>{item.day}</Text>
+
             {item.isToday ? (
               <View style={styles.todayDateCircle}>
-                <Text style={[styles.dayNumber, styles.todayText]}>
-                  {item.date}
-                </Text>
+                <Text style={[styles.dayNumber, styles.todayText]}>{item.date}</Text>
               </View>
             ) : (
               <Text style={styles.dayNumber}>{item.date}</Text>
@@ -197,7 +204,7 @@ export default function WorkoutScreen() {
       <View style={styles.stepsIconContainer}>
         <Ionicons name="footsteps-outline" size={22} color="#fff" />
       </View>
-      
+
       <View style={styles.stepsContent}>
         <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
         <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
@@ -218,36 +225,36 @@ export default function WorkoutScreen() {
     </View>
   );
 
- const renderTraining = () => (
-  <View style={styles.trainingSection}>
-    <View style={styles.trainingHeader}>
-      <Text style={styles.trainingTitle}>Training</Text>
-      <Image source={TrainingArrow} style={styles.trainingArrowImage} />
-    </View>
-    
-    <View style={styles.sessionCard}>
-      <View style={styles.sessionHeader}>
-        <Text style={styles.sessionTitle}>Session {currentSession}</Text>
-        <TouchableOpacity style={styles.startButton}>
-          <Text style={styles.startButtonText}>Start Workout</Text>
-        </TouchableOpacity>
+  const renderTraining = () => (
+    <View style={styles.trainingSection}>
+      <View style={styles.trainingHeader}>
+        <Text style={styles.trainingTitle}>Training</Text>
+        <Image source={TrainingArrow} style={styles.trainingArrowImage} />
       </View>
-      
-      <View style={styles.exercisesList}>
-        {exerciseData.map((exercise, index) => (
-          <View key={index} style={styles.exerciseRow}>
-            <View style={styles.exerciseInfo}>
-              <View style={styles.bulletPoint} />
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+
+      <View style={styles.sessionCard}>
+        <View style={styles.sessionHeader}>
+          <Text style={styles.sessionTitle}>Session {currentSession}</Text>
+          <TouchableOpacity style={styles.startButton}>
+            <Text style={styles.startButtonText}>Start Workout</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.exercisesList}>
+          {exerciseData.map((exercise, index) => (
+            <View key={index} style={styles.exerciseRow}>
+              <View style={styles.exerciseInfo}>
+                <View style={styles.bulletPoint} />
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+              </View>
+              <Text style={styles.exerciseSets}>{exercise.sets}</Text>
+              <Text style={styles.exerciseRepRange}>{exercise.repRange} </Text>
             </View>
-            <Text style={styles.exerciseSets}>{exercise.sets}</Text>
-            <Text style={styles.exerciseRepRange}>{exercise.repRange} </Text>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
 
   const renderBottomNav = () => (
     <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
@@ -291,33 +298,32 @@ export default function WorkoutScreen() {
     );
   }
 
-return (
-  <SafeAreaView style={styles.safeArea}>
-    <ScrollView
-      style={styles.scrollView}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      contentContainerStyle={styles.scrollViewContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {renderHeader()}
-      
-      <View style={styles.content}>
-        {/* First row with two cards side by side */}
-        <View style={styles.cardRow}>
-          {renderTodaysAim()}
-          {renderPrepTimeCard()}
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}>
+        {renderHeader()}
+
+        <View style={styles.content}>
+          {/* First row with two cards side by side */}
+          <View style={styles.cardRow}>
+            {renderTodaysAim()}
+            {renderPrepTimeCard()}
+          </View>
+
+          {/* Second row with steps card */}
+          {renderStepsCard()}
+
+          {renderTraining()}
         </View>
-        
-        {/* Second row with steps card */}
-        {renderStepsCard()}
-        
-        {renderTraining()}
-      </View>
-    </ScrollView>
-    {renderBottomNav()}
-  </SafeAreaView>
-);
+      </ScrollView>
+      {renderBottomNav()}
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -350,11 +356,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 50,
   },
   headerContent: {
-    flexDirection: 'row',            // Changed to match ReportScreen
+    flexDirection: 'row', // Changed to match ReportScreen
     justifyContent: 'space-between', // Changed to match ReportScreen
-    alignItems: 'flex-start',        // Changed to match ReportScreen
-    marginBottom: 30,                // Changed to match ReportScreen
-    top: 20
+    alignItems: 'flex-start', // Changed to match ReportScreen
+    marginBottom: 30, // Changed to match ReportScreen
+    top: 20,
   },
   headerTitle: {
     color: '#fff',
@@ -451,9 +457,9 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    
-    width: '50%', // Full width 
-    top:-75
+
+    width: '50%', // Full width
+    top: -75,
   },
   stepsIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -500,7 +506,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 50,
     top: 60,
-    height: 50, 
+    height: 50,
   },
   trainingSection: {
     marginTop: -28,
@@ -558,7 +564,7 @@ const styles = StyleSheet.create({
   },
   exercisesList: {
     marginTop: 10,
-    left:-10
+    left: -10,
   },
   exerciseRow: {
     flexDirection: 'row',
@@ -588,7 +594,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: 30,
     marginHorizontal: 5,
-    
   },
   exerciseRepRange: {
     color: '#000000',
@@ -645,5 +650,5 @@ const styles = StyleSheet.create({
     height: 28,
     resizeMode: 'contain',
     zIndex: 2,
-  }
+  },
 });
