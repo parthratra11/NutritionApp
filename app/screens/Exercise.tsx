@@ -62,7 +62,7 @@ const ExerciseItem = ({
           <Text style={styles.repRangePrefix}></Text>{repRange}
         </Text>
         <TouchableOpacity onPress={onEditPress} style={styles.editButton}>
-          <Feather name="edit-2" size={16} color={isCompleted ? "#777" : "#fff"} />
+          <Feather name="edit-2" size={16} color={isCompleted ? "#fff" : "#fff"} />
         </TouchableOpacity>
       </View>
     </View>
