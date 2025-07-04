@@ -17,6 +17,7 @@ import StepScreen from 'screens/StepScreen';
 import ProgressScreen from 'screens/ProgressScreen';
 import AddressScreen from '../screens/Address';
 import ExerciseScreen from '../screens/Exercise';
+import WarmupScreen from '../screens/Warmup';
 
 const Stack = createNativeStackNavigator();
 
@@ -46,6 +47,16 @@ export default function AuthNavigator() {
             presentation: 'transparentModal',
             }} 
             />
+            <Stack.Screen 
+  name="Warmup" 
+  component={WarmupScreen} 
+  options={{
+    headerShown: false,
+    cardStyle: { backgroundColor: 'transparent' },
+    cardOverlayEnabled: true,
+    presentation: 'transparentModal',
+  }} 
+/>
           <Stack.Screen name="Steps" component={StepScreen} />
           <Stack.Screen
             name="Nutrition"

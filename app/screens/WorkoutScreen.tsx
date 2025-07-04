@@ -212,18 +212,21 @@ export default function WorkoutScreen() {
     </View>
   );
 
-  const renderPrepTimeCard = () => (
-    <View style={styles.prepCard}>
-      <View style={styles.prepContent}>
-        <Ionicons name="timer-outline" size={24} color="#fff" />
-        <View style={styles.prepTextContainer}>
-          <Text style={styles.prepTitle}>Prep time.</Text>
-          <Text style={styles.prepTitle}>Warm Up!</Text>
-          <Feather name="chevron-right" size={20} color="#fff" style={styles.prepArrow} />
-        </View>
+const renderPrepTimeCard = () => (
+  <TouchableOpacity 
+    style={styles.prepCard}
+    onPress={() => navigation.navigate('Warmup')}
+  >
+    <View style={styles.prepContent}>
+      <Ionicons name="timer-outline" size={24} color="#fff" />
+      <View style={styles.prepTextContainer}>
+        <Text style={styles.prepTitle}>Prep time.</Text>
+        <Text style={styles.prepTitle}>Warm Up!</Text>
+        <Feather name="chevron-right" size={20} color="#fff" style={styles.prepArrow} />
       </View>
     </View>
-  );
+  </TouchableOpacity>
+);
 
   // Update the renderTraining function to navigate to Exercise screen
   const renderTraining = () => (

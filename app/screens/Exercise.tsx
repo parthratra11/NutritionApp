@@ -13,10 +13,12 @@ import {
   PanResponder,
   StatusBar,
   Modal,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { BlurView } from 'expo-blur';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -57,7 +59,7 @@ const ExerciseItem = ({
           {sets}
         </Text>
         <Text style={[styles.exerciseRepRange, isCompleted && styles.completedText]}>
-          <Text style={styles.repRangePrefix}>{'<'}</Text>{repRange}
+          <Text style={styles.repRangePrefix}></Text>{repRange}
         </Text>
         <TouchableOpacity onPress={onEditPress} style={styles.editButton}>
           <Feather name="edit-2" size={16} color={isCompleted ? "#777" : "#fff"} />
@@ -66,6 +68,123 @@ const ExerciseItem = ({
     </View>
   </TouchableOpacity>
 );
+
+const EditExerciseModal = ({ 
+  visible, 
+  onClose, 
+  exerciseName, 
+  initialSets = 4, 
+  onSave 
+}) => {
+  const [sets, setSets] = useState(initialSets);
+  const [weights, setWeights] = useState(Array(initialSets).fill('')); 
+  const [reps, setReps] = useState(Array(initialSets).fill(''));
+
+  const handleAddSet = () => {
+    setSets(sets + 1);
+    setWeights([...weights, '']);
+    setReps([...reps, '']);
+  };
+
+  const handleRemoveSet = () => {
+    if (sets > 1) {
+      setSets(sets - 1);
+      setWeights(weights.slice(0, -1));
+      setReps(reps.slice(0, -1));
+    }
+  };
+
+  const handleWeightChange = (index, value) => {
+    const newWeights = [...weights];
+    newWeights[index] = value;
+    setWeights(newWeights);
+  };
+
+  const handleRepChange = (index, value) => {
+    const newReps = [...reps];
+    newReps[index] = value;
+    setReps(newReps);
+  };
+
+  const handleSave = () => {
+    onSave({ sets, weights, reps });
+    onClose();
+  };
+
+  const renderSetRow = (index) => {
+    return (
+      <View key={index} style={styles.editRow}>
+        <TouchableOpacity 
+          style={styles.editCell}
+          onPress={() => console.log(`Set ${index + 1} clicked`)}
+        >
+          <Text style={styles.editCellText}>{index + 1}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.editCell}
+          onPress={() => console.log(`Weight ${index + 1} clicked`)}
+        >
+          <Text style={styles.editCellText}>{weights[index] || ''}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.editCell}
+          onPress={() => console.log(`Reps ${index + 1} clicked`)}
+        >
+          <Text style={styles.editCellText}>{reps[index] || ''}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.editModalOverlay}>
+        {/* Exercise name outside the container */}
+        <Text style={styles.editModalExerciseName}>{exerciseName}</Text>
+        
+        <View style={styles.editModalContent}>
+          <View style={styles.editModalHeader}>
+            <TouchableOpacity onPress={onClose} style={styles.editModalClose}>
+              <Feather name="x" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.editTableHeader}>
+            <Text style={styles.editHeaderText}>Set</Text>
+            <Text style={styles.editHeaderText}>Kg</Text>
+            <Text style={styles.editHeaderText}>Reps</Text>
+          </View>
+          
+          <ScrollView style={styles.editTableContent}>
+            {Array.from({ length: sets }).map((_, index) => renderSetRow(index))}
+          </ScrollView>
+          
+          <View style={styles.editButtonsRow}>
+            <TouchableOpacity 
+              style={[styles.editButton, styles.editRemoveButton, sets <= 1 && styles.disabledButton]} 
+              onPress={handleRemoveSet}
+              disabled={sets <= 1}
+            >
+              <Text style={styles.editButtonText}>Remove Set</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.editButton, styles.editAddButton]} 
+              onPress={handleAddSet}
+            >
+              <Text style={styles.editButtonText}>Add Set</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const Exercise = () => {
   const navigation = useNavigation();
@@ -188,11 +307,31 @@ const Exercise = () => {
     setExercises(updatedExercises);
   };
   
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingExercise, setEditingExercise] = useState(null);
+  
   const handleEditExercise = (index) => {
-    // Implement exercise editing functionality
-    console.log(`Edit exercise at index ${index}`);
+    setEditingExercise({
+      index,
+      ...exercises[index]
+    });
+    setEditModalVisible(true);
   };
   
+  const handleSaveEdit = (editData) => {
+    if (editingExercise) {
+      const updatedExercises = [...exercises];
+      updatedExercises[editingExercise.index] = {
+        ...updatedExercises[editingExercise.index],
+        sets: editData.sets.toString(),
+        // You might want to store weights and reps data as well
+      };
+      setExercises(updatedExercises);
+    }
+    setEditModalVisible(false);
+    setEditingExercise(null);
+  };
+
   const handleFinish = () => {
     // Implement saving completed workout
     // You might want to pass the completed exercises back to the WorkoutScreen
@@ -245,7 +384,6 @@ return (
           </TouchableOpacity>
         </View>
         
-        {/* Rest of your content */}
         <View style={styles.sessionHeader}>
           <Text style={styles.sessionName}>{sessionName}</Text>
         </View>
@@ -284,7 +422,21 @@ return (
         <TouchableOpacity style={styles.cancelButton}>
           <Text style={styles.cancelButtonText}>Cancel Workout</Text>
         </TouchableOpacity>
+        
+        {/* Blur overlay when edit modal is open */}
+        {editModalVisible && (
+          <View style={styles.blurOverlay} />
+        )}
       </Animated.View>
+      
+      {/* Edit Exercise Modal */}
+      <EditExerciseModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        exerciseName={editingExercise?.name || ''}
+        initialSets={parseInt(editingExercise?.sets) || 4}
+        onSave={handleSaveEdit}
+      />
     </View>
 );
 };
@@ -317,6 +469,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    top: 0, // Ensure it covers the entire screen1
     maxHeight: '100%',
   },
   pullDownContainer: {
@@ -477,7 +630,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   cancelButton: {
-    marginBottom: screenHeight * 0.13,
+    marginBottom: screenHeight * 0.10,
     marginHorizontal: screenWidth * 0.1,
     padding: screenHeight * 0.016,
     backgroundColor: '#562424',
@@ -491,6 +644,108 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  // Add these new styles for the edit modal
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent', // Make transparent to see the blur
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editModalExerciseName: {
+    color: '#fff',
+    fontSize: screenWidth * 0.045,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    width: '80%',
+  },
+  editModalContent: {
+    width: screenWidth * 0.85,
+    height: screenHeight * 0.52,
+    backgroundColor: '#0A1E33',
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end', // Align close button to the right
+    alignItems: 'center',
+    padding: 12,
+  },
+  editModalClose: {
+    padding: 4,
+  },
+  editTableHeader: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  editHeaderText: {
+    color: '#fff',
+    fontSize: screenWidth * 0.035,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
+  editTableContent: {
+    flex: 1,
+    paddingTop: 5,
+  },
+  editRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  editCell: {
+    flex: 1,
+    height: 35,
+    backgroundColor: '#d3d3d3',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  editCellText: {
+    color: '#081A2F', // Dark text for visibility on gray background
+    fontSize: screenWidth * 0.035,
+    fontWeight: '500',
+  },
+  editButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    borderTopWidth: 0, // Remove the top border
+  },
+  editButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    minWidth: screenWidth * 0.3,
+    alignItems: 'center',
+  },
+  editRemoveButton: {
+    backgroundColor: '#562424',
+  },
+  editAddButton: {
+    backgroundColor: '#16486B',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: screenWidth * 0.035,
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(8, 26, 47, 0.9)', // Darkened blue background
+    backdropFilter: 'blur(100px)', // This works on web, for native use BlurView
   },
 });
 
