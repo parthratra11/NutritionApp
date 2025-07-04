@@ -16,6 +16,7 @@ import SlackScreen from 'screens/SlackScreen';
 import StepScreen from 'screens/StepScreen';
 import ProgressScreen from 'screens/ProgressScreen';
 import AddressScreen from '../screens/Address';
+import ExerciseScreen from '../screens/Exercise';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,16 @@ export default function AuthNavigator() {
           <Stack.Screen name="Payment" component={PaymentScreen} options={{headerShown:false}}/>
           <Stack.Screen name="Reports" component={ReportScreen} options={{headerShown:false}}/>
           <Stack.Screen name="Progress" component={ProgressScreen} />
+          <Stack.Screen 
+            name="Exercise" 
+            component={ExerciseScreen} 
+            options={{
+            headerShown: false,
+            cardStyle: { backgroundColor: 'transparent' },
+            cardOverlayEnabled: true,
+            presentation: 'transparentModal',
+            }} 
+            />
           <Stack.Screen name="Steps" component={StepScreen} />
           <Stack.Screen
             name="Nutrition"
