@@ -38,7 +38,7 @@ export default function WorkoutScreen() {
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
-  const screenWidth = Dimensions.get('window').width;
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const [steps, setSteps] = useState(9000);
   const [stepsGoal, setStepsGoal] = useState(10000);
   const [exerciseData, setExerciseData] = useState([]);
@@ -212,19 +212,23 @@ export default function WorkoutScreen() {
     </View>
   );
 
-  const renderPrepTimeCard = () => (
-    <View style={styles.prepCard}>
-      <View style={styles.prepContent}>
-        <Ionicons name="timer-outline" size={24} color="#fff" />
-        <View style={styles.prepTextContainer}>
-          <Text style={styles.prepTitle}>Prep time.</Text>
-          <Text style={styles.prepTitle}>Warm Up!</Text>
-          <Feather name="chevron-right" size={20} color="#fff" style={styles.prepArrow} />
-        </View>
+const renderPrepTimeCard = () => (
+  <TouchableOpacity 
+    style={styles.prepCard}
+    onPress={() => navigation.navigate('Warmup')}
+  >
+    <View style={styles.prepContent}>
+      <Ionicons name="timer-outline" size={24} color="#fff" />
+      <View style={styles.prepTextContainer}>
+        <Text style={styles.prepTitle}>Prep time.</Text>
+        <Text style={styles.prepTitle}>Warm Up!</Text>
+        <Feather name="chevron-right" size={20} color="#fff" style={styles.prepArrow} />
       </View>
     </View>
-  );
+  </TouchableOpacity>
+);
 
+  // Update the renderTraining function to navigate to Exercise screen
   const renderTraining = () => (
     <View style={styles.trainingSection}>
       <View style={styles.trainingHeader}>
@@ -235,7 +239,14 @@ export default function WorkoutScreen() {
       <View style={styles.sessionCard}>
         <View style={styles.sessionHeader}>
           <Text style={styles.sessionTitle}>Session {currentSession}</Text>
-          <TouchableOpacity style={styles.startButton}>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() =>
+              navigation.navigate('Exercise', {
+                exercises: exerciseData,
+                sessionName: `Session ${currentSession}`,
+              })
+            }>
             <Text style={styles.startButtonText}>Start Workout</Text>
           </TouchableOpacity>
         </View>
@@ -248,7 +259,7 @@ export default function WorkoutScreen() {
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
               </View>
               <Text style={styles.exerciseSets}>{exercise.sets}</Text>
-              <Text style={styles.exerciseRepRange}>{exercise.repRange} </Text>
+              <Text style={styles.exerciseRepRange}>× {exercise.repRange}</Text>
             </View>
           ))}
         </View>
@@ -260,7 +271,7 @@ export default function WorkoutScreen() {
     <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
       <Image source={NavRectangle} style={styles.bottomNavBg} />
       <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
+        <Pressable onPress={() => navigation.navigate('Reports')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={HomeIcon} style={styles.bottomNavIcon} />
           </View>
@@ -329,7 +340,7 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5', // Updated to match ReportScreen
+    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -349,28 +360,28 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#081A2F',
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
   },
   headerContent: {
-    flexDirection: 'row', // Changed to match ReportScreen
-    justifyContent: 'space-between', // Changed to match ReportScreen
-    alignItems: 'flex-start', // Changed to match ReportScreen
-    marginBottom: 30, // Changed to match ReportScreen
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 30,
     top: 20,
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: Dimensions.get('window').width * 0.07, // 7% of screen width
     fontWeight: 'bold',
-    lineHeight: 38,
+    lineHeight: Dimensions.get('window').width * 0.095, // 9.5% of screen width
   },
   dateText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width * 0.035, // 3.5% of screen width
     opacity: 0.7,
     marginTop: 10,
   },
@@ -379,13 +390,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 10,
+    paddingHorizontal: Dimensions.get('window').width * 0.02, // 2% of screen width
   },
   dayContainer: {
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: Dimensions.get('window').height * 0.012, // 1.2% of screen height
+    paddingHorizontal: Dimensions.get('window').width * 0.02, // 2% of screen width
     borderRadius: 20,
-    minWidth: 40,
+    minWidth: Dimensions.get('window').width * 0.1, // 10% of screen width
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -395,44 +407,44 @@ const styles = StyleSheet.create({
   },
   dayLetter: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: Dimensions.get('window').width * 0.03, // 3% of screen width
     marginBottom: 5,
     opacity: 0.7,
   },
   dayNumber: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Dimensions.get('window').width * 0.04, // 4% of screen width
     fontWeight: 'bold',
   },
   todayText: {
     color: '#fff',
     opacity: 1,
   },
-
   content: {
-    backgroundColor: '#f5f5f5', // Updated to match ReportScreen
-    padding: 20,
+    backgroundColor: '#f5f5f5',
+    padding: Dimensions.get('window').width * 0.05, // 5% of screen width
     flex: 1,
-    marginTop: 0, // Removed negative margin
+    marginTop: 0,
   },
   cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
-    alignItems: 'flex-start', // Change to stretch for equal heights
+    marginBottom: Dimensions.get('window').height * 0.018, // 1.8% of screen height
+    alignItems: 'flex-start',
+    height: Dimensions.get('window').height * 0.22, // Fixed height for consistency
   },
   aimCard: {
     backgroundColor: '#081A2F',
     borderRadius: 16,
-    padding: 16,
-    flex: 1,
-    marginRight: 10,
-    height: undefined, // Remove fixed height
+    padding: Dimensions.get('window').width * 0.04, // 4% of screen width
+    flex: 0.48, // 48% of available width
+    marginRight: Dimensions.get('window').width * 0.02, // 2% spacing
+    justifyContent: 'space-between',
   },
   aimHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Dimensions.get('window').height * 0.025, // 2.5% of screen height
   },
   aimIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -442,24 +454,25 @@ const styles = StyleSheet.create({
   },
   aimTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Dimensions.get('window').width * 0.04, // 4% of screen width
     fontWeight: 'bold',
     flex: 1,
   },
   aimSubtitle: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width * 0.035, // 3.5% of screen width
     opacity: 0.7,
   },
   stepsCard: {
     backgroundColor: '#C7312B',
     borderRadius: 16,
-    padding: 16,
+    padding: Dimensions.get('window').width * 0.04, // 4% of screen width
     flexDirection: 'row',
     alignItems: 'center',
-
-    width: '50%', // Full width
-    top: -75,
+    width: Dimensions.get('window').width * 0.437, // 50% of screen width
+    alignSelf: 'flex-start',
+    marginTop: -Dimensions.get('window').height * 0.09, // Negative margin relative to screen height
+    marginBottom: Dimensions.get('window').height * 0.02, // 2% of screen height
   },
   stepsIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -472,21 +485,21 @@ const styles = StyleSheet.create({
   },
   stepsCount: {
     color: '#fff',
-    fontSize: 30,
+    fontSize: Dimensions.get('window').width * 0.075, // 7.5% of screen width
     fontWeight: 'bold',
   },
   stepsGoal: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: Dimensions.get('window').width * 0.03, // 3% of screen width
     opacity: 0.8,
   },
   prepCard: {
     backgroundColor: '#081A2F',
     borderRadius: 16,
-    padding: 16,
-    flex: 1,
+    padding: Dimensions.get('window').width * 0.04, // 4% of screen width
+    flex: 0.5, // 50% of available width
     justifyContent: 'center',
-    height: 180, // Remove fixed height
+    height: Dimensions.get('window').height * 0.25,
   },
   prepContent: {
     flexDirection: 'row',
@@ -498,78 +511,80 @@ const styles = StyleSheet.create({
   },
   prepTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Dimensions.get('window').width * 0.04, // 4% of screen width
     fontWeight: 'bold',
-    lineHeight: 24,
+    lineHeight: Dimensions.get('window').width * 0.06, // 6% of screen width
   },
   prepArrow: {
     position: 'absolute',
-    right: 50,
-    top: 60,
-    height: 50,
+    right: Dimensions.get('window').width * 0.16, // 12% from right
+    top: '50%',
+    marginTop: 40, // Half of icon height
   },
   trainingSection: {
-    marginTop: -28,
+    marginTop: Dimensions.get('window').height * 0.02, // 2% of screen height
   },
   trainingHeader: {
     position: 'relative',
-    marginBottom: 15,
+    marginBottom: Dimensions.get('window').height * 0.018, // 1.8% of screen height
     flexDirection: 'row',
     alignItems: 'center',
   },
   trainingTitle: {
-    color: '#fff',
-    fontSize: 40,
+    color: '#ffff',
+    fontSize: Dimensions.get('window').width * 0.1, // 10% of screen width
     fontWeight: 'bold',
     zIndex: 2,
     position: 'relative',
   },
   trainingArrowImage: {
     position: 'absolute',
-    right: 70,
-    top: -20,
-    width: 380, // Adjust width as needed
-    height: 97, // Adjust height as needed
-    resizeMode: 'stretch',
+    right: Dimensions.get('window').width * 0.25, // 5% from right
+    top: -Dimensions.get('window').height * 0.025, // 2.5% above
+    width: Dimensions.get('window').width * 0.7, // 70% of screen width
+    height: Dimensions.get('window').height * 0.12, // 12% of screen height
+    resizeMode: 'contain',
     zIndex: 1,
   },
   sessionCard: {
     backgroundColor: '#f5f5f5',
     borderRadius: 16,
-    padding: 16,
-    marginTop: 40,
+    padding: Dimensions.get('window').width * 0.04, // 4% of screen width
+    marginTop: Dimensions.get('window').height * 0.05, // 5% of screen height
   },
   sessionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Dimensions.get('window').height * 0.025, // 2.5% of screen height
   },
   sessionTitle: {
     color: '#000000',
-    fontSize: 18,
+    fontSize: Dimensions.get('window').width * 0.045, // 4.5% of screen width
     fontWeight: 'bold',
   },
   startButton: {
     backgroundColor: '#C7312B',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: Dimensions.get('window').height * 0.01, // 1% of screen height
+    paddingHorizontal: Dimensions.get('window').width * 0.04, // 4% of screen width
     borderRadius: 10,
-    width: 127,
-    right: 70,
+    minWidth: Dimensions.get('window').width * 0.3, // 30% of screen width
+    alignItems: 'center',
+    marginRight: Dimensions.get('window').width * 0.25, // 2% of screen width
   },
   startButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: Dimensions.get('window').width * 0.035, // 3.5% of screen width
   },
   exercisesList: {
     marginTop: 10,
-    left: -10,
   },
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Dimensions.get('window').height * 0.02, // 2% of screen height
+    paddingHorizontal: Dimensions.get('window').width * 0.02, // 2% of screen width
   },
   exerciseInfo: {
     flexDirection: 'row',
@@ -581,34 +596,34 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#000000',
-    marginRight: 30,
+    marginRight: Dimensions.get('window').width * 0.08, // 8% of screen width
   },
   exerciseName: {
     color: '#000000',
-    fontSize: 12,
+    fontSize: Dimensions.get('window').width * 0.03, // 3% of screen width
     flex: 1,
   },
   exerciseSets: {
     color: '#000000',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width * 0.035, // 3.5% of screen width
     textAlign: 'center',
-    width: 30,
+    width: Dimensions.get('window').width * 0.08, // 8% of screen width
     marginHorizontal: 5,
   },
   exerciseRepRange: {
     color: '#000000',
-    fontSize: 13,
+    fontSize: Dimensions.get('window').width * 0.032, // 3.2% of screen width
     textAlign: 'right',
     flex: 1,
   },
   bottomNavContainer: {
-    height: 55,
+    height: Dimensions.get('window').height * 0.07, // 7% of screen height
     justifyContent: 'flex-end',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 20,
-    left: 12,
-    right: 12,
+    bottom: Dimensions.get('window').height * 0.025, // 2.5% from bottom
+    left: Dimensions.get('window').width * 0.03, // 3% from left
+    right: Dimensions.get('window').width * 0.03, // 3% from right
   },
   bottomNavBg: {
     position: 'absolute',
@@ -624,7 +639,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%',
     width: '100%',
-    paddingHorizontal: 24,
+    paddingHorizontal: Dimensions.get('window').width * 0.06, // 6% of screen width
   },
   navItem: {
     alignItems: 'center',
@@ -637,17 +652,17 @@ const styles = StyleSheet.create({
   },
   activeEclipse: {
     position: 'absolute',
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
+    width: Dimensions.get('window').width * 0.088, // 8.8% of screen width
+    height: Dimensions.get('window').width * 0.088, // Keep it circular
+    borderRadius: Dimensions.get('window').width * 0.044, // Half of width/height
     backgroundColor: '#C7312B',
     opacity: 0.6,
-    top: -3.5,
-    left: -3.5,
+    top: -(Dimensions.get('window').width * 0.009), // -0.9% of screen width
+    left: -(Dimensions.get('window').width * 0.009), // -0.9% of screen width
   },
   bottomNavIcon: {
-    width: 28,
-    height: 28,
+    width: Dimensions.get('window').width * 0.07, // 7% of screen width
+    height: Dimensions.get('window').width * 0.07, // Keep it square
     resizeMode: 'contain',
     zIndex: 2,
   },
