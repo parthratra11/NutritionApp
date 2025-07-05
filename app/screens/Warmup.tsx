@@ -247,7 +247,7 @@ const Warmup = () => {
 const styles = StyleSheet.create({
   modalContainer: {
     position: 'absolute',
-    top: 25,
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: 0,
+    top: 25,
     maxHeight: '100%',
   },
   pullDownContainer: {
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     width: screenWidth * 0.3,
   },
   cancelButton: {
-    marginBottom: screenHeight * 0.13,
+    marginBottom: screenHeight * 0.23,
     marginHorizontal: screenWidth * 0.1,
     padding: screenHeight * 0.016,
     backgroundColor: '#562424',

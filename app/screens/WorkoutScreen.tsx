@@ -20,12 +20,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
 
 // Import assets
-const HomeIcon = require('../assets/home.png');
-const ChatIcon = require('../assets/chat.png');
-const AddIcon = require('../assets/add.png');
-const WorkoutIcon = require('../assets/workout.png');
-const NutritionIcon = require('../assets/nutrition.png');
-const NavRectangle = require('../assets/NavRectangle.png');
+
 const TrainingArrow = require('../assets/TrainingArrow.png'); // Add this line
 export default function WorkoutScreen() {
   const navigation = useNavigation();
@@ -375,7 +370,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   todayContainer: {
-    backgroundColor: '#2A3F5F',
+    backgroundColor: '#878787',
     borderWidth: 0,
   },
   dayLetter: {

@@ -444,7 +444,7 @@ return (
 const styles = StyleSheet.create({
   modalContainer: {
     position: 'absolute',
-    top: 25,
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top:0, // Ensure it covers the entire screen
+    top:25, // Ensure it covers the entire screen
     maxHeight: '100%',
   },
   pullDownContainer: {
