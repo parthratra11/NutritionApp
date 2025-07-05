@@ -18,13 +18,7 @@ import { useAuthRequest, makeRedirectUri, ResponseType } from 'expo-auth-session
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
-
-// Add these asset imports
-const HomeIcon = require('../assets/home.png');
-const ChatIcon = require('../assets/chat.png');
-const AddIcon = require('../assets/add.png');
-const WorkoutIcon = require('../assets/workout.png');
-const NavRectangle = require('../assets/NavRectangle.png');
+import Navbar from '../components/navbar'; // Import the Navbar component
 
 // 🔐 Slack credentials from environment
 const slackTeamId = process.env.SLACK_TEAM_ID!;
@@ -60,6 +54,9 @@ export default function SlackScreen() {
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
+
+  // Add navbar ref
+  const navbarRef = useRef(null);
 
   // 🔑 Set up Slack OAuth request
   const [request, response, promptAsync] = useAuthRequest(
@@ -219,7 +216,7 @@ export default function SlackScreen() {
     initSlack(slackToken); // refresh messages
   };
 
-  // Add this function after your state declarations
+  // Update the handleScroll function to use the navbar ref
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
@@ -231,53 +228,21 @@ export default function SlackScreen() {
           clearTimeout(scrollTimeout.current);
         }
 
-        Animated.timing(navOpacity, {
-          toValue: 1,
-          duration: 50,
-          useNativeDriver: true,
-        }).start();
+        // Show navbar when scrolling starts
+        if (navbarRef.current) {
+          navbarRef.current.show();
+        }
 
+        // Hide navbar after scrolling stops
         scrollTimeout.current = setTimeout(() => {
-          Animated.timing(navOpacity, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: true,
-          }).start();
+          if (navbarRef.current) {
+            navbarRef.current.hide();
+          }
         }, 2000);
 
         lastScrollY.current = currentScrollY;
       },
     }
-  );
-
-  // Add this function with your other functions
-  const renderBottomNav = () => (
-    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-      <Image source={NavRectangle} style={styles.bottomNavBg} />
-      <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={HomeIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={AddIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Chat')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={ChatIcon} style={styles.bottomNavIcon} />
-            <View style={styles.activeEclipse} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-      </View>
-    </Animated.View>
   );
 
   return (
@@ -318,7 +283,13 @@ export default function SlackScreen() {
           </>
         )}
       </View>
-      {renderBottomNav()}
+      
+      {/* Replace renderBottomNav() with the Navbar component */}
+      <Navbar 
+        ref={navbarRef}
+        activeScreen="Slack" 
+        opacityValue={navOpacity} 
+      />
     </SafeAreaView>
   );
 }
@@ -372,55 +343,5 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     padding: 8,
     borderRadius: 6,
-  },
-  bottomNavContainer: {
-    height: 45,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  bottomNavBg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    resizeMode: 'stretch',
-    bottom: 0,
-    left: 0,
-  },
-  bottomNavContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: '100%',
-    width: '100%',
-    paddingHorizontal: 24,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeEclipse: {
-    position: 'absolute',
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#BABABA',
-    opacity: 0.6,
-    top: -3.5,
-    left: -3.5,
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: 'contain',
-    zIndex: 2,
   },
 });
