@@ -1,52 +1,242 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  SafeAreaView,
+  TouchableOpacity,
+  Animated,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { Feather } from '@expo/vector-icons';
+import Navbar from '../components/navbar';
 
+// Import assets
+const UserImage = require('../assets/User.png');
+const EditIcon = require('../assets/edit.png');
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const { isDarkMode } = useTheme();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [userFullName, setUserFullName] = useState('');
+  const [userData, setUserData] = useState(null);
+  const navbarRef = React.useRef(null);
+  const navOpacity = React.useRef(new Animated.Value(1)).current;
+
+  // Get current date info
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.email) return;
+
+      try {
+        // Fetch user data from intakeForms
+        const intakeFormRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const intakeFormSnap = await getDoc(intakeFormRef);
+
+        if (intakeFormSnap.exists()) {
+          const data = intakeFormSnap.data();
+          setUserFullName(data.fullName);
+          setUserData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user?.email]);
+
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <Text style={styles.headerTitle}>Profile</Text>
+      
+      <View style={styles.avatarContainer}>
+        <Image source={UserImage} style={styles.userAvatar} />
+        <TouchableOpacity style={styles.editIconContainer}>
+          <Image source={EditIcon} style={styles.editIcon} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, isDarkMode && styles.containerDark]}>
+        <Text style={[styles.loadingText, isDarkMode && styles.textDark]}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>Profile Screen</Text>
-      <Pressable
-        style={[styles.button, isDarkMode && styles.buttonDark]}
-        onPress={() => navigation.goBack()}>
-        <Text style={[styles.buttonText, isDarkMode && styles.textDark]}>Go Back</Text>
-      </Pressable>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}>
+        
+        {renderHeader()}
+        
+        <View style={styles.profileContainer}>
+            <Text style={styles.userName}>{userFullName || 'Aria'}</Text> 
+          {/* Settings Menu */}
+          <View style={styles.settingsContainer}>
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>Account Settings</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>Notifications</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>Connect Apple Health</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>About</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>Privacy Policy</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.settingsItem}>
+              <Text style={styles.settingsText}>Logout</Text>
+              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+      
+      <Navbar 
+        ref={navbarRef} 
+        activeScreen="Home" 
+        opacityValue={navOpacity} 
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffff',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 100,
+  },
+  headerContainer: {
+    backgroundColor: '#081A2F',
+    paddingTop: 81,
+    paddingBottom: 81, // Increased to make room for the avatar
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: 'bold',
+    marginBottom: 40, // Increased to leave space for avatar
+  },
+  avatarContainer: {
+    position: 'absolute',
+    bottom: -40,
+    alignSelf: 'center',
+    zIndex: 10, // Ensure it appears on top
+  },
+  userAvatar: {
+    width: 132,
+    height: 132,
+    borderRadius: 100,
+    borderWidth: 5,
+    borderColor: '#fff',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#D9D9D9',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  editIcon: {
+    width: 16,
+    height: 16,
+    tintColor: 'black', // Original comment mentioned "white" but value is "black"
+  },
+  profileContainer: {
+    paddingTop: 50,  // Space after the avatar
+    paddingHorizontal: 20,
+    flex: 1,
+    paddingBottom: 10,
+  },
+    userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  settingsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginTop: 20,
+    paddingVertical: 5,
+
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+
+  },
+  settingsText: {
+    fontSize: 16,
+    color: '#333333',
+  },
   container: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
   containerDark: {
     backgroundColor: '#111827',
   },
-  title: {
-    marginBottom: 16,
-    fontSize: 24,
-    color: '#000000',
+  loadingText: {
+    fontSize: 18,
+    color: '#000',
   },
   textDark: {
-    color: '#ffffff',
-  },
-  button: {
-    backgroundColor: '#e5e7eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonDark: {
-    backgroundColor: '#374151',
-  },
-  buttonText: {
-    fontWeight: 'bold',
-    color: '#000000',
+    color: '#fff',
   },
 });

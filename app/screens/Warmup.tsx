@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: 25,
+    top: 20,
     maxHeight: '100%',
   },
   pullDownContainer: {
