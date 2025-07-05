@@ -12,12 +12,16 @@ import {
   Dimensions,
   SafeAreaView,
   Animated,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as HealthConnectLibrary from 'react-native-health-connect';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import Navbar from '../components/navbar';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const REQUIRED_PERMISSIONS = [
   { accessType: 'read', recordType: 'Steps' },
@@ -82,12 +86,15 @@ const WeekdayBar = () => {
 };
 
 // Circular progress component
-const CircularProgress = ({ steps = 0, goal = 10000 }) => {
+const CircularProgress = ({ steps = 0, goal = 10000, onEditSteps, showEditButton = false }) => {
   const percentage = Math.min(steps / goal, 1);
   const radius = 110;
   const strokeWidth = 16;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - circumference * percentage;
+  const strokeDashoffset = circumference * (1 - percentage);
+
+  // Arrow positioning fixed to start from the top (0 degrees) and move clockwise
+  const angle = percentage * 360; // Now starts at top (0°) and goes clockwise
 
   return (
     <View style={styles.progressContainer}>
@@ -105,7 +112,7 @@ const CircularProgress = ({ steps = 0, goal = 10000 }) => {
           fill="transparent"
         />
 
-        {/* Progress Arc */}
+        {/* Progress Arc - adjusted transform to start from right (90 degrees) */}
         <Circle
           cx={radius + strokeWidth / 2}
           cy={radius + strokeWidth / 2}
@@ -119,23 +126,33 @@ const CircularProgress = ({ steps = 0, goal = 10000 }) => {
           transform={`rotate(-90, ${radius + strokeWidth / 2}, ${radius + strokeWidth / 2})`}
         />
 
-        {/* Arrow at the end of progress */}
+        {/* Arrow at the end of progress - positioned slightly ahead of the progress */}
         <G
-          transform={`rotate(${percentage * 360 - 90}, ${radius + strokeWidth / 2}, ${radius + strokeWidth / 2}) translate(${radius + strokeWidth / 2}, ${strokeWidth / 2})`}>
+          transform={`rotate(${angle + 5}, ${radius + strokeWidth / 2}, ${radius + strokeWidth / 2}) translate(${radius + strokeWidth / 2}, ${-strokeWidth / 2})`}>
           <Path d="M0,0 L10,10 L0,20 Z" fill="#C7312B" />
         </G>
       </Svg>
 
       <View style={styles.progressContent}>
-        <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
-        <Text style={styles.stepsLabel}>Steps</Text>
+        {/* Updated step count display with inline "Steps" and bottom border */}
+        <View style={styles.stepsInlineContainer}>
+          <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
+        </View>
+
         <Text style={styles.stepsGoal}>Out of {goal.toLocaleString()} steps</Text>
+
+        {showEditButton && (
+          <TouchableOpacity style={styles.editButton} onPress={onEditSteps}>
+            <Ionicons name="pencil" size={18} color="white" />
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
 
-const StepScreen = () => {
+const StepScreen = ({ navigation }) => {
   const [healthData, setHealthData] = useState({
     steps: 0,
     calories: null,
@@ -147,16 +164,83 @@ const StepScreen = () => {
 
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
+  const [isConnectedToHealthServices, setIsConnectedToHealthServices] = useState(false);
   const [permissionError, setPermissionError] = useState('');
   const [appInfo, setAppInfo] = useState('');
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [manualSteps, setManualSteps] = useState('');
+  const [editedDate, setEditedDate] = useState('');
   const poller = useRef(null);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
+
+  // Function to navigate to the detailed fitness screen
+  const navigateToDetailedFitnessScreen = () => {
+    navigation.navigate('DetailedFitnessScreen');
+  };
+
+  // Function to handle manual step count edit
+  const handleEditSteps = () => {
+    setManualSteps(healthData.steps.toString());
+    setEditModalVisible(true);
+  };
+
+  // Function to save edited step count
+  const saveEditedSteps = async () => {
+    try {
+      const steps = parseInt(manualSteps);
+      if (isNaN(steps) || steps < 0) {
+        Alert.alert('Invalid Input', 'Please enter a valid step count.');
+        return;
+      }
+
+      // Get today's date as a string for storage key
+      const today = new Date().toISOString().split('T')[0];
+
+      // Save manually edited steps to AsyncStorage
+      await AsyncStorage.setItem('manualSteps_' + today, steps.toString());
+      setEditedDate(today);
+
+      // Update health data with manually edited steps
+      setHealthData((prev) => ({
+        ...prev,
+        steps: steps,
+      }));
+
+      setEditModalVisible(false);
+    } catch (error) {
+      console.error('Error saving edited steps:', error);
+      Alert.alert('Error', 'Failed to save step count.');
+    }
+  };
+
+  // Function to check for previously edited steps
+  const checkForEditedSteps = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const savedSteps = await AsyncStorage.getItem('manualSteps_' + today);
+
+      if (savedSteps !== null) {
+        const steps = parseInt(savedSteps);
+        if (!isNaN(steps)) {
+          console.log('Found manually edited steps:', steps);
+          setHealthData((prev) => ({
+            ...prev,
+            steps: steps,
+          }));
+          setEditedDate(today);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for edited steps:', error);
+    }
+  };
 
   // All the logic functions remain unchanged
   const ensurePermissions = async () => {
     try {
       setPermissionError('');
+      let isConnected = false;
 
       if (Platform.OS === 'android') {
         const { NativeModules } = require('react-native');
@@ -180,37 +264,36 @@ const StepScreen = () => {
         }
       }
 
+      // Check if Health Connect is available and has permissions
       if (typeof HealthConnectLibrary.initialize === 'function') {
         await HealthConnectLibrary.initialize();
         console.log('Health Connect initialized');
+
+        const sdkStatus = await HealthConnectLibrary.getSdkStatus();
+        console.log('SDK Status:', sdkStatus);
+        if (sdkStatus === HealthConnectLibrary.SdkAvailabilityStatus.SDK_AVAILABLE) {
+          const grantedPerms = await HealthConnectLibrary.getGrantedPermissions();
+          console.log('Granted permissions:', JSON.stringify(grantedPerms));
+
+          const allGranted = REQUIRED_PERMISSIONS.every((perm) =>
+            grantedPerms.some(
+              (g) => g.recordType === perm.recordType && g.accessType === perm.accessType
+            )
+          );
+
+          if (allGranted) {
+            isConnected = true;
+            console.log('Connected to Health Services');
+          }
+        }
       }
 
-      const sdkStatus = await HealthConnectLibrary.getSdkStatus();
-      console.log('SDK Status:', sdkStatus);
-      if (sdkStatus !== HealthConnectLibrary.SdkAvailabilityStatus.SDK_AVAILABLE) {
-        setPermissionError('Health Connect not available. Status: ' + sdkStatus);
-        Alert.alert('Unavailable', 'Health Connect is not available on this device.');
-        return false;
-      }
-
-      const grantedPerms = await HealthConnectLibrary.getGrantedPermissions();
-      console.log('Granted permissions:', JSON.stringify(grantedPerms));
-
-      const allGranted = REQUIRED_PERMISSIONS.every((perm) =>
-        grantedPerms.some(
-          (g) => g.recordType === perm.recordType && g.accessType === perm.accessType
-        )
-      );
-
-      if (!allGranted) {
-        console.log('Not all permissions granted');
-        return false;
-      }
-      console.log('All permissions granted');
-      return true;
+      setIsConnectedToHealthServices(isConnected);
+      return isConnected;
     } catch (error) {
       console.error('Permission error:', error);
       setPermissionError('Error: ' + error.message);
+      setIsConnectedToHealthServices(false);
       return false;
     }
   };
@@ -226,6 +309,12 @@ const StepScreen = () => {
       console.log(
         `Fetching data for today: ${startTime.toISOString()} to ${endTime.toISOString()}`
       );
+
+      const today = endTime.toISOString().split('T')[0];
+      // If date changed, clear edited steps
+      if (editedDate && editedDate !== today) {
+        setEditedDate('');
+      }
 
       const grantedPerms = await HealthConnectLibrary.getGrantedPermissions();
       if (
@@ -256,7 +345,7 @@ const StepScreen = () => {
         }
       }
 
-      // Process steps
+      // Process steps - Only update if there's no manual edit for today
       let totalSteps = 0;
       const stepsData = healthData.Steps || {};
       if (stepsData.records && Array.isArray(stepsData.records)) {
@@ -299,16 +388,31 @@ const StepScreen = () => {
         console.log(`Estimated calories from steps: ${totalCalories.toFixed(2)} kcal`);
       }
 
-      setHealthData({
-        steps: totalSteps,
-        calories: totalCalories,
-        caloriesSource,
-        distance: totalDistance,
-        exerciseSessions: healthData.ExerciseSession,
-        heartRate: healthData.HeartRate,
-      });
+      // Only update steps if there's no manual edit for today
+      if (editedDate !== today) {
+        setHealthData((prev) => ({
+          ...prev,
+          steps: totalSteps,
+          calories: totalCalories,
+          caloriesSource,
+          distance: totalDistance,
+          exerciseSessions: healthData.ExerciseSession,
+          heartRate: healthData.HeartRate,
+        }));
+      } else {
+        // Keep edited steps, update only other data
+        setHealthData((prev) => ({
+          ...prev,
+          calories: totalCalories,
+          caloriesSource,
+          distance: totalDistance,
+          exerciseSessions: healthData.ExerciseSession,
+          heartRate: healthData.HeartRate,
+        }));
+      }
+
       console.log('Updated health data:', {
-        steps: totalSteps,
+        steps: editedDate === today ? healthData.steps : totalSteps,
         distance: totalDistance,
         calories: totalCalories,
         caloriesSource,
@@ -323,6 +427,7 @@ const StepScreen = () => {
 
   useEffect(() => {
     (async () => {
+      await checkForEditedSteps();
       const ok = await ensurePermissions();
       setHasPermission(ok);
       if (ok) {
@@ -344,7 +449,12 @@ const StepScreen = () => {
           <View style={styles.contentContainer}>
             <WeekdayBar />
 
-            <CircularProgress steps={0} goal={10000} />
+            <CircularProgress
+              steps={0}
+              goal={10000}
+              onEditSteps={handleEditSteps}
+              showEditButton={true}
+            />
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
@@ -379,7 +489,22 @@ const StepScreen = () => {
               <Text style={styles.loadingText}>Fetching your data...</Text>
             </View>
           ) : (
-            <CircularProgress steps={healthData.steps} goal={10000} />
+            <>
+              <CircularProgress
+                steps={healthData.steps}
+                goal={10000}
+                onEditSteps={handleEditSteps}
+                showEditButton={!isConnectedToHealthServices}
+              />
+
+              {/* View More Button - Moved here, right below the progress circle */}
+              <TouchableOpacity
+                style={styles.viewMoreButton}
+                onPress={navigateToDetailedFitnessScreen}>
+                <Text style={styles.viewMoreText}>View More</Text>
+                <Ionicons name="chevron-forward" size={16} color="#C7312B" />
+              </TouchableOpacity>
+            </>
           )}
 
           {!loading && (
@@ -401,11 +526,51 @@ const StepScreen = () => {
         </View>
       </View>
 
+      {/* Moved refresh button to center of whitespace */}
       <TouchableOpacity style={styles.refreshButton} onPress={fetchHealthData} disabled={loading}>
-        <Ionicons name="refresh" size={24} color="white" />
+        <Ionicons name="refresh" size={24} color="white" style={styles.refreshIcon} />
+        <Text style={styles.refreshButtonText}>Refresh</Text>
       </TouchableOpacity>
 
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
+
+      {/* Edit Steps Modal - only used when not connected to health services */}
+      <Modal
+        visible={editModalVisible && !isConnectedToHealthServices}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditModalVisible(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Step Count</Text>
+
+            <TextInput
+              style={styles.stepInput}
+              keyboardType="number-pad"
+              value={manualSteps}
+              onChangeText={setManualSteps}
+              placeholder="Enter steps"
+              placeholderTextColor="#999"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setEditModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveEditedSteps}>
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -475,8 +640,9 @@ const styles = StyleSheet.create({
   progressContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
+    marginTop: 20, // Reduced from 60 to 20 to move it up
   },
+
   progressContent: {
     position: 'absolute',
     alignItems: 'center',
@@ -486,16 +652,31 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: 'white',
+    marginRight: 8,
   },
-  stepsLabel: {
-    fontSize: 14,
-    color: '#aaa',
-    marginTop: 5,
+  stepsInline: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '500',
   },
   stepsGoal: {
     fontSize: 12,
     color: '#aaa',
     marginTop: 8,
+    marginBottom: 12,
+  },
+  editButton: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(199, 49, 43, 0.8)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: 'white',
+    fontSize: 14,
+    marginLeft: 4,
   },
   buttonContainer: {
     width: '100%',
@@ -528,21 +709,34 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     position: 'absolute',
-    bottom: 100,
-    right: 30,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    bottom: 100, // Lowered from 130 to 100 to position it a bit lower
+    alignSelf: 'center', // Center horizontally
+    flexDirection: 'row',
     backgroundColor: '#C7312B',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  refreshIcon: {
+    marginRight: 8,
+  },
+  refreshButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '90%',
-    marginTop: 40,
+    marginTop: 20, // Reduced from 40 to 20 since View More is now between circle and stats
     paddingHorizontal: 10,
   },
   statCard: {
@@ -566,6 +760,72 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 10,
     fontSize: 16,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#1D2740',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 20,
+  },
+  stepInput: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#0D1321',
+    color: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    width: '48%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#C7312B',
+  },
+  saveButton: {
+    backgroundColor: '#C7312B',
+    borderColor: '#C7312B',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  viewMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10, // Reduced from 30 to 10 for tighter spacing below circle
+    paddingVertical: 10,
+  },
+  viewMoreText: {
+    color: '#C7312B',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
 

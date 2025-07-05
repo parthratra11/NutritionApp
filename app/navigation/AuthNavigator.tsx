@@ -19,6 +19,7 @@ import AddressScreen from '../screens/Address';
 import ExerciseScreen from '../screens/Exercise';
 import WarmupScreen from '../screens/Warmup';
 import CronoScreen from 'screens/CronoScreen';
+import DetailedFitnessScreen from 'screens/DetailedFitnessScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +38,11 @@ export default function AuthNavigator() {
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Reports" component={ReportScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
+          <Stack.Screen
+            name="DetailedFitnessScreen"
+            component={DetailedFitnessScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Cronometer" component={CronoScreen} />
           <Stack.Screen
             name="Exercise"
