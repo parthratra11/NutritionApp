@@ -17,14 +17,10 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import Navbar from '../components/navbar';
 
 // Import assets
-const HomeIcon = require('../assets/home.png');
-const ChatIcon = require('../assets/chat.png');
-const AddIcon = require('../assets/add.png');
-const WorkoutIcon = require('../assets/workout.png');
-const NutritionIcon = require('../assets/nutrition.png');
-const NavRectangle = require('../assets/NavRectangle.png');
+
 const TrainingArrow = require('../assets/TrainingArrow.png'); // Add this line
 export default function WorkoutScreen() {
   const navigation = useNavigation();
@@ -38,6 +34,7 @@ export default function WorkoutScreen() {
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
+  const navbarRef = useRef(null);
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const [steps, setSteps] = useState(9000);
   const [stepsGoal, setStepsGoal] = useState(10000);
@@ -128,32 +125,31 @@ export default function WorkoutScreen() {
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
 
-  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-    useNativeDriver: false,
-    listener: (event) => {
-      const currentScrollY = event.nativeEvent.contentOffset.y;
 
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
+const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+  useNativeDriver: false,
+  listener: (event) => {
+    const currentScrollY = event.nativeEvent.contentOffset.y;
+
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
+    }
+
+    // Show navbar when scrolling starts
+    if (navbarRef.current) {
+      navbarRef.current.show();
+    }
+
+    // Hide navbar after scrolling stops
+    scrollTimeout.current = setTimeout(() => {
+      if (navbarRef.current) {
+        navbarRef.current.hide();
       }
+    }, 2000);
 
-      Animated.timing(navOpacity, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }).start();
-
-      scrollTimeout.current = setTimeout(() => {
-        Animated.timing(navOpacity, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }).start();
-      }, 2000);
-
-      lastScrollY.current = currentScrollY;
-    },
-  });
+    lastScrollY.current = currentScrollY;
+  },
+});
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -199,18 +195,21 @@ export default function WorkoutScreen() {
     </View>
   );
 
-  const renderStepsCard = () => (
-    <View style={styles.stepsCard}>
-      <View style={styles.stepsIconContainer}>
-        <Ionicons name="footsteps-outline" size={22} color="#fff" />
-      </View>
-
-      <View style={styles.stepsContent}>
-        <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
-        <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
-      </View>
+const renderStepsCard = () => (
+  <TouchableOpacity 
+    style={styles.stepsCard}
+    onPress={() => navigation.navigate('Steps')}
+  >
+    <View style={styles.stepsIconContainer}>
+      <Ionicons name="footsteps-outline" size={22} color="#fff" />
     </View>
-  );
+
+    <View style={styles.stepsContent}>
+      <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
+      <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
+    </View>
+  </TouchableOpacity>
+);
 
 const renderPrepTimeCard = () => (
   <TouchableOpacity 
@@ -267,40 +266,6 @@ const renderPrepTimeCard = () => (
     </View>
   );
 
-  const renderBottomNav = () => (
-    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-      <Image source={NavRectangle} style={styles.bottomNavBg} />
-      <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Reports')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={HomeIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={AddIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Nutrition')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={NutritionIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={ChatIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-            <View style={styles.activeEclipse} />
-          </View>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -332,7 +297,13 @@ const renderPrepTimeCard = () => (
           {renderTraining()}
         </View>
       </ScrollView>
-      {renderBottomNav()}
+      
+      {/* Replace renderBottomNav() with the Navbar component */}
+      <Navbar 
+        ref={navbarRef} 
+        activeScreen="Workout" 
+        opacityValue={navOpacity} 
+      />
     </SafeAreaView>
   );
 }
@@ -371,7 +342,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 30,
-    top: 20,
+    top: 25,
   },
   headerTitle: {
     color: '#fff',
@@ -402,7 +373,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   todayContainer: {
-    backgroundColor: '#2A3F5F',
+    backgroundColor: '#878787',
     borderWidth: 0,
   },
   dayLetter: {
@@ -615,55 +586,5 @@ const styles = StyleSheet.create({
     fontSize: Dimensions.get('window').width * 0.032, // 3.2% of screen width
     textAlign: 'right',
     flex: 1,
-  },
-  bottomNavContainer: {
-    height: Dimensions.get('window').height * 0.07, // 7% of screen height
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: Dimensions.get('window').height * 0.025, // 2.5% from bottom
-    left: Dimensions.get('window').width * 0.03, // 3% from left
-    right: Dimensions.get('window').width * 0.03, // 3% from right
-  },
-  bottomNavBg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    resizeMode: 'stretch',
-    bottom: 0,
-    left: 0,
-  },
-  bottomNavContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: '100%',
-    width: '100%',
-    paddingHorizontal: Dimensions.get('window').width * 0.06, // 6% of screen width
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeEclipse: {
-    position: 'absolute',
-    width: Dimensions.get('window').width * 0.088, // 8.8% of screen width
-    height: Dimensions.get('window').width * 0.088, // Keep it circular
-    borderRadius: Dimensions.get('window').width * 0.044, // Half of width/height
-    backgroundColor: '#C7312B',
-    opacity: 0.6,
-    top: -(Dimensions.get('window').width * 0.009), // -0.9% of screen width
-    left: -(Dimensions.get('window').width * 0.009), // -0.9% of screen width
-  },
-  bottomNavIcon: {
-    width: Dimensions.get('window').width * 0.07, // 7% of screen width
-    height: Dimensions.get('window').width * 0.07, // Keep it square
-    resizeMode: 'contain',
-    zIndex: 2,
   },
 });

@@ -20,16 +20,9 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
-
-// Import assets
-const UserImage = require('../assets/User.png');
+import Navbar from '../components/navbar';
 const GreetRectangle = require('../assets/GreetRectangle.png');
-const HomeIcon = require('../assets/home.png');
-const ChatIcon = require('../assets/chat.png');
-const AddIcon = require('../assets/add.png');
-const WorkoutIcon = require('../assets/workout.png');
-const NavRectangle = require('../assets/NavRectangle.png');
-
+const UserImage = require('../assets/User.png');
 const metrics = ['Sleep Quality', 'Mood', 'Hunger Level'];
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 // Add near other state declarations at the top
@@ -100,6 +93,9 @@ const DailyCheckInForm = () => {
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
+
+  // Add navbar ref
+  const navbarRef = useRef(null);
 
   useEffect(() => {
     const yesterday = getYesterday();
@@ -216,6 +212,7 @@ const DailyCheckInForm = () => {
     fetchUserData();
   }, [user?.email]);
 
+  // Update the handleScroll function to use the navbar ref
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
@@ -229,19 +226,15 @@ const DailyCheckInForm = () => {
         }
 
         // Show navbar when scrolling
-        Animated.timing(navOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
+        if (navbarRef.current) {
+          navbarRef.current.show();
+        }
 
         // Hide navbar after 2 seconds of no scrolling
         scrollTimeout.current = setTimeout(() => {
-          Animated.timing(navOpacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
+          if (navbarRef.current) {
+            navbarRef.current.hide();
+          }
         }, 2000);
 
         lastScrollY.current = currentScrollY;
@@ -537,29 +530,6 @@ const DailyCheckInForm = () => {
     );
   };
 
-  const renderBottomNav = () => (
-    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-      <Image source={NavRectangle} style={styles.bottomNavBg} />
-      <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
-          <Image source={HomeIcon} style={styles.bottomNavIcon} />
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Add')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={AddIcon} style={styles.bottomNavIcon} />
-            <View style={styles.activeEclipse} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
-          <Image source={ChatIcon} style={styles.bottomNavIcon} />
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-          <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
       <ScrollView
@@ -585,8 +555,17 @@ const DailyCheckInForm = () => {
             {alreadySubmitted ? 'Already Submitted for Yesterday' : 'Submit Check-in'}
           </Text>
         </TouchableOpacity>
+        
+        {/* Add extra padding at bottom for navbar */}
+        <View style={{ height: 70 }} />
       </ScrollView>
-      {renderBottomNav()}
+      
+      {/* Replace renderBottomNav() with the Navbar component */}
+      <Navbar 
+        ref={navbarRef}
+        activeScreen="WeeklyForm" 
+        opacityValue={navOpacity} 
+      />
     </SafeAreaView>
   );
 };
@@ -795,54 +774,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  bottomNavContainer: {
-    height: 45,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  bottomNavBg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    resizeMode: 'stretch',
-  },
-  bottomNavContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: '100%',
-    width: '100%',
-    paddingHorizontal: 24,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeEclipse: {
-    position: 'absolute',
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#BABABA',
-    opacity: 0.6,
-    top: -3.5,
-    left: -3.5,
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: 'contain',
-    zIndex: 2,
   },
 });
 

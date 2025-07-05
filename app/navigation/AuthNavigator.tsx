@@ -57,7 +57,7 @@ export default function AuthNavigator() {
     presentation: 'transparentModal',
   }} 
 />
-          <Stack.Screen name="Steps" component={StepScreen} />
+          <Stack.Screen name="Steps" component={StepScreen} options={{headerShown:false}} />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}

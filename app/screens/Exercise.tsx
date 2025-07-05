@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: 0, // Ensure it covers the entire screen1
+    top:25, // Ensure it covers the entire screen
     maxHeight: '100%',
   },
   pullDownContainer: {
