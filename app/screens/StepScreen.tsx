@@ -35,24 +35,23 @@ const WeekdayBar = () => {
   const currentDate = new Date();
   const dayOfWeek = currentDate.getDay(); // 0 is Sunday, 1 is Monday, etc.
   const dayOfMonth = currentDate.getDate();
-  
+
   // Generate array of 7 days starting from Sunday (3 days before current day to 3 days after)
   const days = [];
   const weekdays = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-  
+
   for (let i = -3; i <= 3; i++) {
     const date = new Date(currentDate);
     date.setDate(dayOfMonth + i);
     const day = date.getDate();
     const isToday = i === 0;
-    
+
     days.push({
       dayOfMonth: day,
       weekday: weekdays[(dayOfWeek + i + 7) % 7],
       isToday,
     });
   }
-  
 
   return (
     <View style={styles.weekdayContainer}>
@@ -62,14 +61,7 @@ const WeekdayBar = () => {
           <View style={[styles.circleProgress, day.isToday && styles.todayCircle]}>
             {/* Progress circle with random progress for visualization */}
             <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="#1D2740"
-                strokeWidth="5"
-                fill="transparent"
-              />
+              <Circle cx="12" cy="12" r="10" stroke="#1D2740" strokeWidth="5" fill="transparent" />
               <Circle
                 cx="12"
                 cy="12"
@@ -95,25 +87,28 @@ const CircularProgress = ({ steps = 0, goal = 10000 }) => {
   const radius = 110;
   const strokeWidth = 16;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (circumference * percentage);
-  
+  const strokeDashoffset = circumference - circumference * percentage;
+
   return (
     <View style={styles.progressContainer}>
-      <Svg height={radius * 2 + strokeWidth} width={radius * 2 + strokeWidth} viewBox={`0 0 ${radius * 2 + strokeWidth} ${radius * 2 + strokeWidth}`}>
+      <Svg
+        height={radius * 2 + strokeWidth}
+        width={radius * 2 + strokeWidth}
+        viewBox={`0 0 ${radius * 2 + strokeWidth} ${radius * 2 + strokeWidth}`}>
         {/* Background Circle */}
         <Circle
-          cx={radius + strokeWidth/2}
-          cy={radius + strokeWidth/2}
+          cx={radius + strokeWidth / 2}
+          cy={radius + strokeWidth / 2}
           r={radius}
           strokeWidth={strokeWidth}
           stroke="rgba(199, 49, 43, 0.2)"
           fill="transparent"
         />
-        
+
         {/* Progress Arc */}
         <Circle
-          cx={radius + strokeWidth/2}
-          cy={radius + strokeWidth/2}
+          cx={radius + strokeWidth / 2}
+          cy={radius + strokeWidth / 2}
           r={radius}
           strokeWidth={strokeWidth}
           stroke="#C7312B"
@@ -121,20 +116,16 @@ const CircularProgress = ({ steps = 0, goal = 10000 }) => {
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           fill="transparent"
-          transform={`rotate(-90, ${radius + strokeWidth/2}, ${radius + strokeWidth/2})`}
+          transform={`rotate(-90, ${radius + strokeWidth / 2}, ${radius + strokeWidth / 2})`}
         />
-        
+
         {/* Arrow at the end of progress */}
         <G
-          transform={`rotate(${percentage * 360 - 90}, ${radius + strokeWidth/2}, ${radius + strokeWidth/2}) translate(${radius + strokeWidth/2}, ${strokeWidth/2})`}
-        >
-          <Path
-            d="M0,0 L10,10 L0,20 Z"
-            fill="#C7312B"
-          />
+          transform={`rotate(${percentage * 360 - 90}, ${radius + strokeWidth / 2}, ${radius + strokeWidth / 2}) translate(${radius + strokeWidth / 2}, ${strokeWidth / 2})`}>
+          <Path d="M0,0 L10,10 L0,20 Z" fill="#C7312B" />
         </G>
       </Svg>
-      
+
       <View style={styles.progressContent}>
         <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
         <Text style={styles.stepsLabel}>Steps</Text>
@@ -154,7 +145,6 @@ const StepScreen = () => {
     heartRate: null,
   });
 
-  
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [permissionError, setPermissionError] = useState('');
@@ -353,32 +343,71 @@ const StepScreen = () => {
         <View style={styles.contentWrapper}>
           <View style={styles.contentContainer}>
             <WeekdayBar />
-            
+
             <CircularProgress steps={0} goal={10000} />
-            
+
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.connectButton}
                 onPress={() =>
                   Linking.openURL('package:com.google.android.apps.healthdata').catch(() =>
                     Linking.openURL('market://details?id=com.google.android.apps.healthdata')
                   )
-                }
-              >
+                }>
                 <Ionicons name="medkit-outline" size={20} color="white" style={styles.buttonIcon} />
                 <Text style={styles.connectButtonText}>Connect Health Connect</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-        
+
         <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
       </SafeAreaView>
     );
   }
 
   // Updated UI rendering - data display screen
+  return (
+    <SafeAreaView style={styles.containerWithWhiteSpace}>
+      <View style={styles.contentWrapper}>
+        <View style={styles.contentContainer}>
+          <WeekdayBar />
 
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#C7312B" />
+              <Text style={styles.loadingText}>Fetching your data...</Text>
+            </View>
+          ) : (
+            <CircularProgress steps={healthData.steps} goal={10000} />
+          )}
+
+          {!loading && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>
+                  {healthData.distance !== null ? healthData.distance.toFixed(2) : '0'} km
+                </Text>
+                <Text style={styles.statLabel}>Distance</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>
+                  {healthData.calories !== null ? Math.round(healthData.calories) : '0'}
+                </Text>
+                <Text style={styles.statLabel}>Calories</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.refreshButton} onPress={fetchHealthData} disabled={loading}>
+        <Ionicons name="refresh" size={24} color="white" />
+      </TouchableOpacity>
+
+      <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -396,7 +425,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 50,
     marginBottom: 230, // Create white space at the bottom
   },
-  
+
   // Update this style
   contentContainer: {
     flex: 1,
@@ -405,7 +434,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 30,
   },
-  
+
   // Keep the rest of your styles
   container: {
     flex: 1,
@@ -508,6 +537,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '90%',
+    marginTop: 40,
+    paddingHorizontal: 10,
+  },
+  statCard: {
+    backgroundColor: '#1D2740',
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+    width: '45%',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  loadingText: {
+    color: 'white',
+    marginTop: 10,
+    fontSize: 16,
   },
 });
 
