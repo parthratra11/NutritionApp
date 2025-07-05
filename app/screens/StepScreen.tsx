@@ -152,7 +152,7 @@ const CircularProgress = ({ steps = 0, goal = 10000, onEditSteps, showEditButton
   );
 };
 
-const StepScreen = () => {
+const StepScreen = ({ navigation }) => {
   const [healthData, setHealthData] = useState({
     steps: 0,
     calories: null,
@@ -173,6 +173,11 @@ const StepScreen = () => {
   const poller = useRef(null);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
+
+  // Function to navigate to the detailed fitness screen
+  const navigateToDetailedFitnessScreen = () => {
+    navigation.navigate('DetailedFitnessScreen');
+  };
 
   // Function to handle manual step count edit
   const handleEditSteps = () => {
@@ -484,12 +489,22 @@ const StepScreen = () => {
               <Text style={styles.loadingText}>Fetching your data...</Text>
             </View>
           ) : (
-            <CircularProgress
-              steps={healthData.steps}
-              goal={10000}
-              onEditSteps={handleEditSteps}
-              showEditButton={!isConnectedToHealthServices}
-            />
+            <>
+              <CircularProgress
+                steps={healthData.steps}
+                goal={10000}
+                onEditSteps={handleEditSteps}
+                showEditButton={!isConnectedToHealthServices}
+              />
+
+              {/* View More Button - Moved here, right below the progress circle */}
+              <TouchableOpacity
+                style={styles.viewMoreButton}
+                onPress={navigateToDetailedFitnessScreen}>
+                <Text style={styles.viewMoreText}>View More</Text>
+                <Ionicons name="chevron-forward" size={16} color="#C7312B" />
+              </TouchableOpacity>
+            </>
           )}
 
           {!loading && (
@@ -625,8 +640,9 @@ const styles = StyleSheet.create({
   progressContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
+    marginTop: 20, // Reduced from 60 to 20 to move it up
   },
+
   progressContent: {
     position: 'absolute',
     alignItems: 'center',
@@ -720,7 +736,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '90%',
-    marginTop: 40,
+    marginTop: 20, // Reduced from 40 to 20 since View More is now between circle and stats
     paddingHorizontal: 10,
   },
   statCard: {
@@ -797,6 +813,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  viewMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10, // Reduced from 30 to 10 for tighter spacing below circle
+    paddingVertical: 10,
+  },
+  viewMoreText: {
+    color: '#C7312B',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
 
