@@ -195,18 +195,21 @@ const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scroll
     </View>
   );
 
-  const renderStepsCard = () => (
-    <View style={styles.stepsCard}>
-      <View style={styles.stepsIconContainer}>
-        <Ionicons name="footsteps-outline" size={22} color="#fff" />
-      </View>
-
-      <View style={styles.stepsContent}>
-        <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
-        <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
-      </View>
+const renderStepsCard = () => (
+  <TouchableOpacity 
+    style={styles.stepsCard}
+    onPress={() => navigation.navigate('Steps')}
+  >
+    <View style={styles.stepsIconContainer}>
+      <Ionicons name="footsteps-outline" size={22} color="#fff" />
     </View>
-  );
+
+    <View style={styles.stepsContent}>
+      <Text style={styles.stepsCount}>{steps.toLocaleString()}</Text>
+      <Text style={styles.stepsGoal}>Goal: {stepsGoal.toLocaleString()}</Text>
+    </View>
+  </TouchableOpacity>
+);
 
 const renderPrepTimeCard = () => (
   <TouchableOpacity 
