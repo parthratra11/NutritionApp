@@ -105,40 +105,44 @@ export default function ReportScreen() {
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
 
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <View style={styles.headerContent}>
-        <View>
-          <Text style={styles.headerSubTitle}>Keeping Moving Today!</Text>
-          <Text style={styles.headerTitle}>Hi, {userFullName || 'Aria'}!</Text>
-          <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
-        </View>
-        <Image source={UserImage} style={styles.userAvatar} />
+ const renderHeader = () => (
+  <View style={styles.headerContainer}>
+    <View style={styles.headerContent}>
+      <View>
+        <Text style={styles.headerSubTitle}>Keeping Moving Today!</Text>
+        <Text style={styles.headerTitle}>Hi, {userFullName || 'Aria'}!</Text>
+        <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
       </View>
       
-      {/* Calendar Week View */}
-      <View style={styles.calendarContainer}>
-        {weekDates.map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={[
-              styles.dayContainer,
-              item.isToday && styles.todayContainer
-            ]}
-          >
-            <Text style={[
-              styles.dayLetter,
-              item.isToday && styles.todayText
-            ]}>{item.day}</Text>
-            <Text style={[
-              styles.dayNumber,
-              item.isToday && styles.todayText
-            ]}>{item.date}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Make the user avatar clickable */}
+      <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+        <Image source={UserImage} style={styles.userAvatar} />
+      </TouchableOpacity>
     </View>
-  );
+    
+    {/* Calendar Week View */}
+    <View style={styles.calendarContainer}>
+      {weekDates.map((item, index) => (
+        <TouchableOpacity 
+          key={index} 
+          style={[
+            styles.dayContainer,
+            item.isToday && styles.todayContainer
+          ]}
+        >
+          <Text style={[
+            styles.dayLetter,
+            item.isToday && styles.todayText
+          ]}>{item.day}</Text>
+          <Text style={[
+            styles.dayNumber,
+            item.isToday && styles.todayText
+          ]}>{item.date}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
 
   const renderWeightChart = () => (
     <View style={styles.cardContainer}>

@@ -32,7 +32,6 @@ export default function AuthNavigator() {
         <>
           <Stack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
@@ -59,6 +58,13 @@ export default function AuthNavigator() {
               presentation: 'transparentModal',
             }}
           />
+            <Stack.Screen 
+               name="Profile" 
+              component={ProfileScreen} 
+            options={{ 
+            headerShown: false 
+          }} 
+           />
           <Stack.Screen name="Steps" component={StepScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="Nutrition"
