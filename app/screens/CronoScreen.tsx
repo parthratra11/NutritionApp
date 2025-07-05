@@ -146,7 +146,7 @@ export default function CronoScreen() {
             const mealData = {
               name: record.name || 'Unnamed meal',
               time: new Date(record.startTime).toLocaleTimeString(),
-              calories: record.energy?.kilocalories || 0,
+              calories: record.energy?.inKilocalories || 0,
               protein: record.protein?.inGrams || 0,
               fat: record.totalFat?.inGrams || 0,
               carbs: record.totalCarbohydrate?.inGrams || 0,

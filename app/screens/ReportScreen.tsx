@@ -18,6 +18,7 @@ import { LineChart, BarChart } from 'react-native-chart-kit';
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Navbar from '../components/navbar';
 
 // Import assets
 const UserImage = require('../assets/User.png');
@@ -36,9 +37,10 @@ export default function ReportScreen() {
   const [loading, setLoading] = useState(true);
   const [userFullName, setUserFullName] = useState('');
   const scrollY = useRef(new Animated.Value(0)).current;
-  const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const navbarRef = useRef(null); // Add this ref to control the navbar
   const screenWidth = Dimensions.get('window').width;
   // Sample data for demonstration
   const [stepsData] = useState([8200, 8500, 9100, 9300, 9600, 9800, 8600]);
@@ -349,6 +351,7 @@ export default function ReportScreen() {
     </View>
   );
 
+  // Update handleScroll to use the navbarRef methods
   const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
     useNativeDriver: false,
     listener: (event) => {
@@ -358,58 +361,21 @@ export default function ReportScreen() {
         clearTimeout(scrollTimeout.current);
       }
 
-      Animated.timing(navOpacity, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }).start();
+      // Show navbar when scrolling starts
+      if (navbarRef.current) {
+        navbarRef.current.show();
+      }
 
+      // Hide navbar after scrolling stops
       scrollTimeout.current = setTimeout(() => {
-        Animated.timing(navOpacity, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }).start();
+        if (navbarRef.current) {
+          navbarRef.current.hide();
+        }
       }, 2000);
 
       lastScrollY.current = currentScrollY;
     },
   });
-
-  const renderBottomNav = () => (
-    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-      <Image source={NavRectangle} style={styles.bottomNavBg} />
-      <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Home')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={HomeIcon} style={styles.bottomNavIcon} />
-            <View style={styles.activeEclipse} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Nutrition')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={NutritionIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={AddIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        
-        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={ChatIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
 
   if (loading) {
     return (
@@ -425,7 +391,7 @@ export default function ReportScreen() {
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{...styles.scrollViewContent,paddingBottom: 5}}>
+        contentContainerStyle={{...styles.scrollViewContent, paddingBottom: 5}}>
         
         {renderHeader()}
         
@@ -441,7 +407,13 @@ export default function ReportScreen() {
           {renderMoodChart()}
         </View>
       </ScrollView>
-      {renderBottomNav()}
+      
+      {/* Pass the opacity value and ref to the navbar */}
+      <Navbar 
+        ref={navbarRef} 
+        activeScreen="Home" 
+        opacityValue={navOpacity} 
+      />
     </SafeAreaView>
   );
 }
@@ -659,55 +631,5 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: '#fff',
-  },
-  bottomNavContainer: {
-    height: 55,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 20,
-    left: 12,
-    right: 12,
-  },
-  bottomNavBg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    resizeMode: 'stretch',
-    bottom: 0,
-    left: 0,
-  },
-  bottomNavContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: '100%',
-    width: '100%',
-    paddingHorizontal: 24,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeEclipse: {
-    position: 'absolute',
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#C7312B',
-    opacity: 0.6,
-    top: -3.5,
-    left: -3.5,
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: 'contain',
-    zIndex: 2,
   },
 });
