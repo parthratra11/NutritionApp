@@ -83,6 +83,10 @@ export default function HomeScreen() {
         <Text style={buttonTextStyle}>Steps Screen</Text>
       </Pressable>
 
+      <Pressable onPress={() => navigation.navigate('Cronometer')} style={buttonStyle()}>
+        <Text style={buttonTextStyle}>Crono Screen</Text>
+      </Pressable>
+
       <Pressable onPress={() => navigation.navigate('Progress')} style={buttonStyle()}>
         <Text style={buttonTextStyle}>Progress Screen</Text>
       </Pressable>

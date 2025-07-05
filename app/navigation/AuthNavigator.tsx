@@ -16,6 +16,7 @@ import SlackScreen from 'screens/SlackScreen';
 import StepScreen from 'screens/StepScreen';
 import ProgressScreen from 'screens/ProgressScreen';
 import AddressScreen from '../screens/Address';
+import CronoScreen from 'screens/CronoScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,10 +33,11 @@ export default function AuthNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Payment" component={PaymentScreen} options={{headerShown:false}}/>
-          <Stack.Screen name="Reports" component={ReportScreen} options={{headerShown:false}}/>
+          <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Reports" component={ReportScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen name="Steps" component={StepScreen} />
+          <Stack.Screen name="Cronometer" component={CronoScreen} />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
