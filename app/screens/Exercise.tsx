@@ -18,7 +18,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -458,20 +458,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.3)', // Semi-transparent overlay
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#081A2F',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    overflow: 'hidden',
-    // Add these properties to position the modal correctly
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top:20, // Ensure it covers the entire screen
-    maxHeight: '100%',
-  },
+safeArea: {
+  flex: 1,
+  backgroundColor: '#081A2F',
+  borderTopLeftRadius: 15,
+  borderTopRightRadius: 15,
+  overflow: 'hidden',
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  top: StatusBar.currentHeight || 0, // Use the actual status bar height
+
+},
   pullDownContainer: {
     height: 30,
     justifyContent: 'center',
@@ -501,6 +500,7 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     alignItems: 'center',
+    
   },
   dateText: {
     color: '#7A7A7A',

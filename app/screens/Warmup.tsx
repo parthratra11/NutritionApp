@@ -262,17 +262,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)', // Semi-transparent overlay
   },
   safeArea: {
-    flex: 1,
-    backgroundColor: '#081A2F',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    overflow: 'hidden',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 20,
-    maxHeight: '100%',
+  flex: 1,
+  backgroundColor: '#081A2F',
+  borderTopLeftRadius: 15,
+  borderTopRightRadius: 15,
+  overflow: 'hidden',
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  top: StatusBar.currentHeight || 0, // Use the actual status bar height
   },
   pullDownContainer: {
     height: 30,
