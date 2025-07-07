@@ -1,26 +1,42 @@
 import './global.css';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useRef, useEffect } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import HomeScreen from './screens/HomeScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import FormScreen from './screens/FormScreen';
-import LoginScreen from './screens/LoginScreen';
-import WorkoutScreen from './screens/WorkoutScreen';
-import PaymentScreen from './screens/PaymentScreen';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
-import WeeklyCheckInForm from './screens/WeeklyForm';
+import { ModalProvider, useModal } from './context/ModalContext';
 import AuthNavigator from './navigation/AuthNavigator';
+import TrackingOptionsModal from './components/TrackingOptionsModal';
+
+// Create a wrapper component that has access to the modal context
+function AppContent() {
+  const { showTrackingModal, setShowTrackingModal } = useModal();
+  const navigationRef = useNavigationContainerRef();
+  
+  return (
+    <>
+      <NavigationContainer ref={navigationRef}>
+        <AuthNavigator />
+      </NavigationContainer>
+      
+      {/* Pass the navigation object to the modal */}
+      <TrackingOptionsModal 
+        visible={showTrackingModal} 
+        onClose={() => setShowTrackingModal(false)} 
+        navigation={navigationRef.current}
+      />
+    </>
+  );
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <SafeAreaProvider>
-          <NavigationContainer>
-            <AuthNavigator />
-          </NavigationContainer>
+          <ModalProvider>
+            <AppContent />
+          </ModalProvider>
         </SafeAreaProvider>
       </ThemeProvider>
     </AuthProvider>

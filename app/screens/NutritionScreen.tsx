@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
-  Alert,
-  Button,
+  SafeAreaView,
+  Animated,
+  Dimensions,
+  Modal,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { useTheme } from '../context/ThemeContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
+import Navbar from '../components/navbar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const mealFields = ['Protein (g)', 'Fat (g)', 'Carbohydrate (g)', 'Kcal'];
 
@@ -33,7 +36,6 @@ function getTodayKey() {
 }
 
 function getDaysBetween(date1, date2) {
-  // Returns the number of days between two dates (date2 - date1)
   const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
   const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
   return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
@@ -49,22 +51,29 @@ function getWeekAndDayKey(firstEntryDate) {
   return { weekKey: `week${weekNum}`, dayKey: dayName };
 }
 
-export default function NutritionScreen() {
-  const { isDarkMode } = useTheme();
+const NutritionScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [dayType, setDayType] = useState('training');
   const [mealData, setMealData] = useState({});
   const [loading, setLoading] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
+  const [showDayTypeDropdown, setShowDayTypeDropdown] = useState(false);
+  
+  // Refs for animations and scrolling
+  const navbarRef = useRef(null);
+  const navOpacity = useRef(new Animated.Value(1)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollTimeout = useRef(null);
+  const lastScrollY = useRef(0);
 
   // Reset mealData when dayType changes
-  React.useEffect(() => {
+  useEffect(() => {
     setMealData({});
   }, [dayType]);
 
   // On mount, get or set firstEntryDate
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchFirstEntryDate = async () => {
       if (!user?.email) {
         setFirstEntryDate(null);
@@ -82,7 +91,7 @@ export default function NutritionScreen() {
   }, [user?.email]);
 
   // Check if already submitted for today
-  React.useEffect(() => {
+  useEffect(() => {
     const checkSubmitted = async () => {
       if (!user?.email || !firstEntryDate) {
         setAlreadySubmitted(false);
@@ -118,20 +127,38 @@ export default function NutritionScreen() {
     }, 0);
   };
 
-  // Add this function at the top with other utility functions
   const getTodaysDate = () => {
     const today = new Date();
-    return today.toISOString().slice(0, 10); // Returns YYYY-MM-DD format
+    return today.toISOString().slice(0, 10);
   };
 
-  // Modify the handleSave function
+  // Get current date and week days
+  const getCurrentWeekDates = () => {
+    const today = new Date();
+    const dayLetters = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
+    const dates = [];
+    
+    for (let i = -3; i <= 3; i++) {
+      const date = new Date();
+      date.setDate(today.getDate() + i);
+      dates.push({
+        day: dayLetters[date.getDay()],
+        date: date.getDate().toString(),
+        isToday: i === 0,
+      });
+    }
+    
+    return dates;
+  };
+
+  const weekDates = getCurrentWeekDates();
+
   const handleSave = async () => {
     if (!user?.email) {
-      Alert.alert('Error', 'Please login first');
+      // Show user friendly error with the app's style
       return;
     }
     if (alreadySubmitted) {
-      Alert.alert('Already Submitted', 'You have already submitted your nutrition for today.');
       return;
     }
     setLoading(true);
@@ -144,7 +171,6 @@ export default function NutritionScreen() {
       if (docSnap.exists()) {
         data = docSnap.data();
         if (!data.firstEntryDate) {
-          // Set firstEntryDate if not present
           const today = getTodaysDate();
           entryDate = today;
           data.firstEntryDate = entryDate;
@@ -153,7 +179,6 @@ export default function NutritionScreen() {
           entryDate = data.firstEntryDate;
         }
       } else {
-        // First ever entry for this user
         const today = getTodaysDate();
         entryDate = today;
         data.firstEntryDate = entryDate;
@@ -168,11 +193,10 @@ export default function NutritionScreen() {
         totals[field] = calculateTotal(field);
       }
 
-      // Save under weekKey -> dayKey with date
       if (!data[weekKey]) data[weekKey] = {};
       data[weekKey][dayKey] = {
         dayType,
-        date: getTodaysDate(), // Add today's date
+        date: getTodaysDate(),
         meals: {},
         totals,
       };
@@ -185,239 +209,446 @@ export default function NutritionScreen() {
       }
 
       await setDoc(docRef, data, { merge: true });
-      Alert.alert('Success', 'Nutrition data saved!');
       setAlreadySubmitted(true);
     } catch (e) {
-      Alert.alert('Error', 'Failed to save nutrition data.');
       console.error(e);
     }
     setLoading(false);
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView
-        style={[styles.container, isDarkMode && styles.containerDark]}
-        contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={[styles.title, isDarkMode && styles.textDark]}>🍽️ Nutrition Tracker</Text>
+  // Update handleScroll to use the navbarRef methods - same as ReportScreen
+  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+    useNativeDriver: false,
+    listener: (event) => {
+      const currentScrollY = event.nativeEvent.contentOffset.y;
 
-        <View style={styles.pickerContainer}>
-          <Text style={[styles.label, isDarkMode && styles.textDark]}>Select Day Type:</Text>
-          <View style={[styles.pickerWrapper, isDarkMode && styles.pickerWrapperDark]}>
-            <Picker
-              selectedValue={dayType}
-              onValueChange={(value) => setDayType(value)}
-              style={[styles.picker, isDarkMode && styles.pickerDark]}
-              dropdownIconColor={isDarkMode ? '#a5b4fc' : '#6366f1'}>
-              <Picker.Item label="Training Day" value="training" />
-              <Picker.Item label="Rest Day" value="rest" />
-              <Picker.Item label="Cardio Day" value="cardio" />
-            </Picker>
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      // Show navbar when scrolling starts
+      if (navbarRef.current) {
+        navbarRef.current.show();
+      }
+
+      // Hide navbar after scrolling stops
+      scrollTimeout.current = setTimeout(() => {
+        if (navbarRef.current) {
+          navbarRef.current.hide();
+        }
+      }, 2000);
+
+      lastScrollY.current = currentScrollY;
+    },
+  });
+
+  const renderDayTypeDropdown = () => (
+    <Modal
+      transparent={true}
+      visible={showDayTypeDropdown}
+      onRequestClose={() => setShowDayTypeDropdown(false)}
+      animationType="fade"
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setShowDayTypeDropdown(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          {['training', 'rest', 'cardio'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.dropdownItem,
+                dayType === type && styles.dropdownItemActive
+              ]}
+              onPress={() => {
+                setDayType(type);
+                setShowDayTypeDropdown(false);
+              }}
+            >
+              <Text 
+                style={[
+                  styles.dropdownItemText,
+                  dayType === type && styles.dropdownItemTextActive
+                ]}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+              {dayType === type && (
+                <Feather name="check" size={18} color="#fff" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  return (
+    <SafeAreaView style={styles.containerWithWhiteSpace}>
+      <ScrollView 
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {/* Blue header section with title and calendar */}
+        <View style={styles.blueHeader}>
+          <Text style={styles.headerTitle}>Nutrition</Text>
+          
+          {/* Calendar Week View */}
+          <View style={styles.calendarContainer}>
+            {weekDates.map((item, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={[styles.dayContainer, item.isToday && styles.todayContainer]}
+              >
+                <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>
+                  {item.day}
+                </Text>
+                <Text style={[styles.dayNumber, item.isToday && styles.todayText]}>
+                  {item.date}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        <View>
-          {defaultMeals[dayType].map((meal, idx) => (
-            <View
-              key={meal}
-              style={[
-                styles.mealCard,
-                { borderLeftColor: colors[idx % colors.length] },
-                isDarkMode && styles.mealCardDark,
-              ]}>
-              <Text style={[styles.mealTitle, isDarkMode && styles.textDark]}>{meal}</Text>
+        {/* White content area */}
+        <View style={styles.whiteContent}>
+          {/* Day type selector as dropdown */}
+          <TouchableOpacity 
+            style={styles.dayTypeSelector}
+            onPress={() => setShowDayTypeDropdown(true)}
+          >
+            <Text style={styles.dayTypeText}>
+              {dayType.charAt(0).toUpperCase() + dayType.slice(1)} Day
+            </Text>
+            <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
+          </TouchableOpacity>
+          
+          {/* Meal content */}
+          <View style={styles.mealsContainer}>
+            {defaultMeals[dayType].map((meal, idx) => (
+              <View
+                key={meal}
+                style={styles.mealCard}
+              >
+                <Text style={styles.mealTitle}>{meal}</Text>
+                {mealFields.map((field) => (
+                  <View key={field} style={styles.inputRow}>
+                    <Text style={styles.inputLabel}>{field}</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={mealData[meal]?.[field] || ''}
+                      onChangeText={(text) => handleChange(meal, field, text)}
+                      placeholder="0"
+                      placeholderTextColor="#b2bec3"
+                    />
+                  </View>
+                ))}
+              </View>
+            ))}
+            
+            {/* Totals summary */}
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalTitle}>Daily Totals</Text>
               {mealFields.map((field) => (
-                <View key={field} style={styles.inputRow}>
-                  <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>{field}</Text>
-                  <TextInput
-                    style={[styles.input, isDarkMode && styles.inputDark]}
-                    keyboardType="numeric"
-                    value={mealData[meal]?.[field] || ''}
-                    onChangeText={(text) => handleChange(meal, field, text)}
-                    placeholder="0"
-                    placeholderTextColor={isDarkMode ? '#888' : '#b2bec3'}
-                  />
+                <View key={field} style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>{field}:</Text>
+                  <Text style={styles.totalValue}>{calculateTotal(field)}</Text>
                 </View>
               ))}
             </View>
-          ))}
+            
+            {/* Daily fiber goal card */}
+            <View style={styles.fiberCard}>
+              <Text style={styles.fiberTitle}>Daily Fiber Goals</Text>
+              <View style={styles.fiberRow}>
+                <Text style={styles.fiberLabel}>Daily Goal:</Text>
+                <Text style={styles.fiberValue}>38g</Text>
+              </View>
+              <View style={styles.fiberRow}>
+                <Text style={styles.fiberLabel}>Per Meal:</Text>
+                <Text style={styles.fiberValue}>8g</Text>
+              </View>
+            </View>
+            
+            {/* Save button */}
+            <TouchableOpacity 
+              style={[styles.saveButton, alreadySubmitted && styles.disabledButton]} 
+              onPress={handleSave}
+              disabled={alreadySubmitted || loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={[styles.totalContainer, isDarkMode && styles.totalContainerDark]}>
-          <Text style={[styles.totalTitle, isDarkMode && styles.textDark]}>Total</Text>
-          {mealFields.map((field) => (
-            <Text key={field} style={[styles.totalText, isDarkMode && styles.textDark]}>
-              {field}: <Text style={styles.totalValue}>{calculateTotal(field)}</Text>
-            </Text>
-          ))}
-        </View>
-
-        <View style={[styles.fiberCard, isDarkMode && styles.fiberCardDark]}>
-          <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
-            🌱 Daily Fibre Goal: <Text style={{ color: '#00b894' }}>38g</Text>
-          </Text>
-          <Text style={[styles.fiberText, isDarkMode && styles.textDark]}>
-            🥗 Per Meal Min: <Text style={{ color: '#00b894' }}>8g</Text>
-          </Text>
-        </View>
-
-        <Button
-          title={alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
-          onPress={handleSave}
-          disabled={loading || alreadySubmitted}
-        />
       </ScrollView>
+
+      {/* Day type dropdown */}
+      {renderDayTypeDropdown()}
+
+      {/* Navbar with auto-hide functionality */}
+      <Navbar 
+        ref={navbarRef} 
+        activeScreen="Nutrition" 
+        opacityValue={navOpacity} 
+      />
     </SafeAreaView>
   );
-}
-
-const colors = ['#6366f1', '#00b894', '#fdcb6e', '#e17055'];
+};
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#f6f7fb',
+  containerWithWhiteSpace: {
+    flex: 1,
+    backgroundColor: 'white',
   },
-  containerDark: {
-    backgroundColor: '#181926',
+  scrollView: {
+    flex: 1,
   },
-  title: {
+  blueHeader: {
+    backgroundColor: '#081A2F',
+    paddingTop: 25,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
+    alignItems: 'center',
+  },
+  headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 18,
+    color: 'white',
     textAlign: 'center',
-    color: '#6366f1',
-    letterSpacing: 1,
+    marginBottom: 20,
+    marginTop: 10,
   },
-  textDark: {
-    color: '#fff',
+  calendarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
   },
-  pickerContainer: {
-    marginVertical: 12,
+  dayContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 8,
-  },
-  pickerWrapper: {
-    borderRadius: 8,
+    borderRadius: 20,
+    minWidth: 40,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    overflow: 'hidden',
-    marginTop: 6,
-    backgroundColor: '#fff',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  pickerWrapperDark: {
-    backgroundColor: '#232946',
-    borderColor: '#444',
+  todayContainer: {
+    backgroundColor: '#878787',
+    borderWidth: 0,
   },
-  picker: {
-    height: 54,
-    color: '#6366f1',
+  dayLetter: {
+    color: '#fff',
+    fontSize: 12,
+    marginBottom: 5,
+    opacity: 0.7,
   },
-  pickerDark: {
-    color: '#a5b4fc',
-    backgroundColor: '#232946',
-  },
-  label: {
+  dayNumber: {
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
-    color: '#636e72',
+    fontWeight: 'bold',
   },
-  mealCard: {
-    marginVertical: 12,
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderLeftWidth: 6,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+  todayText: {
+    color: '#fff',
+    opacity: 1,
+  },
+  whiteContent: {
+    flex: 1,
+    backgroundColor: 'white',
+    paddingTop: 20,
+    paddingBottom: 80, // Add space for navbar
+  },
+  dayTypeSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
     elevation: 2,
   },
-  mealCardDark: {
-    backgroundColor: '#232946',
+  dayTypeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownContainer: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  dropdownItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownItemActive: {
+    backgroundColor: '#C7312B',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownItemTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  mealsContainer: {
+    paddingHorizontal: 20,
+  },
+  mealCard: {
+    marginBottom: 15,
+    padding: 15,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#C7312B',
   },
   mealTitle: {
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 10,
-    color: '#6366f1',
-    letterSpacing: 0.5,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   inputLabel: {
-    flex: 1.2,
+    flex: 1,
     fontSize: 15,
-    color: '#636e72',
+    color: '#666',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f1f2f6',
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#dfe6e9',
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 8,
     fontSize: 15,
-    color: '#22223b',
-    marginLeft: 8,
-  },
-  inputDark: {
-    backgroundColor: '#232946',
-    borderColor: '#444',
-    color: '#fff',
+    color: '#333',
+    textAlign: 'center',
   },
   totalContainer: {
-    marginTop: 24,
-    padding: 18,
-    backgroundColor: '#dfe6e9',
+    marginTop: 10,
+    marginBottom: 15,
+    padding: 15,
+    backgroundColor: '#f0f0f0',
     borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  totalContainerDark: {
-    backgroundColor: '#232946',
   },
   totalTitle: {
-    fontSize: 21,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 10,
-    color: '#6366f1',
+    textAlign: 'center',
   },
-  totalText: {
-    fontSize: 16,
-    marginVertical: 2,
-    color: '#636e72',
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  totalLabel: {
+    fontSize: 15,
+    color: '#666',
   },
   totalValue: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#C7312B',
+  },
+  fiberCard: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00b894',
+  },
+  fiberTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  fiberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  fiberLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  fiberValue: {
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#00b894',
   },
-  fiberCard: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#ffeaa7',
-    borderRadius: 12,
+  saveButton: {
+    backgroundColor: '#C7312B',
+    paddingVertical: 15,
+    borderRadius: 30,
     alignItems: 'center',
-    shadowColor: '#fdcb6e',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    marginBottom: 30,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  fiberCardDark: {
-    backgroundColor: '#232946',
+  disabledButton: {
+    backgroundColor: '#999',
   },
-  fiberText: {
+  saveButtonText: {
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#636e72',
-    marginVertical: 2,
+    fontWeight: 'bold',
   },
 });
+
+export default NutritionScreen;

@@ -8,6 +8,7 @@ import {
   Dimensions 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useModal } from '../context/ModalContext'; // Add this import
 
 // Import assets
 const HomeIcon = require('../assets/home.png');
@@ -25,6 +26,7 @@ type NavbarProps = {
 // Convert to forwardRef to expose methods
 const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref) => {
   const navigation = useNavigation();
+  const { setShowTrackingModal } = useModal(); // Add this line
   // Use provided opacity value or create our own
   const navOpacity = opacityValue || useRef(new Animated.Value(1)).current;
   const { width: screenWidth } = Dimensions.get('window');
@@ -34,6 +36,12 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
     if (activeScreen !== screen) {
       navigation.navigate(screen);
     }
+  };
+  
+  // Function to handle the WeeklyForm/Add button
+  const handleTrackingButton = () => {
+    // Show the tracking modal instead of navigating
+    setShowTrackingModal(true);
   };
 
   // Expose methods to parent component
@@ -78,8 +86,9 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
           </View>
         </Pressable>
         
+        {/* Change this Pressable to use handleTrackingButton */}
         <Pressable 
-          onPress={() => handleNavigate('WeeklyForm')} 
+          onPress={handleTrackingButton}  
           style={styles.navItem}
         >
           <View style={styles.iconContainer}>
@@ -111,6 +120,8 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
     </Animated.View>
   );
 });
+
+
 
 const styles = StyleSheet.create({
   bottomNavContainer: {

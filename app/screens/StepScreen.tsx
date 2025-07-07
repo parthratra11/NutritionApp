@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20, // Reduced from 60 to 20 to move it up
+    marginTop: screenHeight * 0.10, // Reduced from 60 to 20 to move it up
   },
 
   progressContent: {
@@ -667,21 +667,21 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(199, 49, 43, 0.8)',
+    marginLeft: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     alignItems: 'center',
   },
   editButtonText: {
-    color: 'white',
+    color: '#081A2F',
     fontSize: 14,
     marginLeft: 4,
   },
   buttonContainer: {
     width: '100%',
     paddingHorizontal: 24,
-    marginTop: 180,
+    marginTop: screenHeight * 0.22,
   },
   connectButton: {
     flexDirection: 'row',

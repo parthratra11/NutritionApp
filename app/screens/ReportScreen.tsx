@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)', // Very light border on all days
   },
   todayContainer: {
-    backgroundColor: '#878787', // Red color matching the screenshot
+    backgroundColor: '#878787', 
     borderWidth: 0, // Remove border for today
   },
   dayLetter: {
