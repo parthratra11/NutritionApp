@@ -468,7 +468,7 @@ safeArea: {
   left: 0,
   right: 0,
   bottom: 0,
-  top: StatusBar.currentHeight || 0, // Use the actual status bar height
+  top: 0, // Use the actual status bar height
 
 },
   pullDownContainer: {
