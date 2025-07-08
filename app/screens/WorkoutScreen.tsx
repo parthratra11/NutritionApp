@@ -90,8 +90,8 @@ export default function WorkoutScreen() {
           )
           .map(([exerciseName, details]) => ({
             name: exerciseName,
-            sets: details?.Sets || '0',
-            repRange: details?.Reps || '0',
+            sets: details?.Sets || '0' ,
+            repRange: details?.Reps || '0' ,
           }));
 
         setExerciseData(formattedExercises);
