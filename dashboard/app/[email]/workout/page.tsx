@@ -288,7 +288,7 @@ export default function WorkoutDashboard() {
         {/* View/Edit Toggle */}
         <div className="flex space-x-4 mb-6">
           <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
-            View Template
+            View Progress
           </button>
           <Link
             href={`/${params.email}/workout/edit-template`}
