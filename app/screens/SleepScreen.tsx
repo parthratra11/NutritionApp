@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
+import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -43,26 +45,14 @@ const SleepScreen = ({ navigation }) => {
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
 
-  // Get current date and week days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-    const dates = [];
-    
-    for (let i = -3; i <= 3; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      dates.push({
-        day: dayLetters[date.getDay()],
-        date: date.getDate().toString(),
-        isToday: i === 0,
-      });
-    }
-    
-    return dates;
-  };
-
+  // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
+  
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
 
   // Generate hours, minutes and am/pm for pickers
   const generateHours = () => {
@@ -230,22 +220,12 @@ const SleepScreen = ({ navigation }) => {
           style={styles.keyboardAvoidingContainer}
         >
           <View style={styles.contentWrapper}>
-            {/* Calendar row */}
-            <View style={styles.calendarContainer}>
-              {weekDates.map((item, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={[styles.dayContainer, item.isToday && styles.todayContainer]}
-                >
-                  <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>
-                    {item.day}
-                  </Text>
-                  <Text style={[styles.dayNumber, item.isToday && styles.todayText]}>
-                    {item.date}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Replace the calendar row with the WeekCalendar component */}
+            <WeekCalendar 
+              weekDates={weekDates}
+              onDatePress={handleDateSelect}
+              containerStyle={styles.calendarContainerStyle}
+            />
 
             {/* Sleep time section */}
             <View style={styles.sleepSection}>
@@ -501,41 +481,10 @@ const styles = StyleSheet.create({
     paddingBottom: 80, // Space for enter button
     alignItems: 'center',
   },
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  calendarContainerStyle: {
     width: '100%',
     marginVertical: 20,
     marginBottom: 40,
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  todayContainer: {
-    backgroundColor: '#878787',
-    borderWidth: 0,
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
   },
   sleepSection: {
     width: '100%',

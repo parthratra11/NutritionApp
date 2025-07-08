@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
   ScrollView,
   Image,
@@ -18,10 +17,12 @@ import { db } from '../firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
+import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
+import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
 
 // Import assets
+const TrainingArrow = require('../assets/TrainingArrow.png');
 
-const TrainingArrow = require('../assets/TrainingArrow.png'); // Add this line
 export default function WorkoutScreen() {
   const navigation = useNavigation();
   const { isDarkMode } = useTheme();
@@ -39,6 +40,18 @@ export default function WorkoutScreen() {
   const [steps, setSteps] = useState(9000);
   const [stepsGoal, setStepsGoal] = useState(10000);
   const [exerciseData, setExerciseData] = useState([]);
+
+  // Get the week dates using our utility function
+  const weekDates = getCurrentWeekDates();
+  
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
+
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,30 +114,6 @@ export default function WorkoutScreen() {
     fetchData();
   }, [user?.email, currentSession]);
 
-  // Get current date and week days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    const dates = [];
-
-    // Get days of current week (Sunday to Saturday)
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() - today.getDay() + i);
-      dates.push({
-        day: dayLetters[i],
-        date: date.getDate().toString(),
-        isToday: date.toDateString() === today.toDateString(),
-      });
-    }
-
-    return dates;
-  };
-
-  const weekDates = getCurrentWeekDates();
-  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
-  const currentYear = new Date().getFullYear();
-
   const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
     useNativeDriver: false,
     listener: (event) => {
@@ -160,24 +149,12 @@ export default function WorkoutScreen() {
         </View>
       </View>
 
-      {/* Calendar Week View */}
-      <View style={styles.calendarContainer}>
-        {weekDates.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.dayContainer, item.isToday && styles.todayContainer]}>
-            <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>{item.day}</Text>
-
-            {item.isToday ? (
-              <View style={styles.todayDateCircle}>
-                <Text style={[styles.dayNumber, styles.todayText]}>{item.date}</Text>
-              </View>
-            ) : (
-              <Text style={styles.dayNumber}>{item.date}</Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Replace the Calendar Week View with the WeekCalendar component */}
+      <WeekCalendar 
+        weekDates={weekDates}
+        onDatePress={handleDateSelect}
+        containerStyle={styles.calendarContainerStyle}
+      />
     </View>
   );
 
@@ -220,7 +197,6 @@ export default function WorkoutScreen() {
     </TouchableOpacity>
   );
 
-  // Update the renderTraining function to navigate to Exercise screen
   const renderTraining = () => (
     <View style={styles.trainingSection}>
       <View style={styles.trainingHeader}>
@@ -259,40 +235,6 @@ export default function WorkoutScreen() {
     </View>
   );
 
-  const renderBottomNav = () => (
-    <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
-      <Image source={NavRectangle} style={styles.bottomNavBg} />
-      <View style={styles.bottomNavContent}>
-        <Pressable onPress={() => navigation.navigate('Reports')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={HomeIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('WeeklyForm')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={AddIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Nutrition')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={NutritionIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Slack')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={ChatIcon} style={styles.bottomNavIcon} />
-          </View>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('Workout')} style={styles.navItem}>
-          <View style={styles.iconContainer}>
-            <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
-            <View style={styles.activeEclipse} />
-          </View>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-  ``;
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -325,7 +267,6 @@ export default function WorkoutScreen() {
         </View>
       </ScrollView>
 
-      {/* Replace renderBottomNav() with the Navbar component */}
       <Navbar ref={navbarRef} activeScreen="Workout" opacityValue={navOpacity} />
     </SafeAreaView>
   );
@@ -369,7 +310,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#fff',
-    fontSize: Dimensions.get('window').width * 0.07, // 7% of screen width
+    fontSize: Dimensions.get('window').width * 0.09, // 7% of screen width
     fontWeight: 'bold',
     lineHeight: Dimensions.get('window').width * 0.095, // 9.5% of screen width
   },
@@ -379,40 +320,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginTop: 10,
   },
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  calendarContainerStyle: {
+    width: '100%',
     paddingTop: 10,
     paddingHorizontal: Dimensions.get('window').width * 0.02, // 2% of screen width
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: Dimensions.get('window').height * 0.012, // 1.2% of screen height
-    paddingHorizontal: Dimensions.get('window').width * 0.02, // 2% of screen width
-    borderRadius: 20,
-    minWidth: Dimensions.get('window').width * 0.1, // 10% of screen width
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  todayContainer: {
-    backgroundColor: '#878787',
-    borderWidth: 0,
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: Dimensions.get('window').width * 0.03, // 3% of screen width
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: Dimensions.get('window').width * 0.04, // 4% of screen width
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
   },
   content: {
     backgroundColor: '#f5f5f5',

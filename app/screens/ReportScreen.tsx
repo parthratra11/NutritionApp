@@ -19,6 +19,8 @@ import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
+import WeekCalendar from '../components/WeekCalendar';
+import { getCurrentWeekDates } from '../utils/dateUtils';
 
 // Import assets
 const UserImage = require('../assets/User.png');
@@ -79,70 +81,39 @@ export default function ReportScreen() {
     fetchData();
   }, [user?.email]);
 
-  // Get current date and previous 6 days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    const dates = [];
-    
-    // Get previous 6 days and today
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(today.getDate() - i);
-      dates.push({
-        day: dayLetters[date.getDay()],
-        date: date.getDate().toString(),
-        full: date,
-        isToday: i === 0
-      });
-    }
-    
-    return dates;
-  };
-
-  // Replace existing days and fullDays arrays with:
+  // Replace the getCurrentWeekDates function with the import
   const weekDates = getCurrentWeekDates();
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
 
- const renderHeader = () => (
-  <View style={styles.headerContainer}>
-    <View style={styles.headerContent}>
-      <View>
-        <Text style={styles.headerSubTitle}>Keeping Moving Today!</Text>
-        <Text style={styles.headerTitle}>Hi, {userFullName || 'Aria'}!</Text>
-        <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
+
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <View style={styles.headerContent}>
+        <View>
+          <Text style={styles.headerSubTitle}>Keeping Moving Today!</Text>
+          <Text style={styles.headerTitle}>Hi, {userFullName || 'Aria'}!</Text>
+          <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
+        </View>
+        
+        {/* Make the user avatar clickable */}
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Image source={UserImage} style={styles.userAvatar} />
+        </TouchableOpacity>
       </View>
       
-      {/* Make the user avatar clickable */}
-      <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-        <Image source={UserImage} style={styles.userAvatar} />
-      </TouchableOpacity>
+      {/* Use the new WeekCalendar component */}
+      <WeekCalendar 
+        weekDates={weekDates} 
+        onDatePress={handleDateSelect}
+      />
     </View>
-    
-    {/* Calendar Week View */}
-    <View style={styles.calendarContainer}>
-      {weekDates.map((item, index) => (
-        <TouchableOpacity 
-          key={index} 
-          style={[
-            styles.dayContainer,
-            item.isToday && styles.todayContainer
-          ]}
-        >
-          <Text style={[
-            styles.dayLetter,
-            item.isToday && styles.todayText
-          ]}>{item.day}</Text>
-          <Text style={[
-            styles.dayNumber,
-            item.isToday && styles.todayText
-          ]}>{item.date}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  </View>
-);
+  );
 
   const renderWeightChart = () => (
     <View style={styles.cardContainer}>
@@ -158,8 +129,8 @@ export default function ReportScreen() {
       <LineChart
         data={{
           labels: ['', '', '', '', '', '', ''],
-          datasets: [
-            {
+          datasets:
+            [{
               data: weightData,
               color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
               strokeWidth: 3,
@@ -474,51 +445,6 @@ const styles = StyleSheet.create({
     top:15,
     borderColor: '#fff',
   },
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)', // Very light border on all days
-  },
-  todayContainer: {
-    backgroundColor: '#878787', 
-    borderWidth: 0, // Remove border for today
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
-
-  },
-    todayDateCircle: {
-    backgroundColor: '#C7312B', // Red circle for today's date
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2, // Small margin to position it like in the design
-  },
-
   chartsContainer: {
     backgroundColor: '#f5f5f5',
     paddingTop: 20,

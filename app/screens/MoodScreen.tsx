@@ -11,10 +11,12 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6'; // Import FontAwesome6
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Navbar from '../components/navbar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
+import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -24,55 +26,6 @@ const moodOptions = [
   { id: 2, name: 'Neutral', icon: 'face-meh', iconType: 'fontawesome6', value: 2, color: '#8E8E93' },
   { id: 3, name: 'Happy', icon: 'happy-outline', iconType: 'ionicon', value: 3, color: '#C7312B' },
 ];
-
-// Week calendar component similar to ReportScreen
-const WeekdayBar = () => {
-  // Get current date and previous 6 days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-    const dates = [];
-    
-    // Get previous 6 days and today
-    for (let i = -3; i <= 3; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      dates.push({
-        day: dayLetters[date.getDay()],
-        date: date.getDate().toString(),
-        full: date,
-        isToday: i === 0
-      });
-    }
-    
-    return dates;
-  };
-
-  const weekDates = getCurrentWeekDates();
-  
-  return (
-    <View style={styles.calendarContainer}>
-      {weekDates.map((item, index) => (
-        <TouchableOpacity 
-          key={index} 
-          style={[
-            styles.dayContainer,
-            item.isToday && styles.todayContainer
-          ]}
-        >
-          <Text style={[
-            styles.dayLetter,
-            item.isToday && styles.todayText
-          ]}>{item.day}</Text>
-          <Text style={[
-            styles.dayNumber,
-            item.isToday && styles.todayText
-          ]}>{item.date}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
 
 // Mood graph showing mood history
 const MoodGraph = () => {
@@ -118,6 +71,15 @@ const MoodScreen = ({ navigation }) => {
   const navOpacity = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef(null);
   const moodItemHeight = 120; // Height of each mood item
+
+  // Get the week dates using our utility function
+  const weekDates = getCurrentWeekDates();
+  
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
 
   useEffect(() => {
     // Center the scroll view to the middle mood initially
@@ -218,8 +180,12 @@ const MoodScreen = ({ navigation }) => {
     <SafeAreaView style={styles.containerWithWhiteSpace}>
       <View style={styles.contentWrapper}>
         <View style={styles.contentContainer}>
-          {/* Calendar header */}
-          <WeekdayBar />
+          {/* Replace WeekdayBar with the reusable WeekCalendar component */}
+          <WeekCalendar 
+            weekDates={weekDates}
+            onDatePress={handleDateSelect}
+            containerStyle={styles.calendarContainerStyle}
+          />
           
           <Text style={styles.title}>How're you feeling today?</Text>
 
@@ -324,42 +290,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 30,
   },
-  // Calendar styles from ReportScreen
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  // Add custom style for the calendar container in this screen
+  calendarContainerStyle: {
     width: '90%',
     marginTop: 15,
     marginBottom: 20,
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  todayContainer: {
-    backgroundColor: '#878787',
-    borderWidth: 0,
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
   },
   title: {
     fontSize: 24,
