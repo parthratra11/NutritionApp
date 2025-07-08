@@ -82,6 +82,7 @@ export default function WorkoutDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trainingType, setTrainingType] = useState<string>("3x Per Week");
+  const [clientName, setClientName] = useState<string>("");
 
   // Helper function to format date
   const formatDate = (dateStr: string) => {
@@ -230,6 +231,25 @@ export default function WorkoutDashboard() {
     fetchTemplatesAndData();
   }, [params?.email]);
 
+  useEffect(() => {
+    const fetchClientName = async () => {
+      if (!params?.email) return;
+      try {
+        const clientEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", clientEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data();
+          setClientName(clientData.fullName);
+        }
+      } catch (err) {
+        console.error("Failed to fetch client name:", err);
+      }
+    };
+
+    fetchClientName();
+  }, [params?.email]);
+
   if (loading) return <div className="p-6">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
   if (!workoutData)
@@ -259,7 +279,7 @@ export default function WorkoutDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
-        title="Workout Dashboard"
+        title={`${clientName || "Client"}'s Workout`}
         subtitle="Training Progress"
         email={params.email as string}
       />
@@ -267,9 +287,7 @@ export default function WorkoutDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* View/Edit Toggle */}
         <div className="flex space-x-4 mb-6">
-          <button
-            className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default"
-          >
+          <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
             View Template
           </button>
           <Link

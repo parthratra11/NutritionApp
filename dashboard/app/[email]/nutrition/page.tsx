@@ -17,6 +17,8 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import Navigation from "@/components/shared/Navigation";
+
 interface MealData {
   "Protein (g)": string;
   "Fat (g)": string;
@@ -39,7 +41,26 @@ interface DayData {
 }
 
 interface WeekData {
-  [day: string]: DayData;
+  [week: string]: {
+    dates: string[];
+    avgProtein: number;
+    avgCarbs: number;
+    avgFat: number;
+    avgCalories: number;
+    dayTypes: string[];
+    dailyData: {
+      [date: string]: {
+        dayType: string;
+        meals: { [meal: string]: MealData };
+        totals: {
+          "Protein (g)": number;
+          "Fat (g)": number;
+          "Carbohydrate (g)": number;
+          Kcal: number;
+        };
+      };
+    };
+  };
 }
 
 interface NutritionDataStructure {
@@ -57,12 +78,15 @@ export default function NutritionPage() {
   const [error, setError] = useState<string | null>(null);
   const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateData, setSelectedDateData] = useState<{
     date: string;
     data: any;
   } | null>(null);
+
+  const clientName = params?.email
+    ? decodeURIComponent(params.email as string).split("@")[0]
+    : "Client";
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-");
@@ -109,13 +133,12 @@ export default function NutritionPage() {
           weeks[weekKey].dayTypes.push(dayData.dayType);
           weeks[weekKey].dailyData[dayData.date] = {
             dayType: dayData.dayType,
-            meals: dayData.meals, // Include meals data
+            meals: dayData.meals,
             totals: dayData.totals,
           };
         }
       });
 
-      // Calculate averages
       const daysCount = weeks[weekKey].dates.length;
       if (daysCount > 0) {
         weeks[weekKey].avgProtein = parseFloat(
@@ -175,8 +198,6 @@ export default function NutritionPage() {
     fetchData();
   }, [params?.email]);
 
-  // Add this component after the CustomTooltip
-  // Update the NutritionModal component
   const NutritionModal = ({
     isOpen,
     onClose,
@@ -192,15 +213,11 @@ export default function NutritionPage() {
 
     return (
       <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
-        {/* Semi-transparent backdrop */}
         <div
           className="fixed inset-0 bg-gray-500/20 backdrop-blur-sm"
           onClick={onClose}
         />
-
-        {/* Modal content */}
         <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto m-4">
-          {/* Header with sticky positioning */}
           <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center z-10">
             <div>
               <h2 className="text-xl font-semibold">
@@ -228,10 +245,7 @@ export default function NutritionPage() {
               </svg>
             </button>
           </div>
-
-          {/* Modal body */}
           <div className="p-6">
-            {/* Meals Breakdown */}
             <div className="space-y-4">
               {dayData.meals &&
                 Object.entries(dayData.meals).map(
@@ -262,8 +276,6 @@ export default function NutritionPage() {
                   )
                 )}
             </div>
-
-            {/* Daily Totals */}
             <div className="mt-6 border-t pt-6">
               <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -299,7 +311,7 @@ export default function NutritionPage() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const dayData = weeklyData[selectedWeek]?.dailyData[label];
+      const dayData = weeklyData && selectedWeek ? weeklyData[selectedWeek]?.dailyData[label] : null;
       if (!dayData) return null;
 
       return (
@@ -310,8 +322,6 @@ export default function NutritionPage() {
             </p>
             <p className="text-sm text-gray-500">{dayData.dayType} Day</p>
           </div>
-
-          {/* Meals Breakdown */}
           {dayData.meals &&
             Object.entries(dayData.meals).map(
               ([meal, data]: [string, MealData]) => (
@@ -330,8 +340,6 @@ export default function NutritionPage() {
                 </div>
               )
             )}
-
-          {/* Daily Totals */}
           <div className="border-t pt-2 mt-2">
             <p className="font-medium text-gray-700 mb-1">Daily Totals</p>
             <div className="grid grid-cols-2 gap-x-4 text-sm">
@@ -351,12 +359,11 @@ export default function NutritionPage() {
     return null;
   };
 
-  // Add this function to filter data based on selected period
   const getFilteredWeeklyData = () => {
     if (!weeklyData) return {};
 
     if (comparisonPeriod === "all") {
-      return weeklyData; // Return all data
+      return weeklyData;
     }
 
     const now = new Date();
@@ -376,9 +383,7 @@ export default function NutritionPage() {
         return weeklyData;
     }
 
-    // Filter weeks based on their date ranges
     return Object.entries(weeklyData).reduce((filtered, [week, data]) => {
-      // Get earliest date in the week
       const earliestDate = new Date(
         Math.min(...data.dates.map((d) => new Date(d).getTime()))
       );
@@ -395,487 +400,481 @@ export default function NutritionPage() {
   if (error) return <div className="p-6 text-red-500">{error}</div>;
   if (!weeklyData) return <div className="p-6">No nutrition data found</div>;
 
-  // Get filtered data for the overview
   const filteredData = getFilteredWeeklyData();
 
+  const summaryMetrics = [
+    {
+      label: "Avg Protein",
+      value: `${weeklyData[selectedWeek]?.avgProtein || 0}g`,
+      color: "bg-green-100 text-green-800",
+    },
+    {
+      label: "Avg Carbs",
+      value: `${weeklyData[selectedWeek]?.avgCarbs || 0}g`,
+      color: "bg-yellow-100 text-yellow-800",
+    },
+    {
+      label: "Avg Fat",
+      value: `${weeklyData[selectedWeek]?.avgFat || 0}g`,
+      color: "bg-red-100 text-red-800",
+    },
+    {
+      label: "Avg Calories",
+      value: `${weeklyData[selectedWeek]?.avgCalories || 0}`,
+      color: "bg-purple-100 text-purple-800",
+    },
+  ];
+
   return (
-    <div className="p-4 md:p-6">
-      {/* View Toggle */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl md:text-2xl font-bold">Nutrition Report</h1>
-        <div className="flex flex-wrap gap-2">
+    <div className="min-h-screen bg-gray-50">
+      <Navigation
+        title={`${clientName}'s Nutrition`}
+        subtitle="Nutrition Progress"
+        email={params.email as string}
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex space-x-4 mb-6">
           <button
             onClick={() => setViewMode("weekly")}
-            className={`px-4 py-2 rounded-lg ${
-              viewMode === "weekly" ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-6 py-2.5 rounded-lg transition-colors ${
+              viewMode === "weekly"
+                ? "bg-[#0a1c3f] text-white"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } font-medium text-sm`}
           >
             Weekly View
           </button>
           <button
             onClick={() => setViewMode("overview")}
-            className={`px-4 py-2 rounded-lg ${
-              viewMode === "overview" ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-6 py-2.5 rounded-lg transition-colors ${
+              viewMode === "overview"
+                ? "bg-[#0a1c3f] text-white"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } font-medium text-sm`}
           >
             Progress Overview
           </button>
-          <Link
-            href={`/${params.email}`}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Back to Client Overview
-          </Link>
         </div>
-      </div>
 
-      {viewMode === "weekly" ? (
-        <>
-          {/* Week Selection */}
-          <div className="mb-6 overflow-x-auto pb-2">
-            <div className="flex flex-nowrap gap-2 min-w-max">
-              {Object.entries(weeklyData).map(([week, data]) => (
-                <button
-                  key={week}
-                  onClick={() => setSelectedWeek(week)}
-                  className={`px-4 py-2 rounded-lg flex-shrink-0 ${
-                    selectedWeek === week
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                >
-                  <div className="text-sm font-medium">{week}</div>
-                  <div className="text-xs opacity-75">
-                    {getWeekRange(data.dates)}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {selectedWeek && weeklyData[selectedWeek] && (
-            <div className="grid gap-6">
-              {/* Weekly Summary */}
-              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                <h2 className="text-lg md:text-xl font-semibold mb-4">
-                  Weekly Summary
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Avg Protein
-                    </h3>
-                    <p className="text-lg">
-                      {weeklyData[selectedWeek].avgProtein} g
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Avg Carbs
-                    </h3>
-                    <p className="text-lg">
-                      {weeklyData[selectedWeek].avgCarbs} g
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Avg Fat
-                    </h3>
-                    <p className="text-lg">
-                      {weeklyData[selectedWeek].avgFat} g
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Avg Calories
-                    </h3>
-                    <p className="text-lg">
-                      {weeklyData[selectedWeek].avgCalories} kcal
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Daily Data for Selected Week */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Macronutrients Chart */}
-                <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                  <h2 className="text-lg md:text-xl font-semibold mb-4">
-                    Weekly Macronutrients
-                  </h2>
-                  <div className="h-[400px] overflow-x-auto">
-                    <div className="min-w-[500px] h-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={weeklyData[selectedWeek].dates.map((date) => ({
-                            date,
-                            protein:
-                              weeklyData[selectedWeek].dailyData[date].totals[
-                                "Protein (g)"
-                              ],
-                            carbs:
-                              weeklyData[selectedWeek].dailyData[date].totals[
-                                "Carbohydrate (g)"
-                              ],
-                            fat: weeklyData[selectedWeek].dailyData[date]
-                              .totals["Fat (g)"],
-                          }))}
-                          margin={{ right: 30, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="date"
-                            tickFormatter={(date) =>
-                              `${getDayName(date).slice(0, 3)} ${formatDate(
-                                date
-                              )}`
-                            }
-                            height={60}
-                            angle={-45}
-                            textAnchor="end"
-                          />
-                          <YAxis />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                          <Bar
-                            dataKey="protein"
-                            fill="#4ade80"
-                            name="Protein"
-                          />
-                          <Bar dataKey="carbs" fill="#f59e0b" name="Carbs" />
-                          <Bar dataKey="fat" fill="#ef4444" name="Fat" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Calories Chart */}
-                <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                  <h2 className="text-lg md:text-xl font-semibold mb-4">
-                    Weekly Calories
-                  </h2>
-                  <div className="h-[400px] overflow-x-auto">
-                    <div className="min-w-[500px] h-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={weeklyData[selectedWeek].dates.map((date) => ({
-                            date,
-                            calories:
-                              weeklyData[selectedWeek].dailyData[date].totals
-                                .Kcal,
-                          }))}
-                          margin={{ right: 30, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="date"
-                            tickFormatter={(date) =>
-                              `${getDayName(date).slice(0, 3)} ${formatDate(
-                                date
-                              )}`
-                            }
-                            height={60}
-                            angle={-45}
-                            textAnchor="end"
-                          />
-                          <YAxis />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                          <Bar
-                            dataKey="calories"
-                            fill="#8b5cf6"
-                            name="Calories"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Weekly Data Table */}
-              <div className="overflow-auto">
-                <div className="min-w-[800px]">
-                  <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Date
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Day Type
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Protein (g)
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Carbs (g)
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Fat (g)
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Calories
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {weeklyData[selectedWeek].dates.map((date) => {
-                          const dayData =
-                            weeklyData[selectedWeek].dailyData[date];
-                          return (
-                            <tr key={date}>
-                              <td
-                                className="px-6 py-4 cursor-pointer hover:text-blue-600"
-                                onClick={() => {
-                                  const dayData =
-                                    weeklyData[selectedWeek].dailyData[date];
-                                  setSelectedDateData({
-                                    date,
-                                    data: dayData, // Now contains both meals and totals
-                                  });
-                                  setIsModalOpen(true);
-                                }}
-                              >
-                                {formatDate(date)}
-                              </td>
-                              <td className="px-6 py-4">{dayData.dayType}</td>
-                              <td className="px-6 py-4">
-                                {dayData.totals["Protein (g)"]}
-                              </td>
-                              <td className="px-6 py-4">
-                                {dayData.totals["Carbohydrate (g)"]}
-                              </td>
-                              <td className="px-6 py-4">
-                                {dayData.totals["Fat (g)"]}
-                              </td>
-                              <td className="px-6 py-4">
-                                {dayData.totals.Kcal}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        <tr className="bg-gray-50 font-medium">
-                          <td className="px-6 py-4">Week Average</td>
-                          <td className="px-6 py-4">-</td>
-                          <td className="px-6 py-4">
-                            {weeklyData[selectedWeek].avgProtein}
-                          </td>
-                          <td className="px-6 py-4">
-                            {weeklyData[selectedWeek].avgCarbs}
-                          </td>
-                          <td className="px-6 py-4">
-                            {weeklyData[selectedWeek].avgFat}
-                          </td>
-                          <td className="px-6 py-4">
-                            {weeklyData[selectedWeek].avgCalories}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        // Overview Mode
-        <div className="grid gap-6">
-          {/* Period Selection Dropdown */}
-          <div className="flex justify-end mb-2">
-            <div className="relative w-full sm:w-48">
-              <button
-                onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full"
-              >
-                <span>
-                  {comparisonPeriod === "all"
-                    ? "All Time"
-                    : comparisonPeriod === "yearly"
-                    ? "Past Year"
-                    : comparisonPeriod === "quarterly"
-                    ? "Past Quarter"
-                    : "Past Month"}
-                </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 transition-transform ${
-                    isPeriodDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {isPeriodDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden">
-                  {[
-                    { id: "all", label: "All Time" },
-                    { id: "yearly", label: "Past Year" },
-                    { id: "quarterly", label: "Past Quarter" },
-                    { id: "monthly", label: "Past Month" },
-                  ].map((period) => (
+        {viewMode === "weekly" ? (
+          <>
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4">Select Week</h2>
+              <div className="overflow-x-auto">
+                <div className="flex gap-3">
+                  {Object.entries(weeklyData).map(([week, data]) => (
                     <button
-                      key={period.id}
-                      onClick={() => {
-                        setComparisonPeriod(period.id);
-                        setIsPeriodDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                        comparisonPeriod === period.id ? "bg-blue-100" : ""
+                      key={week}
+                      onClick={() => setSelectedWeek(week)}
+                      className={`flex-shrink-0 px-4 py-3 rounded-lg transition-colors ${
+                        selectedWeek === week
+                          ? "bg-[#0a1c3f] text-white"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                       }`}
                     >
-                      {period.label}
+                      <div className="text-sm font-medium">{week}</div>
+                      <div className="text-xs opacity-75">
+                        {getWeekRange(data.dates)}
+                      </div>
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Progress Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Macronutrients Progress */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">
-                Macronutrients Progress
-              </h2>
-              <div className="h-[400px] overflow-x-auto">
-                <div className="min-w-[500px] h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={Object.entries(filteredData).map(
-                        ([week, data]) => ({
-                          week,
-                          protein: data.avgProtein,
-                          carbs: data.avgCarbs,
-                          fat: data.avgFat,
-                        })
-                      )}
-                      margin={{ right: 30, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="protein"
-                        stroke="#4ade80"
-                        name="Avg Protein (g)"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="carbs"
-                        stroke="#f59e0b"
-                        name="Avg Carbs (g)"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="fat"
-                        stroke="#ef4444"
-                        name="Avg Fat (g)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
               </div>
             </div>
 
-            {/* Calories Progress */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">
-                Calories Progress
-              </h2>
-              <div className="h-[400px] overflow-x-auto">
-                <div className="min-w-[500px] h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={Object.entries(filteredData).map(
-                        ([week, data]) => ({
-                          week,
-                          calories: data.avgCalories,
-                        })
-                      )}
-                      margin={{ right: 30, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="calories"
-                        stroke="#8b5cf6"
-                        name="Avg Calories"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Overview Table */}
-          <div className="overflow-auto">
-            <div className="min-w-[800px]">
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Week
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Date Range
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Protein (g)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Carbs (g)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Fat (g)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Calories
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.entries(filteredData).map(([week, data]) => (
-                      <tr key={week}>
-                        <td className="px-6 py-4">{week}</td>
-                        <td className="px-6 py-4">
-                          {getWeekRange(data.dates)}
-                        </td>
-                        <td className="px-6 py-4">{data.avgProtein}</td>
-                        <td className="px-6 py-4">{data.avgCarbs}</td>
-                        <td className="px-6 py-4">{data.avgFat}</td>
-                        <td className="px-6 py-4">{data.avgCalories}</td>
-                      </tr>
+            {selectedWeek && weeklyData[selectedWeek] && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h2 className="text-lg font-semibold mb-4">Weekly Summary</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {summaryMetrics.map((metric) => (
+                      <div
+                        key={metric.label}
+                        className="bg-white rounded-lg p-4 border border-gray-200"
+                      >
+                        <div className="text-sm text-gray-500">
+                          {metric.label}
+                        </div>
+                        <div
+                          className={`text-xl font-semibold mt-1 ${metric.color} inline-block px-2 py-1 rounded-full`}
+                        >
+                          {metric.value}
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Weekly Macronutrients
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={weeklyData[selectedWeek].dates.map(
+                              (date) => ({
+                                date,
+                                protein:
+                                  weeklyData[selectedWeek].dailyData[date]
+                                    .totals["Protein (g)"],
+                                carbs:
+                                  weeklyData[selectedWeek].dailyData[date]
+                                    .totals["Carbohydrate (g)"],
+                                fat: weeklyData[selectedWeek].dailyData[date]
+                                  .totals["Fat (g)"],
+                              })
+                            )}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="date"
+                              tickFormatter={(date) =>
+                                `${getDayName(date).slice(0, 3)} ${formatDate(
+                                  date
+                                )}`
+                              }
+                              height={60}
+                              angle={-45}
+                              textAnchor="end"
+                            />
+                            <YAxis />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+                            <Bar
+                              dataKey="protein"
+                              fill="#4ade80"
+                              name="Protein"
+                            />
+                            <Bar dataKey="carbs" fill="#f59e0b" name="Carbs" />
+                            <Bar dataKey="fat" fill="#ef4444" name="Fat" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Weekly Calories
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={weeklyData[selectedWeek].dates.map(
+                              (date) => ({
+                                date,
+                                calories:
+                                  weeklyData[selectedWeek].dailyData[date]
+                                    .totals.Kcal,
+                              })
+                            )}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="date"
+                              tickFormatter={(date) =>
+                                `${getDayName(date).slice(0, 3)} ${formatDate(
+                                  date
+                                )}`
+                              }
+                              height={60}
+                              angle={-45}
+                              textAnchor="end"
+                            />
+                            <YAxis />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+                            <Bar
+                              dataKey="calories"
+                              fill="#8b5cf6"
+                              name="Calories"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Day Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Protein (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Carbs
+                          (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Fat (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Calories
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {weeklyData[selectedWeek].dates.map((date) => {
+                        const dayData =
+                          weeklyData[selectedWeek].dailyData[date];
+                        return (
+                          <tr key={date}>
+                            <td
+                              className="px-6 py-4 cursor-pointer hover:text-blue-600"
+                              onClick={() => {
+                                const dayData =
+                                  weeklyData[selectedWeek].dailyData[date];
+                                setSelectedDateData({
+                                  date,
+                                  data: dayData,
+                                });
+                                setIsModalOpen(true);
+                              }}
+                            >
+                              {formatDate(date)}
+                            </td>
+                            <td className="px-6 py-4">{dayData.dayType}</td>
+                            <td className="px-6 py-4">
+                              {dayData.totals["Protein (g)"]}
+                            </td>
+                            <td className="px-6 py-4">
+                              {dayData.totals["Carbohydrate (g)"]}
+                            </td>
+                            <td className="px-6 py-4">
+                              {dayData.totals["Fat (g)"]}
+                            </td>
+                            <td className="px-6 py-4">
+                              {dayData.totals.Kcal}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-gray-50 font-medium">
+                        <td className="px-6 py-4">Week Average</td>
+                        <td className="px-6 py-4">-</td>
+                        <td className="px-6 py-4">
+                          {weeklyData[selectedWeek].avgProtein}
+                        </td>
+                        <td className="px-6 py-4">
+                          {weeklyData[selectedWeek].avgCarbs}
+                        </td>
+                        <td className="px-6 py-4">
+                          {weeklyData[selectedWeek].avgFat}
+                        </td>
+                        <td className="px-6 py-4">
+                          {weeklyData[selectedWeek].avgCalories}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-end mb-2">
+              <div className="relative w-full sm:w-48">
+                <button
+                  onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full"
+                >
+                  <span>
+                    {comparisonPeriod === "all"
+                      ? "All Time"
+                      : comparisonPeriod === "yearly"
+                      ? "Past Year"
+                      : comparisonPeriod === "quarterly"
+                        ? "Past Quarter"
+                        : "Past Month"}
+                  </span>
+                  <svg
+                    className="h-5 w-5 transition-transform ${isPeriodDropdownOpen ? 'rotate-180' : ''}"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {isPeriodDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden">
+                    {[
+                      { id: "all", label: "All Time" },
+                      { id: "yearly", label: "Past Year" },
+                      { id: "quarterly", label: "Past Quarter" },
+                      { id: "monthly", label: "Past Month" },
+                    ].map((period) => (
+                      <button
+                        key={period.id}
+                        onClick={() => {
+                          setComparisonPeriod(period.id);
+                          setIsPeriodDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                          comparisonPeriod === period.id ? "bg-blue-100" : ""
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
+                  Macronutrients Progress
+                </h2>
+                <div className="h-[400px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={Object.entries(filteredData).map(
+                          ([week, data]) => ({
+                            week,
+                            protein: data.avgProtein,
+                            carbs: data.avgCarbs,
+                            fat: data.avgFat,
+                          })
+                        )}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="week" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="protein"
+                          stroke="#4ade80"
+                          name="Avg Protein (g)"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="carbs"
+                          stroke="#f59e0b"
+                          name="Avg Carbs (g)"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="fat"
+                          stroke="#ef4444"
+                          name="Avg Fat (g)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
+                  Calories Progress
+                </h2>
+                <div className="h-[400px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      >
+                      <LineChart
+                        data={Object.entries(filteredData).map(
+                          ([week, data]) => ({
+                            week,
+                            calories: data.avgCalories,
+                          })
+                        )}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="week" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="calories"
+                          stroke="#8b5cf6"
+                          name="Avg Calories"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-auto">
+              <div className="min-w-[800px]">
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Week
+                            </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Date Range
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Protein (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Carbs (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Fat (g)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Calories
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {Object.entries(filteredData).map(([week, data]) => (
+                        <tr key={week}>
+                          <td className="px-6 py-4">{week}</td>
+                          <td className="px-6 py-4">
+                            {getWeekRange(data.dates)}
+                          </td>
+                          <td className="px-6 py-4">{data.avgProtein}</td>
+                          <td className="px-6 py-4">{data.avgCarbs}</td>
+                          <td className="px-6 py-4">{data.avgFat}</td>
+                          <td className="px-6 py-4">{data.avgCalories}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+      
       {selectedDateData && (
         <NutritionModal
           isOpen={isModalOpen}

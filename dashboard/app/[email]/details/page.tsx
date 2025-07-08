@@ -5,6 +5,7 @@ import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import Navigation from "@/components/shared/Navigation";
 
 interface IntakeForm {
   fullName: string;
@@ -133,98 +134,269 @@ export default function UserDetails() {
   );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Client Details</h1>
-        <Link
-          href={`/${params.email}`}
-          className="text-blue-600 hover:text-blue-800"
-        >
-          Back to Client Overview
-        </Link>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation
+        title={`${form?.fullName || "Client"}'s Details`}
+        subtitle="Client Information"
+        email={params.email as string}
+      />
 
-      {/* Personal Information */}
-      {renderSection("Personal Information", [
-        { label: "Name", value: form.fullName },
-        { label: "Email", value: form.email },
-        {
-          label: "Address",
-          value: `${form.street}, ${form.city}, ${form.postalCode}, ${form.country}`,
-        },
-        { label: "Age", value: form.age },
-        { label: "Height", value: form.height },
-        { label: "Weight", value: form.weight },
-        { label: "Body Fat", value: form.bodyFat },
-      ])}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header Card */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Client Profile
+              </h1>
+              <p className="text-gray-600">
+                Form submitted: {form?.timestamp?.toDate().toLocaleDateString()}
+              </p>
+            </div>
+            <Link
+              href={`/${params.email}`}
+              className="text-[#0a1c3f] hover:text-[#0b2552] font-medium"
+            >
+              Back to Overview
+            </Link>
+          </div>
+        </div>
 
-      {/* Strength Metrics */}
-      {renderSection("Strength Metrics", [
-        { label: "Bench Press", value: form.benchPress },
-        { label: "Squat", value: form.squat },
-        { label: "Chin-up", value: form.chinUp },
-        { label: "Deadlift", value: form.deadlift },
-        { label: "Overhead Press", value: form.overheadPress },
-        { label: "Exercise Competency", value: form.exerciseCompetency },
-      ])}
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Personal Information */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Basic Information
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  { label: "Name", value: form?.fullName },
+                  { label: "Email", value: form?.email },
+                  { label: "Age", value: form?.age },
+                  { label: "Height", value: form?.height },
+                  { label: "Weight", value: form?.weight },
+                  { label: "Body Fat", value: form?.bodyFat },
+                  { label: "Occupation", value: form?.occupation },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <span className="text-gray-500">{item.label}</span>
+                  <span className="font-medium text-gray-900">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Goals and Training */}
-      {renderSection("Goals and Training", [
-        { label: "Goals", value: form.goals },
-        { label: "Main Obstacle", value: form.obstacle },
-        { label: "Other Exercises", value: form.otherExercises },
-        { label: "Dedication Level", value: form.dedicationLevel },
-        { label: "Weekly Frequency", value: form.weeklyFrequency },
-      ])}
+          {/* Medical & Lifestyle */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Medical & Lifestyle
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  {
+                    label: "Medical Conditions",
+                    value: form?.medicalConditions,
+                  },
+                  { label: "Special Diet", value: form?.specialDiet },
+                  { label: "Sleep Quality", value: form?.sleepQuality },
+                  { label: "Stress Level", value: form?.stressLevel },
+                  { label: "Activity Level", value: form?.activityLevel },
+                  { label: "Caffeine Intake", value: form?.caffeineIntake },
+                  {
+                    label: "Training Time",
+                    value: form?.trainingTimePreference,
+                  },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <span className="text-gray-500 text-sm">{item.label}</span>
+                  <p className="font-medium text-gray-900">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Lifestyle */}
-      {renderSection("Lifestyle", [
-        { label: "Occupation", value: form.occupation },
-        { label: "Medical Conditions", value: form.medicalConditions },
-        { label: "Special Diet", value: form.specialDiet },
-        {
-          label: "Training Time Preference",
-          value: form.trainingTimePreference,
-        },
-        { label: "Activity Level", value: form.activityLevel },
-        { label: "Stress Level", value: form.stressLevel },
-        { label: "Sleep Quality", value: form.sleepQuality },
-        { label: "Caffeine Intake", value: form.caffeineIntake },
-      ])}
+          {/* Address */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Location Details
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  { label: "Street", value: form?.street },
+                  { label: "City", value: form?.city },
+                  { label: "Postal Code", value: form?.postalCode },
+                  { label: "Country", value: form?.country },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <span className="text-gray-500">{item.label}</span>
+                  <span className="font-medium text-gray-900">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Add Equipment section */}
-      {renderSection(
-        "Equipment Access",
-        equipmentFields.map(({ field, label }) => ({
-          label,
-          value: form[field as keyof IntakeForm],
-        }))
-      )}
+          {/* Training Information */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Training Profile
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  {
+                    label: "Experience",
+                    value: form?.strengthTrainingExperience,
+                  },
+                  { label: "Competency", value: form?.exerciseCompetency },
+                  { label: "Weekly Frequency", value: form?.weeklyFrequency },
+                  { label: "Dedication Level", value: form?.dedicationLevel },
+                  { label: "Current Training", value: form?.currentTraining },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <span className="text-gray-500 text-sm">{item.label}</span>
+                  <p className="font-medium text-gray-900">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Add Menstrual Cycle to Additional Information section */}
-      {renderSection("Additional Information", [
-        {
-          label: "Menstrual Cycle & Contraception",
-          value: form.menstrualCycle,
-        },
-        { label: "Supplements", value: form.supplements },
-        { label: "Wrist Circumference", value: form.wristCircumference },
-        { label: "Ankle Circumference", value: form.ankleCircumference },
-        { label: "Typical Diet", value: form.typicalDiet },
-        { label: "Current Training", value: form.currentTraining },
-      ])}
+          {/* Strength Metrics */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Strength Metrics
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  { label: "Bench Press", value: form?.benchPress },
+                  { label: "Squat", value: form?.squat },
+                  { label: "Chin-up", value: form?.chinUp },
+                  { label: "Deadlift", value: form?.deadlift },
+                  { label: "Overhead Press", value: form?.overheadPress },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <span className="text-gray-500">{item.label}</span>
+                  <span className="font-medium text-gray-900">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Additional Information */}
-      {renderSection("Additional Information", [
-        { label: "Supplements", value: form.supplements },
-        { label: "Wrist Circumference", value: form.wristCircumference },
-        { label: "Ankle Circumference", value: form.ankleCircumference },
-        { label: "Typical Diet", value: form.typicalDiet },
-        { label: "Current Training", value: form.currentTraining },
-      ])}
+          {/* Body Measurements */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Body Measurements
+            </h2>
+            <div className="space-y-4">
+              {(
+                [
+                  {
+                    label: "Wrist Circumference",
+                    value: form?.wristCircumference,
+                  },
+                  {
+                    label: "Ankle Circumference",
+                    value: form?.ankleCircumference,
+                  },
+                  { label: "Menstrual Cycle", value: form?.menstrualCycle },
+                ] as const
+              ).map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <span className="text-gray-500">{item.label}</span>
+                  <span className="font-medium text-gray-900">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      <div className="mt-6 text-sm text-gray-500">
-        Form submitted on: {form.timestamp?.toDate().toLocaleDateString()}
+          {/* Equipment Access */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Equipment Access
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {equipmentFields.map(({ field, label }) => (
+                <div key={field} className="flex items-center gap-2">
+                  <div
+                    className={`w-4 h-4 rounded-full ${
+                      form?.[field as keyof IntakeForm]
+                        ? "bg-green-500"
+                        : "bg-red-500"
+                    }`}
+                  />
+                  <span className="text-sm text-gray-700">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Goals and Obstacles */}
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Goals & Obstacles
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <span className="text-gray-500">Goals</span>
+                  <p className="font-medium text-gray-900 mt-1">
+                    {form?.goals}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Main Obstacle</span>
+                  <p className="font-medium text-gray-900 mt-1">
+                    {form?.obstacle}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Other Exercises</span>
+                <p className="font-medium text-gray-900 mt-1">
+                  {form?.otherExercises}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Information */}
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+              Additional Information
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <span className="text-gray-500">Supplements</span>
+                <p className="font-medium text-gray-900 mt-1">
+                  {form?.supplements}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-500">Typical Diet</span>
+                <p className="font-medium text-gray-900 mt-1">
+                  {form?.typicalDiet}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

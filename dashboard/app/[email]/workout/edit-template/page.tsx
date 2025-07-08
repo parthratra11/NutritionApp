@@ -168,6 +168,7 @@ export default function EditTemplate() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showNav, setShowNav] = useState(false); // Add this line
+  const [clientName, setClientName] = useState<string>("");
 
   // Add date strip generation
   const generateDateStrip = () => {
@@ -216,6 +217,25 @@ export default function EditTemplate() {
     };
 
     fetchOrCreateTemplate();
+  }, [params?.email]);
+
+  useEffect(() => {
+    const fetchClientName = async () => {
+      if (!params?.email) return;
+      try {
+        const clientEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", clientEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data();
+          setClientName(clientData.fullName);
+        }
+      } catch (err) {
+        console.error("Failed to fetch client name:", err);
+      }
+    };
+
+    fetchClientName();
   }, [params?.email]);
 
   const handleExerciseChange = (
@@ -294,7 +314,7 @@ export default function EditTemplate() {
   return (
     <div className="min-h-screen bg-white">
       <Navigation
-        title="Workout Template"
+        title={`${clientName || "Client"}'s Workout Template`}
         subtitle="Edit Mode"
         email={params.email as string}
       />

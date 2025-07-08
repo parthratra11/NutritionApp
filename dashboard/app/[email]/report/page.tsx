@@ -5,6 +5,7 @@ import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Navigation from "@/components/shared/Navigation";
 import {
   LineChart,
   Line,
@@ -311,246 +312,173 @@ export default function ReportPage() {
   if (!weeklyData) return <div className="p-6">No data found</div>;
 
   return (
-    <div className="p-4 md:p-6">
-      {/* Client Info Header */}
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
-            <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Age</h3>
-            <p className="text-lg">{clientInfo?.age} years</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">
-              Starting Weight
-            </h3>
-            <p className="text-lg">{clientInfo?.weight} kg</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Height</h3>
-            <p className="text-lg">{clientInfo?.height} cm</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-500">Goals</h3>
-          <p className="text-gray-700">{clientInfo?.goals}</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation
+        title={`${clientInfo?.fullName || "Client"}'s Report`}
+        subtitle="Progress Overview"
+        email={params.email as string}
+      />
 
-      {/* View Toggle */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl md:text-2xl font-bold">Progress Report</h1>
-        <div className="flex flex-wrap gap-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Client Info Header */}
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
+              <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Age</h3>
+              <p className="text-lg">{clientInfo?.age} years</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">
+                Starting Weight
+              </h3>
+              <p className="text-lg">{clientInfo?.weight} kg</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Height</h3>
+              <p className="text-lg">{clientInfo?.height} cm</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-gray-500">Goals</h3>
+            <p className="text-gray-700">{clientInfo?.goals}</p>
+          </div>
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex space-x-4 mb-6">
           <button
             onClick={() => setViewMode("weekly")}
-            className={`px-4 py-2 rounded-lg ${
-              viewMode === "weekly" ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-6 py-2.5 rounded-lg transition-colors ${
+              viewMode === "weekly"
+                ? "bg-[#0a1c3f] text-white"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } font-medium text-sm`}
           >
             Weekly View
           </button>
           <button
             onClick={() => setViewMode("overview")}
-            className={`px-4 py-2 rounded-lg ${
-              viewMode === "overview" ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-6 py-2.5 rounded-lg transition-colors ${
+              viewMode === "overview"
+                ? "bg-[#0a1c3f] text-white"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } font-medium text-sm`}
           >
             Progress Overview
           </button>
-          <Link
-            href={`/${params.email}`}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Back to Client Overview
-          </Link>
         </div>
-      </div>
 
-      {viewMode === "weekly" ? (
-        <>
-          <div className="mb-6 relative">
-            <button
-              onClick={() => setIsWeekDropdownOpen(!isWeekDropdownOpen)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-64"
-            >
-              <span className="truncate">
-                {selectedWeek}{" "}
-                {selectedWeek && weeklyData[selectedWeek]
-                  ? `(${getWeekDates(weeklyData[selectedWeek])})`
-                  : ""}
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-5 w-5 transition-transform flex-shrink-0 ${
-                  isWeekDropdownOpen ? "rotate-180" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+        {viewMode === "weekly" ? (
+          <>
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4">Select Week</h2>
+              <div className="relative">
+                <button
+                  onClick={() => setIsWeekDropdownOpen(!isWeekDropdownOpen)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-64"
+                >
+                  <span className="truncate">
+                    {selectedWeek}{" "}
+                    {selectedWeek && weeklyData[selectedWeek]
+                      ? `(${getWeekDates(weeklyData[selectedWeek])})`
+                      : ""}
+                  </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-5 w-5 transition-transform flex-shrink-0 ${
+                      isWeekDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
 
-            {isWeekDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-full sm:w-64 bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                {Object.entries(weeklyData)
-                  .filter(([week]) => week !== "firstEntryDate")
-                  .sort((a, b) => {
-                    // Sort by the first date in each week's data in descending order
-                    const aStartDate = getWeekStartDate(a[1]) || new Date(0);
-                    const bStartDate = getWeekStartDate(b[1]) || new Date(0);
-                    return bStartDate.getTime() - aStartDate.getTime(); // Descending order by date
-                  })
-                  .map(([week, data]) => (
-                    <button
-                      key={week}
-                      onClick={() => {
-                        setSelectedWeek(week);
-                        setIsWeekDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                        selectedWeek === week ? "bg-blue-100" : ""
-                      }`}
-                    >
-                      <div className="font-medium">{week}</div>
-                      <div className="text-xs text-gray-500">
-                        {getWeekDates(data)}
-                      </div>
-                    </button>
-                  ))}
+                {isWeekDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full sm:w-64 bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                    {Object.entries(weeklyData)
+                      .filter(([week]) => week !== "firstEntryDate")
+                      .sort((a, b) => {
+                        // Sort by the first date in each week's data in descending order
+                        const aStartDate = getWeekStartDate(a[1]) || new Date(0);
+                        const bStartDate = getWeekStartDate(b[1]) || new Date(0);
+                        return bStartDate.getTime() - aStartDate.getTime(); // Descending order by date
+                      })
+                      .map(([week, data]) => (
+                        <button
+                          key={week}
+                          onClick={() => {
+                            setSelectedWeek(week);
+                            setIsWeekDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                            selectedWeek === week ? "bg-blue-100" : ""
+                          }`}
+                        >
+                          <div className="font-medium">{week}</div>
+                          <div className="text-xs text-gray-500">
+                            {getWeekDates(data)}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          {selectedWeek &&
-            (weeklyData[selectedWeek]?.waist ||
-              weeklyData[selectedWeek]?.hip) && (
-              <div className="mb-6 bg-white rounded-lg shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">
-                  Week {selectedWeek} Measurements
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {weeklyData[selectedWeek]?.waist && (
-                    <div>
-                      <span className="text-gray-500">Waist:</span>
-                      <span className="ml-2 font-medium">
-                        {weeklyData[selectedWeek].waist} cm
-                      </span>
-                    </div>
-                  )}
-                  {weeklyData[selectedWeek]?.hip && (
-                    <div>
-                      <span className="text-gray-500">Hip:</span>
-                      <span className="ml-2 font-medium">
-                        {weeklyData[selectedWeek].hip} cm
-                      </span>
-                    </div>
-                  )}
-                  {weeklyData[selectedWeek]?.waist &&
-                    weeklyData[selectedWeek]?.hip && (
-                      <div>
-                        <span className="text-gray-500">W/H Ratio:</span>
-                        <span className="ml-2 font-medium">
-                          {(
-                            parseFloat(weeklyData[selectedWeek].waist) /
-                            parseFloat(weeklyData[selectedWeek].hip)
-                          ).toFixed(2)}
+            {selectedWeek &&
+              (weeklyData[selectedWeek]?.waist ||
+                weeklyData[selectedWeek]?.hip) && (
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">
+                    Measurements Summary
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {weeklyData[selectedWeek]?.waist && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <span className="text-sm text-gray-500 block mb-1">Waist:</span>
+                        <span className="text-xl font-medium text-blue-700">
+                          {weeklyData[selectedWeek].waist} cm
                         </span>
                       </div>
                     )}
+                    {weeklyData[selectedWeek]?.hip && (
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <span className="text-sm text-gray-500 block mb-1">Hip:</span>
+                        <span className="text-xl font-medium text-purple-700">
+                          {weeklyData[selectedWeek].hip} cm
+                        </span>
+                      </div>
+                    )}
+                    {weeklyData[selectedWeek]?.waist &&
+                      weeklyData[selectedWeek]?.hip && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <span className="text-sm text-gray-500 block mb-1">W/H Ratio:</span>
+                          <span className="text-xl font-medium text-green-700">
+                            {(
+                              parseFloat(weeklyData[selectedWeek].waist) /
+                              parseFloat(weeklyData[selectedWeek].hip)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-          <div className="overflow-auto">
-            <div className="min-w-[800px]">
-              <table className="min-w-full divide-y divide-gray-200 border">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Week {selectedWeek}
-                    </th>
-                    {days.map((day) => {
-                      const dayData =
-                        selectedWeek && weeklyData[selectedWeek]?.[day];
-                      const dateStr = dayData
-                        ? formatDate(dayData.timestamp)
-                        : "";
-                      return (
-                        <th
-                          key={day}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          <div>{day}</div>
-                          <div className="text-xs font-normal text-gray-400">
-                            {dateStr}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {metrics.map((metric) => (
-                    <tr key={metric}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {metric}
-                      </td>
-                      {days.map((day) => {
-                        const dayData =
-                          selectedWeek && weeklyData[selectedWeek]?.[day];
-                        let value = "";
-                        let colorClass = "";
-
-                        if (dayData) {
-                          if (metric === "Weight") {
-                            value = dayData.weight;
-                          } else {
-                            // Access the metrics directly using the exact key names
-                            const metricKey = metric as keyof DayData;
-                            const metricData = dayData[metricKey];
-                            if (
-                              metricData &&
-                              typeof metricData === "object" &&
-                              "value" in metricData
-                            ) {
-                              value =
-                                metricData.value != null
-                                  ? metricData.value.toString()
-                                  : "";
-                              colorClass = getColorClass(metricData.color);
-                            }
-                          }
-                        }
-
-                        return (
-                          <td
-                            key={`${day}-${metric}`}
-                            className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${colorClass}`}
-                          >
-                            {value || "-"}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Daily Progress Charts */}
-          <div className="mt-8 grid gap-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Daily Progress Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Daily Weight & Measurements Chart */}
               <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
                 <h2 className="text-lg md:text-xl font-semibold mb-4">
@@ -580,13 +508,15 @@ export default function ReportPage() {
                           tick={{ fontSize: 10 }}
                         />
                         <YAxis />
-                        <Tooltip />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Line
                           type="monotone"
                           dataKey="weight"
                           stroke="#2563eb"
                           name="Weight (kg)"
+                          activeDot={{ r: 6 }}
+                          strokeWidth={2}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -623,25 +553,28 @@ export default function ReportPage() {
                           tick={{ fontSize: 10 }}
                         />
                         <YAxis domain={[0, 5]} />
-                        <Tooltip />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Line
                           type="monotone"
                           dataKey="sleep"
                           stroke="#4ade80"
                           name="Sleep Quality"
+                          strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="mood"
                           stroke="#f59e0b"
                           name="Mood"
+                          strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="hunger"
                           stroke="#ef4444"
                           name="Hunger Level"
+                          strokeWidth={2}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -649,156 +582,255 @@ export default function ReportPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </>
-      ) : (
-        <div className="grid gap-6">
-          {/* Period Selection Dropdown */}
-          <div className="flex justify-end mb-2">
-            <div className="relative">
-              <button
-                onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-48"
-              >
-                <span>
-                  {comparisonPeriod === "all"
-                    ? "All Time"
-                    : comparisonPeriod === "yearly"
-                    ? "Past Year"
-                    : comparisonPeriod === "quarterly"
-                    ? "Past Quarter"
-                    : "Past Month"}
-                </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 transition-transform ${
-                    isPeriodDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
 
-              {isPeriodDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-full sm:w-48 bg-white rounded-lg shadow-lg overflow-hidden">
-                  {[
-                    { id: "all", label: "All Time" },
-                    { id: "yearly", label: "Past Year" },
-                    { id: "quarterly", label: "Past Quarter" },
-                    { id: "monthly", label: "Past Month" },
-                  ].map((period) => (
-                    <button
-                      key={period.id}
-                      onClick={() => {
-                        setComparisonPeriod(period.id);
-                        setIsPeriodDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                        comparisonPeriod === period.id ? "bg-blue-100" : ""
-                      }`}
-                    >
-                      {period.label}
-                    </button>
-                  ))}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4">Weekly Progress Details</h2>
+              <div className="overflow-auto">
+                <div className="min-w-[800px]">
+                  <table className="min-w-full divide-y divide-gray-200 border">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Week {selectedWeek}
+                        </th>
+                        {days.map((day) => {
+                          const dayData =
+                            selectedWeek && weeklyData[selectedWeek]?.[day];
+                          const dateStr = dayData
+                            ? formatDate(dayData.timestamp)
+                            : "";
+                          return (
+                            <th
+                              key={day}
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              <div>{day}</div>
+                              <div className="text-xs font-normal text-gray-400">
+                                {dateStr}
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {metrics.map((metric) => (
+                        <tr key={metric}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {metric}
+                          </td>
+                          {days.map((day) => {
+                            const dayData =
+                              selectedWeek && weeklyData[selectedWeek]?.[day];
+                            let value = "";
+                            let colorClass = "";
+
+                            if (dayData) {
+                              if (metric === "Weight") {
+                                value = dayData.weight;
+                              } else {
+                                // Access the metrics directly using the exact key names
+                                const metricKey = metric as keyof DayData;
+                                const metricData = dayData[metricKey];
+                                if (
+                                  metricData &&
+                                  typeof metricData === "object" &&
+                                  "value" in metricData
+                                ) {
+                                  value =
+                                    metricData.value != null
+                                      ? metricData.value.toString()
+                                      : "";
+                                  colorClass = getColorClass(metricData.color);
+                                }
+                              }
+                            }
+
+                            return (
+                              <td
+                                key={`${day}-${metric}`}
+                                className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${colorClass}`}
+                              >
+                                {value || "-"}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-
-          {/* Progress Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weight & Measurements Chart */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">
-                Weight & Measurements Progress
-              </h2>
-              <div className="h-[420px] overflow-x-auto">
-                <div className="min-w-[500px] h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={calculateAverages()}
-                      margin={{ right: 30, bottom: 20 }}
+          </>
+        ) : (
+          <div className="space-y-6">
+            {/* Period Selection Dropdown */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Progress Timeline</h2>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-48"
+                  >
+                    <span>
+                      {comparisonPeriod === "all"
+                        ? "All Time"
+                        : comparisonPeriod === "yearly"
+                        ? "Past Year"
+                        : comparisonPeriod === "quarterly"
+                        ? "Past Quarter"
+                        : "Past Month"}
+                    </span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className={`h-5 w-5 transition-transform ${
+                        isPeriodDropdownOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="week"
-                        height={60}
-                        tick={{ fontSize: 10 }}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
                       />
-                      <YAxis yAxisId="weight" orientation="left" />
-                      <YAxis yAxisId="measurements" orientation="right" />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        yAxisId="weight"
-                        type="monotone"
-                        dataKey="avgWeight"
-                        stroke="#2563eb"
-                        name="Average Weight (kg)"
-                      />
-                      <Line
-                        yAxisId="measurements"
-                        type="monotone"
-                        dataKey="waist"
-                        stroke="#ec4899"
-                        name="Waist (cm)"
-                      />
-                      <Line
-                        yAxisId="measurements"
-                        type="monotone"
-                        dataKey="hip"
-                        stroke="#8b5cf6"
-                        name="Hip (cm)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                    </svg>
+                  </button>
+
+                  {isPeriodDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full sm:w-48 bg-white rounded-lg shadow-lg overflow-hidden">
+                      {{
+                        id: "all",
+                        label: "All Time",
+                      }}
+                      {{
+                        id: "yearly",
+                        label: "Past Year",
+                      }}
+                      {{
+                        id: "quarterly",
+                        label: "Past Quarter",
+                      }}
+                      {{
+                        id: "monthly",
+                        label: "Past Month",
+                      }}.map((period) => (
+                        <button
+                          key={period.id}
+                          onClick={() => {
+                            setComparisonPeriod(period.id);
+                            setIsPeriodDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                            comparisonPeriod === period.id ? "bg-blue-100" : ""
+                          }`}
+                        >
+                          {period.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Waist-Hip Ratio Chart */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">
-                Waist-Hip Ratio
-              </h2>
-              <div className="h-[420px] overflow-x-auto">
-                <div className="min-w-[500px] h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={calculateAverages()}
-                      margin={{ right: 30, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="week"
-                        height={60}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis domain={[0.6, 1.0]} />
-                      <Tooltip content={<WaistHipTooltip />} />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="waistHipRatio"
-                        stroke="#9333ea"
-                        name="Waist-Hip Ratio"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+            {/* Progress Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Weight & Measurements Chart */}
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
+                  Weight & Measurements Progress
+                </h2>
+                <div className="h-[420px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={calculateAverages()}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="week"
+                          height={60}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis yAxisId="weight" orientation="left" />
+                        <YAxis yAxisId="measurements" orientation="right" />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          yAxisId="weight"
+                          type="monotone"
+                          dataKey="avgWeight"
+                          stroke="#2563eb"
+                          name="Average Weight (kg)"
+                          strokeWidth={2}
+                          activeDot={{ r: 6 }}
+                        />
+                        <Line
+                          yAxisId="measurements"
+                          type="monotone"
+                          dataKey="waist"
+                          stroke="#ec4899"
+                          name="Waist (cm)"
+                          strokeWidth={2}
+                        />
+                        <Line
+                          yAxisId="measurements"
+                          type="monotone"
+                          dataKey="hip"
+                          stroke="#8b5cf6"
+                          name="Hip (cm)"
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Waist-Hip Ratio Chart */}
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h2 className="text-lg md:text-xl font-semibold mb-4">
+                  Waist-Hip Ratio
+                </h2>
+                <div className="h-[420px] overflow-x-auto">
+                  <div className="min-w-[500px] h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={calculateAverages()}
+                        margin={{ right: 30, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="week"
+                          height={60}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis domain={[0.6, 1.0]} />
+                        <Tooltip content={<WaistHipTooltip />} />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="waistHipRatio"
+                          stroke="#9333ea"
+                          name="Waist-Hip Ratio"
+                          strokeWidth={2}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Well-being Metrics Chart */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
                 Well-being Metrics
               </h2>
@@ -823,166 +855,170 @@ export default function ReportPage() {
                         dataKey="avgSleep"
                         stroke="#4ade80"
                         name="Sleep Quality"
+                        strokeWidth={2}
                       />
                       <Line
                         type="monotone"
                         dataKey="avgMood"
                         stroke="#f59e0b"
                         name="Mood"
+                        strokeWidth={2}
                       />
                       <Line
                         type="monotone"
                         dataKey="avgHunger"
                         stroke="#ef4444"
                         name="Hunger Level"
+                        strokeWidth={2}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Progress Table */}
-          <div className="overflow-auto">
-            <div className="min-w-[900px]">
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Week
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Dates
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Weight (kg)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Weight Change
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Waist (cm)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Hip (cm)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        W/H Ratio
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Sleep
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Mood
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Avg Hunger
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {calculateAverages().map((weekData, index, array) => {
-                      const previousWeek = index > 0 ? array[index - 1] : null;
-                      const weightChange =
-                        previousWeek?.avgWeight && weekData.avgWeight
-                          ? (
-                              parseFloat(weekData.avgWeight) -
-                              parseFloat(previousWeek.avgWeight)
-                            ).toFixed(1)
-                          : null;
+            {/* Progress Table */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4">Weekly Progress Summary</h2>
+              <div className="overflow-auto">
+                <div className="min-w-[900px]">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Week
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Dates
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Weight (kg)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Weight Change
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Waist (cm)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Hip (cm)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          W/H Ratio
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Sleep
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Mood
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Avg Hunger
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {calculateAverages().map((weekData, index, array) => {
+                        const previousWeek = index > 0 ? array[index - 1] : null;
+                        const weightChange =
+                          previousWeek?.avgWeight && weekData.avgWeight
+                            ? (
+                                parseFloat(weekData.avgWeight) -
+                                parseFloat(previousWeek.avgWeight)
+                              ).toFixed(1)
+                            : null;
 
-                      return (
-                        <tr key={weekData.week}>
-                          <td className="px-6 py-4 whitespace-nowrap font-medium">
-                            {weekData.week}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {weekData.weekDates}
-                          </td>
-                          <td className="px-6 py-4">
-                            {weekData.avgWeight || "-"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div
-                              className={`px-2 py-1 rounded-full inline-block ${
-                                weightChange
-                                  ? parseFloat(weightChange) < 0
-                                    ? "bg-green-100 text-green-800"
-                                    : parseFloat(weightChange) > 0
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-gray-100 text-gray-800"
-                                  : ""
-                              }`}
-                            >
-                              {weightChange
-                                ? `${
-                                    weightChange > 0 ? "+" : ""
-                                  }${weightChange} kg`
-                                : "-"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">{weekData.waist || "-"}</td>
-                          <td className="px-6 py-4">{weekData.hip || "-"}</td>
-                          <td className="px-6 py-4">
-                            {weekData.waistHipRatio || "-"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div
-                              className={`px-2 py-1 rounded-full inline-block ${
-                                weekData.avgSleep
-                                  ? parseFloat(weekData.avgSleep) >= 4
-                                    ? "bg-green-100 text-green-800"
-                                    : parseFloat(weekData.avgSleep) >= 3
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                                  : ""
-                              }`}
-                            >
-                              {weekData.avgSleep || "-"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div
-                              className={`px-2 py-1 rounded-full inline-block ${
-                                weekData.avgMood
-                                  ? parseFloat(weekData.avgMood) >= 4
-                                    ? "bg-green-100 text-green-800"
-                                    : parseFloat(weekData.avgMood) >= 3
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                                  : ""
-                              }`}
-                            >
-                              {weekData.avgMood || "-"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div
-                              className={`px-2 py-1 rounded-full inline-block ${
-                                weekData.avgHunger
-                                  ? parseFloat(weekData.avgHunger) >= 4
-                                    ? "bg-red-100 text-red-800"
-                                    : parseFloat(weekData.avgHunger) >= 3
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-green-100 text-green-800"
-                                  : ""
-                              }`}
-                            >
-                              {weekData.avgHunger || "-"}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                        return (
+                          <tr key={weekData.week} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap font-medium">
+                              {weekData.week}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {weekData.weekDates}
+                            </td>
+                            <td className="px-6 py-4">
+                              {weekData.avgWeight || "-"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div
+                                className={`px-2 py-1 rounded-full inline-block ${
+                                  weightChange
+                                    ? parseFloat(weightChange) < 0
+                                      ? "bg-green-100 text-green-800"
+                                      : parseFloat(weightChange) > 0
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
+                                    : ""
+                                }`}
+                              >
+                                {weightChange
+                                  ? `${
+                                      weightChange > 0 ? "+" : ""
+                                    }${weightChange} kg`
+                                  : "-"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">{weekData.waist || "-"}</td>
+                            <td className="px-6 py-4">{weekData.hip || "-"}</td>
+                            <td className="px-6 py-4">
+                              {weekData.waistHipRatio || "-"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div
+                                className={`px-2 py-1 rounded-full inline-block ${
+                                  weekData.avgSleep
+                                    ? parseFloat(weekData.avgSleep) >= 4
+                                      ? "bg-green-100 text-green-800"
+                                      : parseFloat(weekData.avgSleep) >= 3
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                    : ""
+                                }`}
+                              >
+                                {weekData.avgSleep || "-"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div
+                                className={`px-2 py-1 rounded-full inline-block ${
+                                  weekData.avgMood
+                                    ? parseFloat(weekData.avgMood) >= 4
+                                      ? "bg-green-100 text-green-800"
+                                      : parseFloat(weekData.avgMood) >= 3
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                    : ""
+                                }`}
+                              >
+                                {weekData.avgMood || "-"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div
+                                className={`px-2 py-1 rounded-full inline-block ${
+                                  weekData.avgHunger
+                                    ? parseFloat(weekData.avgHunger) >= 4
+                                      ? "bg-red-100 text-red-800"
+                                      : parseFloat(weekData.avgHunger) >= 3
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-green-100 text-green-800"
+                                    : ""
+                                }`}
+                              >
+                                {weekData.avgHunger || "-"}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
