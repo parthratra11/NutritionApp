@@ -345,42 +345,21 @@ export default function WorkoutDashboard() {
           : [[selectedSession, sessionData[selectedSession]]]
         ).map(([session, exercises]) => (
           <div key={session} className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">
+            <h3 className="text-[#333333] font-semibold mb-3 text-right">
               Session {session}
-            </h2>
-            <div className="overflow-auto">
-              <div className="min-w-[800px]">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
-                        Exercise
-                      </th>
-                      {Array.from(
-                        new Set(
-                          Object.values(exercises)
-                            .flatMap((exercise) => Object.keys(exercise))
-                            .sort(
-                              (a, b) =>
-                                new Date(b).getTime() - new Date(a).getTime()
-                            )
-                        )
-                      ).map((date) => (
-                        <th
-                          key={date}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
-                        >
-                          {date}
+            </h3>
+            <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-4">
+              <div
+                className="overflow-x-auto"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                <div className="min-w-full">
+                  <table className="w-full border-separate border-spacing-0">
+                    <thead className="sticky top-0">
+                      <tr className="text-left text-gray-600 text-sm">
+                        <th className="sticky left-0 z-10 bg-[#F5F5F5] pb-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px]">
+                          Exercise
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {Object.entries(exercises).map(([exercise, dates]) => (
-                      <tr key={exercise} className="hover:bg-gray-50">
-                        <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
-                          {exercise}
-                        </td>
                         {Array.from(
                           new Set(
                             Object.values(exercises)
@@ -390,43 +369,163 @@ export default function WorkoutDashboard() {
                                   new Date(b).getTime() - new Date(a).getTime()
                               )
                           )
-                        ).map((date) => {
-                          const data = dates[date];
-                          return (
+                        ).map((date) => (
+                          <th
+                            key={date}
+                            className="pb-3 px-2 font-medium whitespace-nowrap min-w-[100px] max-w-[120px]"
+                          >
+                            {date}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="text-[#333333] text-sm divide-y divide-gray-200">
+                      {Object.entries(exercises).map(
+                        ([exercise, dates], exerciseIndex) => (
+                          <tr
+                            key={exercise}
+                            className={
+                              exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
+                            }
+                          >
                             <td
-                              key={date}
-                              className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                              className={`sticky left-0 z-10 ${
+                                exerciseIndex % 2 === 0
+                                  ? "bg-gray-50"
+                                  : "bg-[#F5F5F5]"
+                              } py-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px] overflow-hidden text-ellipsis border-l-4 border-[#0a1c3f]`}
                             >
-                              {data ? (
-                                <div>
-                                  {data.sets.map((set, index) => (
-                                    <div
-                                      key={set.id}
-                                      className={`text-xs ${
-                                        set.completed
-                                          ? "text-green-600"
-                                          : "text-gray-500"
-                                      }`}
-                                    >
-                                      {set.weight}kg × {set.reps}
+                              {exercise}
+                            </td>
+                            {Array.from(
+                              new Set(
+                                Object.values(exercises)
+                                  .flatMap((exercise) => Object.keys(exercise))
+                                  .sort(
+                                    (a, b) =>
+                                      new Date(b).getTime() -
+                                      new Date(a).getTime()
+                                  )
+                              )
+                            ).map((date) => {
+                              const data = dates[date];
+                              return (
+                                <td
+                                  key={date}
+                                  className={`py-2 px-2 min-w-[100px] max-w-[120px] ${
+                                    exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
+                                  }`}
+                                >
+                                  {data ? (
+                                    <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+                                      {data.sets.map((set, index) => (
+                                        <div
+                                          key={set.id}
+                                          className={`${
+                                            set.completed
+                                              ? "text-green-600"
+                                              : "text-gray-500"
+                                          } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
+                                        >
+                                          <span className="font-medium whitespace-nowrap">
+                                            {set.weight}
+                                            <span className="mx-0.5">×</span>
+                                            {set.reps}
+                                          </span>
+                                          <span className="ml-1">
+                                            {set.completed ? (
+                                              <svg
+                                                className="h-3 w-3 text-green-500"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M5 13l4 4L19 7"
+                                                />
+                                              </svg>
+                                            ) : (
+                                              <svg
+                                                className="h-3 w-3 text-gray-400"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M6 18L18 6M6 6l12 12"
+                                                />
+                                              </svg>
+                                            )}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {data.duration && (
+                                        <div className="text-xs text-gray-500 mt-2 pt-1 border-t border-gray-100">
+                                          <span className="font-medium">
+                                            Time:
+                                          </span>{" "}
+                                          {data.duration}
+                                        </div>
+                                      )}
+                                      {data.workoutNote && (
+                                        <div className="text-xs text-gray-500 mt-1 relative group">
+                                          <span className="font-medium">
+                                            Note:
+                                          </span>{" "}
+                                          <span className="truncate block max-w-[80px] inline-block cursor-help">
+                                            {data.workoutNote.length > 12
+                                              ? `${data.workoutNote.substring(
+                                                  0,
+                                                  12
+                                                )}...`
+                                              : data.workoutNote}
+                                          </span>
+                                          <div className="hidden group-hover:block absolute z-20 bottom-full mb-1 left-0 bg-gray-800 text-white rounded p-2 text-xs min-w-[200px] max-w-[300px] shadow-lg whitespace-normal">
+                                            {data.workoutNote}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  ))}
-                                  {data.duration && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      {data.duration}
+                                  ) : (
+                                    <div className="text-center text-gray-400">
+                                      —
                                     </div>
                                   )}
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Scroll indicator */}
+              <div className="flex justify-center mt-2">
+                <div className="text-xs text-gray-500 flex items-center">
+                  <svg
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                  Scroll horizontally to see more dates
+                </div>
               </div>
             </div>
           </div>
