@@ -304,11 +304,11 @@ export default function EditTemplate() {
         <div className="flex space-x-4 my-6">
           <Link
             href={`/${params.email}/workout`}
-            className="px-6 py-2.5 rounded-full bg-gray-100 text-gray-700 font-medium text-sm hover:bg-gray-200 transition-colors"
+            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
           >
             View Template
           </Link>
-          <button className="px-6 py-2.5 rounded-full bg-red-500 text-white font-medium text-sm">
+          <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
             Edit Template
           </button>
         </div>

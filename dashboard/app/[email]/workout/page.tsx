@@ -1,5 +1,6 @@
 "use client";
 
+import Navigation from "@/components/shared/Navigation";
 import { useEffect, useState } from "react";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
@@ -233,152 +234,110 @@ export default function WorkoutDashboard() {
   if (error) return <div className="p-6 text-red-500">{error}</div>;
   if (!workoutData)
     return (
-      <div className="p-6">
-        <div className="flex gap-4">
-          <Link
-            href={`/${params.email}/workout/edit-template`}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-          >
-            Edit Template
-          </Link>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation
+          title="Workout Dashboard"
+          subtitle="No Data Available"
+          email={params.email as string}
+        />
+        <div className="p-6">
+          <div className="flex gap-4">
+            <Link
+              href={`/${params.email}/workout/edit-template`}
+              className="bg-[#0a1c3f] hover:bg-[#0b2552] text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Edit Template
+            </Link>
+          </div>
+          <p className="mt-4 text-gray-600">No workout data found</p>
         </div>
-        No workout data found
       </div>
     );
 
   const sessionData = organizeBySession(workoutData);
 
-  const generateChartData = (exercise: string, dates: any) => {
-    return Object.entries(dates).map(([date, data]: [string, any]) => ({
-      date,
-      maxWeight: Math.max(
-        ...data.sets.map((set: SetData) => parseFloat(set.weight) || 0)
-      ),
-      volume: data.sets.reduce(
-        (acc: number, set: SetData) =>
-          acc + (parseFloat(set.weight) || 0) * (parseFloat(set.reps) || 0),
-        0
-      ),
-    }));
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-          <p className="font-semibold">{label}</p>
-          <p className="text-sm text-gray-600">Duration: {data.duration}</p>
-          <div className="mt-2">
-            {data.sets.map((set: SetData, index: number) => (
-              <p key={set.id} className="text-sm">
-                Set {index + 1}: {set.weight}kg x {set.reps} reps
-              </p>
-            ))}
-          </div>
-          {data.workoutNote && (
-            <p className="mt-2 text-sm text-gray-600">
-              Note: {data.workoutNote}
-            </p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="p-4 md:p-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Workout Progress</h1>
-          <p className="text-gray-600">Training Split: {trainingType}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-4">
+    <div className="min-h-screen bg-gray-50">
+      <Navigation
+        title="Workout Dashboard"
+        subtitle="Training Progress"
+        email={params.email as string}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* View/Edit Toggle */}
+        <div className="flex space-x-4 mb-6">
+          <button
+            className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default"
+          >
+            View Template
+          </button>
           <Link
             href={`/${params.email}/workout/edit-template`}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
           >
             Edit Template
           </Link>
-          <Link
-            href={`/${params.email}`}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Back to Client Overview
-          </Link>
         </div>
-      </div>
 
-      {/* Session Filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <button
-          onClick={() => setSelectedSession("all")}
-          className={`px-4 py-2 rounded-lg ${
-            selectedSession === "all"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 hover:bg-gray-300"
-          }`}
-        >
-          All Sessions
-        </button>
-        {Object.keys(sessionData).map((session) => (
-          <button
-            key={session}
-            onClick={() => setSelectedSession(session as "A" | "B" | "C")}
-            className={`px-4 py-2 rounded-lg ${
-              selectedSession === session
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 hover:bg-gray-300"
-            }`}
-          >
-            Session {session}
-          </button>
-        ))}
-      </div>
+        {/* Header Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                Workout Progress
+              </h1>
+              <p className="text-gray-600">Training Split: {trainingType}</p>
+            </div>
+          </div>
+        </div>
 
-      {/* Session Tables */}
-      {(selectedSession === "all"
-        ? Object.entries(sessionData)
-        : [[selectedSession, sessionData[selectedSession]]]
-      ).map(([session, exercises]) => (
-        <div key={session} className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Session {session}</h2>
-          <div className="overflow-auto">
-            <div className="min-w-[800px]">
-              <table className="min-w-full bg-white border rounded-lg">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
-                      Exercise
-                    </th>
-                    {/* Get unique dates across all exercises */}
-                    {Array.from(
-                      new Set(
-                        Object.values(exercises)
-                          .flatMap((exercise) => Object.keys(exercise))
-                          .sort(
-                            (a, b) =>
-                              new Date(b).getTime() - new Date(a).getTime()
-                          )
-                      )
-                    ).map((date) => (
-                      <th
-                        key={date}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
-                      >
-                        {date}
+        {/* Session Filter */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedSession("all")}
+              className={`px-6 py-2 rounded-lg transition-colors ${
+                selectedSession === "all"
+                  ? "bg-[#0a1c3f] text-white"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+              }`}
+            >
+              All Sessions
+            </button>
+            {Object.keys(sessionData).map((session) => (
+              <button
+                key={session}
+                onClick={() => setSelectedSession(session as "A" | "B" | "C")}
+                className={`px-6 py-2 rounded-lg transition-colors ${
+                  selectedSession === session
+                    ? "bg-[#0a1c3f] text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+              >
+                Session {session}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Session Tables */}
+        {(selectedSession === "all"
+          ? Object.entries(sessionData)
+          : [[selectedSession, sessionData[selectedSession]]]
+        ).map(([session, exercises]) => (
+          <div key={session} className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900">
+              Session {session}
+            </h2>
+            <div className="overflow-auto">
+              <div className="min-w-[800px]">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
+                        Exercise
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {Object.entries(exercises).map(([exercise, dates]) => (
-                    <tr key={exercise} className="hover:bg-gray-50">
-                      <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
-                        {exercise}
-                      </td>
                       {Array.from(
                         new Set(
                           Object.values(exercises)
@@ -388,107 +347,73 @@ export default function WorkoutDashboard() {
                                 new Date(b).getTime() - new Date(a).getTime()
                             )
                         )
-                      ).map((date) => {
-                        const data = dates[date];
-                        return (
-                          <td
-                            key={date}
-                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                          >
-                            {data ? (
-                              <div>
-                                {data.sets.map((set, index) => (
-                                  <div
-                                    key={set.id}
-                                    className={`text-xs ${
-                                      set.completed
-                                        ? "text-green-600"
-                                        : "text-gray-500"
-                                    }`}
-                                  >
-                                    {set.weight}kg × {set.reps}
-                                  </div>
-                                ))}
-                                {data.duration && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {data.duration}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        );
-                      })}
+                      ).map((date) => (
+                        <th
+                          key={date}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
+                        >
+                          {date}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {Object.entries(exercises).map(([exercise, dates]) => (
+                      <tr key={exercise} className="hover:bg-gray-50">
+                        <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
+                          {exercise}
+                        </td>
+                        {Array.from(
+                          new Set(
+                            Object.values(exercises)
+                              .flatMap((exercise) => Object.keys(exercise))
+                              .sort(
+                                (a, b) =>
+                                  new Date(b).getTime() - new Date(a).getTime()
+                              )
+                          )
+                        ).map((date) => {
+                          const data = dates[date];
+                          return (
+                            <td
+                              key={date}
+                              className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                            >
+                              {data ? (
+                                <div>
+                                  {data.sets.map((set, index) => (
+                                    <div
+                                      key={set.id}
+                                      className={`text-xs ${
+                                        set.completed
+                                          ? "text-green-600"
+                                          : "text-gray-500"
+                                      }`}
+                                    >
+                                      {set.weight}kg × {set.reps}
+                                    </div>
+                                  ))}
+                                  {data.duration && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {data.duration}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-          {/* Progress Charts
-          <div className="mt-6 bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">
-              Progress Charts - Session {session}
-            </h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis
-                    yAxisId="weight"
-                    label={{
-                      value: "Weight (kg)",
-                      angle: -90,
-                      position: "insideLeft",
-                    }}
-                  />
-                  <YAxis
-                    yAxisId="volume"
-                    orientation="right"
-                    label={{
-                      value: "Volume (kg)",
-                      angle: 90,
-                      position: "insideRight",
-                    }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  {Object.entries(exercises).map(([exercise, dates]) => {
-                    const data = Object.entries(dates).map(([date, data]) => ({
-                      date,
-                      maxWeight: Math.max(
-                        ...data.sets.map((set) => parseFloat(set.weight) || 0)
-                      ),
-                      volume: data.sets.reduce(
-                        (acc, set) =>
-                          acc +
-                          (parseFloat(set.weight) || 0) *
-                            (parseFloat(set.reps) || 0),
-                        0
-                      ),
-                    }));
-
-                    return (
-                      <Line
-                        key={exercise}
-                        yAxisId="weight"
-                        type="monotone"
-                        dataKey="maxWeight"
-                        name={`${exercise} (Max Weight)`}
-                        stroke="#8884d8"
-                        dot={{ r: 4 }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div> */}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
