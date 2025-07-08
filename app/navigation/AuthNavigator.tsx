@@ -22,6 +22,7 @@ import CronoScreen from 'screens/CronoScreen';
 import DetailedFitnessScreen from 'screens/DetailedFitnessScreen';
 import WeightScreen from '../screens/WeightScreen';
 import MoodScreen from '../screens/MoodScreen';
+import SleepScreen from 'screens/SleepScreen';
 const Stack = createNativeStackNavigator();
 
 export default function AuthNavigator() {
@@ -75,6 +76,7 @@ export default function AuthNavigator() {
           <Stack.Screen name="Steps" component={StepScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Weight" component={WeightScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Mood" component={MoodScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Sleep" component={SleepScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
