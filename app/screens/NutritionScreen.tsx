@@ -17,6 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
+import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -66,6 +68,15 @@ const NutritionScreen = ({ navigation }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollTimeout = useRef(null);
   const lastScrollY = useRef(0);
+
+  // Get the week dates using our utility function
+  const weekDates = getCurrentWeekDates();
+  
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
 
   // Reset mealData when dayType changes
   useEffect(() => {
@@ -131,27 +142,6 @@ const NutritionScreen = ({ navigation }) => {
     const today = new Date();
     return today.toISOString().slice(0, 10);
   };
-
-  // Get current date and week days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-    const dates = [];
-    
-    for (let i = -3; i <= 3; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      dates.push({
-        day: dayLetters[date.getDay()],
-        date: date.getDate().toString(),
-        isToday: i === 0,
-      });
-    }
-    
-    return dates;
-  };
-
-  const weekDates = getCurrentWeekDates();
 
   const handleSave = async () => {
     if (!user?.email) {
@@ -296,22 +286,12 @@ const NutritionScreen = ({ navigation }) => {
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Nutrition</Text>
           
-          {/* Calendar Week View */}
-          <View style={styles.calendarContainer}>
-            {weekDates.map((item, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={[styles.dayContainer, item.isToday && styles.todayContainer]}
-              >
-                <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>
-                  {item.day}
-                </Text>
-                <Text style={[styles.dayNumber, item.isToday && styles.todayText]}>
-                  {item.date}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* Replace the Calendar Week View with the WeekCalendar component */}
+          <WeekCalendar 
+            weekDates={weekDates}
+            onDatePress={handleDateSelect}
+            containerStyle={styles.calendarContainerStyle}
+          />
         </View>
 
         {/* White content area */}
@@ -427,40 +407,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 10,
   },
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  calendarContainerStyle: {
     width: '100%',
     marginTop: 10,
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  todayContainer: {
-    backgroundColor: '#878787',
-    borderWidth: 0,
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
   },
   whiteContent: {
     flex: 1,

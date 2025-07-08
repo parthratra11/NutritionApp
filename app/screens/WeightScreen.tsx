@@ -14,6 +14,8 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart } from 'react-native-chart-kit';
+import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
+import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -42,6 +44,15 @@ const WeightScreen = ({ navigation }) => {
       },
     ],
   });
+
+  // Get the week dates using our utility function
+  const weekDates = getCurrentWeekDates();
+  
+  // Handle date selection
+  const handleDateSelect = (selectedDate) => {
+    console.log('Selected date:', selectedDate.full);
+    // You can add your logic here to update data based on the selected date
+  };
 
   useEffect(() => {
     loadWeightHistory();
@@ -117,27 +128,6 @@ const WeightScreen = ({ navigation }) => {
     setWeight(prev => Math.max(prev - 1, 0));
   };
 
-  // Get current date and week days
-  const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayLetters = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
-    const dates = [];
-    
-    for (let i = -3; i <= 3; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      dates.push({
-        day: dayLetters[date.getDay()],
-        date: date.getDate().toString(),
-        isToday: i === 0,
-      });
-    }
-    
-    return dates;
-  };
-
-  const weekDates = getCurrentWeekDates();
-
   // Add this function to handle unit change with conversion
   const handleUnitChange = (newUnit) => {
     if (newUnit === weightUnit) return; // No change needed
@@ -159,22 +149,12 @@ const WeightScreen = ({ navigation }) => {
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Weight</Text>
           
-          {/* Calendar Week View */}
-          <View style={styles.calendarContainer}>
-            {weekDates.map((item, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={[styles.dayContainer, item.isToday && styles.todayContainer]}
-              >
-                <Text style={[styles.dayLetter, item.isToday && styles.todayText]}>
-                  {item.day}
-                </Text>
-                <Text style={[styles.dayNumber, item.isToday && styles.todayText]}>
-                  {item.date}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* Use the reusable WeekCalendar component */}
+          <WeekCalendar 
+            weekDates={weekDates}
+            onDatePress={handleDateSelect}
+            containerStyle={styles.calendarContainerStyle}
+          />
         </View>
 
         <View style={styles.whiteContent}>
@@ -244,7 +224,7 @@ const WeightScreen = ({ navigation }) => {
           <View style={styles.chartContainer}>
             <LineChart
               data={chartData}
-              width={screenWidth - 20} // Reduce the horizontal padding (was 40)
+              width={screenWidth - 20}
               height={120}
               chartConfig={{
                 backgroundColor: 'transparent',
@@ -306,40 +286,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 15,
   },
-  calendarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  // Add custom style for the calendar container in this screen
+  calendarContainerStyle: {
     width: '100%',
     marginTop: 10,
-  },
-  dayContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  todayContainer: {
-    backgroundColor: '#878787',
-    borderWidth: 0,
-  },
-  dayLetter: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    opacity: 0.7,
-  },
-  dayNumber: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  todayText: {
-    color: '#fff',
-    opacity: 1,
   },
   whiteContent: {
     flex: 1,
