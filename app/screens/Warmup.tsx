@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   left: 0,
   right: 0,
   bottom: 0,
-  top: 0, // Use the actual status bar height
+  top: 25, // Use the actual status bar height
   },
   pullDownContainer: {
     height: 30,

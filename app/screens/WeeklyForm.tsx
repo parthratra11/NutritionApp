@@ -8,11 +8,11 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
-  Pressable,
   Platform,
   Image,
   ScrollView,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../firebaseConfig';
@@ -21,18 +21,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import Navbar from '../components/navbar';
-const GreetRectangle = require('../assets/GreetRectangle.png');
+import WeekCalendar from '../components/WeekCalendar';
+import { getCurrentWeekDates } from '../utils/dateUtils';
+
 const UserImage = require('../assets/User.png');
 const metrics = ['Sleep Quality', 'Mood', 'Hunger Level'];
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-// Add near other state declarations at the top
+
+// Helper functions remain the same
 const getYesterday = () => {
   const date = new Date();
   date.setDate(date.getDate() - 1);
   return dayNames[date.getDay()];
 };
 
-// Helper to get color tag for a value
 const getTag = (value) => {
   if (value === null) return null;
   if (value <= 2) return 'red';
@@ -41,25 +43,21 @@ const getTag = (value) => {
   return null;
 };
 
-// Helper to calculate week number from a date and first entry date
 const getWeekNumber = (currentDate, firstEntryDate) => {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const firstDate = new Date(firstEntryDate);
   const diffTime = Math.abs(currentDate.getTime() - firstDate.getTime());
   const diffWeeks = Math.floor(diffTime / msPerWeek);
-  return diffWeeks + 1; // Week numbers are 1-based
+  return diffWeeks + 1;
 };
 
-// Helper to check if a date is from the current week
 const isSameWeek = (date1, date2) => {
   const d1 = new Date(date1);
   const d2 = new Date(date2);
 
-  // Get first day of week (Sunday) for each date
   const firstDay1 = new Date(d1.setDate(d1.getDate() - d1.getDay()));
   const firstDay2 = new Date(d2.setDate(d2.getDate() - d2.getDay()));
 
-  // Compare year and week number
   return (
     firstDay1.getFullYear() === firstDay2.getFullYear() &&
     firstDay1.getMonth() === firstDay2.getMonth() &&
@@ -67,7 +65,6 @@ const isSameWeek = (date1, date2) => {
   );
 };
 
-// Add this helper function near the other helper functions
 const getYesterdayDate = () => {
   const date = new Date();
   date.setDate(date.getDate() - 1);
@@ -84,18 +81,27 @@ const DailyCheckInForm = () => {
   const [showWaistHip, setShowWaistHip] = useState(true);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
   const [userFullName, setUserFullName] = useState('');
-  const [yesterdayDate, setYesterdayDate] = useState(''); // Move this line here
+  const [yesterdayDate, setYesterdayDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
+
+  // Get the week dates for the calendar
+  const weekDates = getCurrentWeekDates();
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const navOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
-
-  // Add navbar ref
   const navbarRef = useRef(null);
+
+  // Handle date selection from calendar
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    console.log('Selected date:', date.full);
+    // You could load previous data for this date here
+  };
 
   useEffect(() => {
     const yesterday = getYesterday();
@@ -107,12 +113,10 @@ const DailyCheckInForm = () => {
     setFormData(initialData);
     setWeight('');
 
-    // Set yesterday's date in ISO format
     const yesterdayDate = getYesterdayDate();
     setYesterdayDate(yesterdayDate.toISOString().slice(0, 10));
   }, []);
 
-  // Fetch or set firstEntryDate
   useEffect(() => {
     const fetchFirstEntryDate = async () => {
       if (!user?.email) {
@@ -130,7 +134,7 @@ const DailyCheckInForm = () => {
     fetchFirstEntryDate();
   }, [user?.email]);
 
-  // Check if already submitted for yesterday when email changes
+  // Rest of useEffect hooks remain the same
   useEffect(() => {
     const checkAlreadySubmitted = async () => {
       if (!user?.email || !yesterdayDate) {
@@ -149,31 +153,23 @@ const DailyCheckInForm = () => {
         const data = userDocSnap.data();
         const yesterday = getYesterdayDate();
 
-        // Check if any week has an entry for yesterday's day of the week
         if (data.firstEntryDate) {
           const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
 
-          // Calculate current week number based on first entry date
           const currentWeekNum = getWeekNumber(yesterday, data.firstEntryDate);
           const currentWeekKey = `week${currentWeekNum}`;
 
-          // Check waist/hip for current week
           if (data[currentWeekKey] && data[currentWeekKey].waist && data[currentWeekKey].hip) {
             foundWaistHip = true;
           }
 
-          // Look through each week's entries
           for (const weekKey of weekKeys) {
             const weekData = data[weekKey];
-            // Skip non-week fields
             if (!weekData || typeof weekData !== 'object') continue;
 
-            // Check each day in this week
             for (const dayKey of dayNames) {
               if (weekData[dayKey] && weekData[dayKey].timestamp) {
                 const entryDate = weekData[dayKey].timestamp.slice(0, 10);
-
-                // Check if there's an entry with yesterday's date
                 if (entryDate === yesterdayDate) {
                   entryExistsForYesterday = true;
                   break;
@@ -193,7 +189,7 @@ const DailyCheckInForm = () => {
     checkAlreadySubmitted();
   }, [user?.email, day, yesterdayDate]);
 
-  // Fetch user full name
+  // Fetch user name
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.email) return;
@@ -212,7 +208,7 @@ const DailyCheckInForm = () => {
     fetchUserData();
   }, [user?.email]);
 
-  // Update the handleScroll function to use the navbar ref
+  // Handle scrolling
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
@@ -220,17 +216,14 @@ const DailyCheckInForm = () => {
       listener: (event) => {
         const currentScrollY = event.nativeEvent.contentOffset.y;
         
-        // Clear existing timeout
         if (scrollTimeout.current) {
           clearTimeout(scrollTimeout.current);
         }
 
-        // Show navbar when scrolling
         if (navbarRef.current) {
           navbarRef.current.show();
         }
 
-        // Hide navbar after 2 seconds of no scrolling
         scrollTimeout.current = setTimeout(() => {
           if (navbarRef.current) {
             navbarRef.current.hide();
@@ -249,12 +242,10 @@ const DailyCheckInForm = () => {
     }));
   };
 
-  // Determine the week number for a specific date
   const calculateWeekForDate = (dateString, firstEntryDateString) => {
     const date = new Date(dateString);
     const firstDate = new Date(firstEntryDateString);
 
-    // Calculate weeks since first entry
     const msPerWeek = 7 * 24 * 60 * 60 * 1000;
     const diffTime = Math.abs(date.getTime() - firstDate.getTime());
     const weeksSinceStart = Math.floor(diffTime / msPerWeek) + 1;
@@ -262,22 +253,22 @@ const DailyCheckInForm = () => {
     return weeksSinceStart;
   };
 
-  // Firestore save logic
+  // Firebase save logic remains mostly the same
   const saveWeeklyForm = async () => {
     if (!user?.email) {
-      alert('Please login first');
+      Alert.alert('Error', 'Please login first');
       return;
     }
 
     if (!weight) {
-      alert('Please enter your weight');
+      Alert.alert('Error', 'Please enter your weight');
       return;
     }
 
     // Validate required metrics
     for (const metric of metrics) {
       if (formData[metric] == null) {
-        alert(`Please select a value for "${metric}"`);
+        Alert.alert('Error', `Please select a value for "${metric}"`);
         return;
       }
     }
@@ -287,118 +278,123 @@ const DailyCheckInForm = () => {
 
     const yesterday = getYesterdayDate();
     const yesterdayIsoString = yesterday.toISOString().slice(0, 10);
-    let data: { [key: string]: any } = {};
+    let data = {};
     let entryDate = firstEntryDate;
 
-    if (userDocSnap.exists()) {
-      data = userDocSnap.data();
+    try {
+      if (userDocSnap.exists()) {
+        data = userDocSnap.data();
 
-      // If this is the first entry ever, set the firstEntryDate
-      if (!data.firstEntryDate) {
-        entryDate = yesterdayIsoString;
-        data.firstEntryDate = entryDate;
-        setFirstEntryDate(entryDate);
-      } else {
-        entryDate = data.firstEntryDate;
-      }
+        // If this is the first entry ever, set the firstEntryDate
+        if (!data.firstEntryDate) {
+          entryDate = yesterdayIsoString;
+          data.firstEntryDate = entryDate;
+          setFirstEntryDate(entryDate);
+        } else {
+          entryDate = data.firstEntryDate;
+        }
 
-      // Calculate which week this entry belongs to
-      const weekNum = calculateWeekForDate(yesterdayIsoString, entryDate);
-      const weekKey = `week${weekNum}`;
+        // Calculate which week this entry belongs to
+        const weekNum = getWeekNumber(yesterday, entryDate);
+        const weekKey = `week${weekNum}`;
 
-      // Check if an entry already exists for yesterday's date
-      let entryExistsForYesterday = false;
-      const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
+        // Check if an entry already exists for yesterday's date
+        let entryExistsForYesterday = false;
+        const weekKeys = Object.keys(data).filter((k) => k.startsWith('week'));
 
-      for (const wKey of weekKeys) {
-        const weekData = data[wKey];
-        if (!weekData || typeof weekData !== 'object') continue;
+        for (const wKey of weekKeys) {
+          const weekData = data[wKey];
+          if (!weekData || typeof weekData !== 'object') continue;
 
-        for (const dayKey of dayNames) {
-          if (weekData[dayKey] && weekData[dayKey].timestamp) {
-            const existingEntryDate = new Date(weekData[dayKey].timestamp)
-              .toISOString()
-              .slice(0, 10);
-            if (existingEntryDate === yesterdayIsoString) {
-              entryExistsForYesterday = true;
-              Alert.alert(
-                'Already Submitted',
-                'You have already submitted an entry for yesterday.'
-              );
-              return;
+          for (const dayKey of dayNames) {
+            if (weekData[dayKey] && weekData[dayKey].timestamp) {
+              const existingEntryDate = new Date(weekData[dayKey].timestamp)
+                .toISOString()
+                .slice(0, 10);
+              if (existingEntryDate === yesterdayIsoString) {
+                entryExistsForYesterday = true;
+                Alert.alert(
+                  'Already Submitted',
+                  'You have already submitted an entry for yesterday.'
+                );
+                return;
+              }
             }
           }
         }
-      }
 
-      // Prepare the object to save: value + color tag for each metric
-      const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
-      Object.keys(formData).forEach((metric) => {
-        metricsWithTags[metric] = {
-          value: formData[metric],
-          color: getTag(formData[metric]),
-        };
-      });
+        // Prepare the object to save: value + color tag for each metric
+        const metricsWithTags = {};
+        Object.keys(formData).forEach((metric) => {
+          metricsWithTags[metric] = {
+            value: formData[metric],
+            color: getTag(formData[metric]),
+          };
+        });
 
-      // Build the update object
-      let update: any = {
-        ...data,
-        [weekKey]: {
-          ...(data[weekKey] || {}),
-          [day]: {
-            ...metricsWithTags,
-            weight,
-            email: user.email,
-            timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+        // Build the update object
+        let update = {
+          ...data,
+          [weekKey]: {
+            ...(data[weekKey] || {}),
+            [day]: {
+              ...metricsWithTags,
+              weight,
+              email: user.email,
+              timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+            },
           },
-        },
-        firstEntryDate: entryDate,
-      };
-
-      // Only add waist/hip at the week level if user is allowed to submit them
-      if (showWaistHip && waist && hip) {
-        update[weekKey].waist = waist;
-        update[weekKey].hip = hip;
-      }
-
-      await setDoc(userDocRef, update, { merge: true });
-      Alert.alert('Success', `Check-in for ${day} saved in ${weekKey}!`);
-      setAlreadySubmitted(true);
-    } else {
-      // First ever entry for this user
-      entryDate = yesterdayIsoString;
-
-      // Prepare the object to save: value + color tag for each metric
-      const metricsWithTags: { [key: string]: { value: any; color: string | null } } = {};
-      Object.keys(formData).forEach((metric) => {
-        metricsWithTags[metric] = {
-          value: formData[metric],
-          color: getTag(formData[metric]),
+          firstEntryDate: entryDate,
         };
-      });
 
-      let newData: any = {
-        firstEntryDate: entryDate,
-        week1: {
-          [day]: {
-            ...metricsWithTags,
-            weight,
-            email: user.email,
-            timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+        // Only add waist/hip at the week level if user is allowed to submit them
+        if (showWaistHip && waist && hip) {
+          update[weekKey].waist = waist;
+          update[weekKey].hip = hip;
+        }
+
+        await setDoc(userDocRef, update, { merge: true });
+        Alert.alert('Success', `Check-in for ${day} saved in ${weekKey}!`);
+        setAlreadySubmitted(true);
+      } else {
+        // First ever entry for this user
+        entryDate = yesterdayIsoString;
+
+        // Prepare the object to save: value + color tag for each metric
+        const metricsWithTags = {};
+        Object.keys(formData).forEach((metric) => {
+          metricsWithTags[metric] = {
+            value: formData[metric],
+            color: getTag(formData[metric]),
+          };
+        });
+
+        let newData = {
+          firstEntryDate: entryDate,
+          week1: {
+            [day]: {
+              ...metricsWithTags,
+              weight,
+              email: user.email,
+              timestamp: yesterday.toISOString(), // Use yesterday's timestamp
+            },
           },
-        },
-      };
+        };
 
-      // Add waist/hip at the week level for new users
-      if (waist && hip) {
-        newData.week1.waist = waist;
-        newData.week1.hip = hip;
+        // Add waist/hip at the week level for new users
+        if (waist && hip) {
+          newData.week1.waist = waist;
+          newData.week1.hip = hip;
+        }
+
+        await setDoc(userDocRef, newData);
+        setFirstEntryDate(entryDate);
+        Alert.alert('Success', `First check-in saved for ${day}!`);
+        setAlreadySubmitted(true);
       }
-
-      await setDoc(userDocRef, newData);
-      setFirstEntryDate(entryDate);
-      Alert.alert('Success', `First check-in saved for ${day}!`);
-      setAlreadySubmitted(true);
+    } catch (error) {
+      console.error('Error saving weekly form:', error);
+      Alert.alert('Error', 'Failed to save your check-in. Please try again.');
     }
   };
 
@@ -411,23 +407,27 @@ const DailyCheckInForm = () => {
     }
   };
 
- const renderGreeting = () => (
-  <View style={styles.bannerContainer}>
-    <Image source={GreetRectangle} style={styles.bannerBg} />
-    <View style={styles.bannerContent}>
-      <View>
-        <Text style={styles.bannerSubTitle}>Keeping Moving Today!</Text>
-        <Text style={styles.bannerTitle}>
-          Hi, <Text style={{ fontWeight: 'bold' }}>{userFullName || 'User'}</Text>!
-        </Text>
-      </View>
-      <Image source={UserImage} style={styles.bannerUserImage} />
+  // Updated rendering functions for consistent UI
+
+  const renderHeader = () => (
+    <View style={styles.blueHeader}>
+      <StatusBar 
+        barStyle="light-content"
+        backgroundColor="#081A2F"
+        translucent
+      />
+      <Text style={styles.headerTitle}>Daily Check-In</Text>
+      
+      <WeekCalendar 
+        weekDates={weekDates}
+        onDatePress={handleDateSelect}
+        containerStyle={styles.calendarContainerStyle}
+      />
     </View>
-  </View>
-);
+  );
 
   const renderWeightSection = () => (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, isDarkMode && styles.cardDark]}>
       <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Weight</Text>
       <TextInput
         style={[styles.weightInput, isDarkMode && styles.inputDark]}
@@ -445,7 +445,7 @@ const DailyCheckInForm = () => {
     showWaistHip && (
       <View style={styles.measurementsContainer}>
         <View style={[styles.measurementCard, isDarkMode && styles.cardDark]}>
-          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Waist Circumference</Text>
+          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Waist</Text>
           <TextInput
             style={[styles.measurementInput, isDarkMode && styles.inputDark]}
             placeholder="cm"
@@ -457,7 +457,7 @@ const DailyCheckInForm = () => {
           />
         </View>
         <View style={[styles.measurementCard, isDarkMode && styles.cardDark]}>
-          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Hip Circumference</Text>
+          <Text style={[styles.cardTitle, isDarkMode && styles.textDark]}>Hip</Text>
           <TextInput
             style={[styles.measurementInput, isDarkMode && styles.inputDark]}
             placeholder="cm"
@@ -485,7 +485,7 @@ const DailyCheckInForm = () => {
             step={1}
             value={currentValue}
             onValueChange={(value) => !alreadySubmitted && handleSelect(metric, Math.round(value))}
-            minimumTrackTintColor="#6366f1"
+            minimumTrackTintColor="#C7312B"
             maximumTrackTintColor="#e5e7eb"
             thumbStyle={styles.sliderThumbStyle}
             trackStyle={styles.sliderTrackStyle}
@@ -531,36 +531,38 @@ const DailyCheckInForm = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {renderGreeting()}
-        {renderWeightSection()}
-        {renderMeasurementsSection()}
-        {metrics.map((metric) => renderMetricCard(metric))}
+        {renderHeader()}
         
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            alreadySubmitted && styles.submitButtonDisabled
-          ]}
-          onPress={handleSubmit}
-          disabled={alreadySubmitted}
-        >
-          <Text style={styles.submitButtonText}>
-            {alreadySubmitted ? 'Already Submitted for Yesterday' : 'Submit Check-in'}
-          </Text>
-        </TouchableOpacity>
-        
-        {/* Add extra padding at bottom for navbar */}
-        <View style={{ height: 70 }} />
+        <View style={styles.whiteContent}>
+          {renderWeightSection()}
+          {renderMeasurementsSection()}
+          {metrics.map((metric) => renderMetricCard(metric))}
+          
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              alreadySubmitted && styles.submitButtonDisabled
+            ]}
+            onPress={handleSubmit}
+            disabled={alreadySubmitted}
+          >
+            <Text style={styles.submitButtonText}>
+              {alreadySubmitted ? 'Already Submitted for Yesterday' : 'Submit Check-in'}
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Add extra padding at bottom for navbar */}
+          <View style={{ height: 70 }} />
+        </View>
       </ScrollView>
       
-      {/* Replace renderBottomNav() with the Navbar component */}
       <Navbar 
         ref={navbarRef}
         activeScreen="WeeklyForm" 
@@ -573,60 +575,46 @@ const DailyCheckInForm = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
-  containerDark: {
-    backgroundColor: '#111827',
+  scrollView: {
+    flex: 1,
   },
-  bannerContainer: {
-    height: 280,
-    marginBottom: -80,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
+  blueHeader: {
+    backgroundColor: '#081A2F',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10,
+    paddingBottom: 40, // Increased padding to compensate for removed content
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
   },
-  bannerBg: {
-    position: 'absolute',
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 20, // Increased margin to create better spacing
+    marginTop: 10,
+  },
+  calendarContainerStyle: {
     width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-    top: 0,
-    left: 0,
+    marginTop: 1,
+    marginBottom: 5, // Reduced bottom margin since no user info below
   },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 50,
-    height: '100%',
-  },
-  bannerSubTitle: {
-    color: 'black',
-    fontSize: 13,
-    marginBottom: 2,
-    opacity: 0.85,
-  },
-  bannerTitle: {
-    color: 'black',
-    fontSize: 26,
-    fontWeight: '400',
-    marginBottom: 10,
-  },
-  bannerUserImage: {
-    width: 73,
-    height: 75,
-    borderRadius: 50,
-    borderWidth: 0,
-    borderColor: '#fff',
-    backgroundColor: '#eee',
-    marginBottom:55
+  whiteContent: {
+    paddingTop: 20,
+    paddingHorizontal: 20,
   },
   cardContainer: {
-    backgroundColor: '#f8fafc',
-    marginHorizontal: 16,
+    backgroundColor: '#fff',
     marginVertical: 8,
-    padding: 20,
+    padding: 16,
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardDark: {
     backgroundColor: '#1f2937',
@@ -642,7 +630,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   weightInput: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#f3f4f6',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -654,18 +642,22 @@ const styles = StyleSheet.create({
   },
   measurementsContainer: {
     flexDirection: 'row',
-    marginHorizontal: 16,
     marginVertical: 8,
     gap: 8,
   },
   measurementCard: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   measurementInput: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
@@ -681,7 +673,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   sliderThumbStyle: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#C7312B',
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -721,51 +713,16 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
   },
-  checkboxRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 16,
-  },
-  checkbox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#ccc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f3f4f6',
-  },
-  checkboxDark: {
-    backgroundColor: '#374151',
-    borderColor: '#444',
-  },
-  checkboxSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#4F46E5',
-  },
-  checkboxSelectedDark: {
-    borderColor: '#a5b4fc',
-    backgroundColor: '#6366f1',
-  },
-  checkboxText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: 'bold',
-  },
-  checkboxTextSelected: {
-    color: '#fff',
-  },
-  checkboxTextSelectedDark: {
-    color: '#fff',
-  },
   submitButton: {
-    backgroundColor: '#6366f1',
-    marginHorizontal: 16,
+    backgroundColor: '#C7312B',
     marginVertical: 24,
-    padding: 16,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 18,
     alignItems: 'center',
+    width: '70%',
+    alignSelf: 'center',
+    shadowColor: '#000',
+    height: 60,
   },
   submitButtonDisabled: {
     backgroundColor: '#9ca3af',
@@ -774,6 +731,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });
 
