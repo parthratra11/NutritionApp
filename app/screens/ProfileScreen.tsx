@@ -100,10 +100,10 @@ export default function ProfileScreen() {
     );
   };
 
-  if (loading) {
+ if (loading) {
     return (
-      <View style={[styles.container, isDarkMode && styles.containerDark]}>
-        <Text style={[styles.loadingText, isDarkMode && styles.textDark]}>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -268,9 +268,15 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#111827',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#081A2F',
+  },
   loadingText: {
+    color: '#fff',
     fontSize: 18,
-    color: '#000',
   },
   textDark: {
     color: '#fff',

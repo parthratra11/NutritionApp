@@ -554,7 +554,7 @@ const DailyCheckInForm = () => {
             disabled={alreadySubmitted}
           >
             <Text style={styles.submitButtonText}>
-              {alreadySubmitted ? 'Already Submitted for Yesterday' : 'Submit Check-in'}
+              {alreadySubmitted ? 'Submitted' : 'Submit Check-in'}
             </Text>
           </TouchableOpacity>
           
@@ -716,13 +716,13 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#C7312B',
     marginVertical: 24,
-    padding: 10,
+    padding: 12,
     borderRadius: 18,
     alignItems: 'center',
     width: '70%',
     alignSelf: 'center',
     shadowColor: '#000',
-    height: 60,
+    height: 48,
   },
   submitButtonDisabled: {
     backgroundColor: '#9ca3af',

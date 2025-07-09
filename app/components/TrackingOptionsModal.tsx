@@ -78,6 +78,13 @@ const TrackingOptionsModal = ({ visible, onClose, navigation }) => {
                 title="Mood"
                 onPress={() => navigateToScreen('Mood')}
               />
+              
+              {/* Weekly Check-in Tracking Option */}
+              <TrackingOption 
+                icon={<Ionicons name="calendar-outline" size={24} color="#FFFFFF" />}
+                title="Check-in"
+                onPress={() => navigateToScreen('WeeklyForm')}
+              />
             </View>
           </View>
         </View>
