@@ -61,7 +61,7 @@ const NutritionScreen = ({ navigation }) => {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
   const [showDayTypeDropdown, setShowDayTypeDropdown] = useState(false);
-  
+
   // Refs for animations and scrolling
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
@@ -71,7 +71,7 @@ const NutritionScreen = ({ navigation }) => {
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
-  
+
   // Handle date selection
   const handleDateSelect = (selectedDate) => {
     console.log('Selected date:', selectedDate.full);
@@ -237,37 +237,28 @@ const NutritionScreen = ({ navigation }) => {
       transparent={true}
       visible={showDayTypeDropdown}
       onRequestClose={() => setShowDayTypeDropdown(false)}
-      animationType="fade"
-    >
-      <TouchableOpacity 
+      animationType="fade">
+      <TouchableOpacity
         style={styles.modalOverlay}
         activeOpacity={1}
-        onPress={() => setShowDayTypeDropdown(false)}
-      >
+        onPress={() => setShowDayTypeDropdown(false)}>
         <View style={styles.dropdownContainer}>
           {['training', 'rest', 'cardio'].map((type) => (
             <TouchableOpacity
               key={type}
-              style={[
-                styles.dropdownItem,
-                dayType === type && styles.dropdownItemActive
-              ]}
+              style={[styles.dropdownItem, dayType === type && styles.dropdownItemActive]}
               onPress={() => {
                 setDayType(type);
                 setShowDayTypeDropdown(false);
-              }}
-            >
-              <Text 
+              }}>
+              <Text
                 style={[
                   styles.dropdownItemText,
-                  dayType === type && styles.dropdownItemTextActive
-                ]}
-              >
+                  dayType === type && styles.dropdownItemTextActive,
+                ]}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </Text>
-              {dayType === type && (
-                <Feather name="check" size={18} color="#fff" />
-              )}
+              {dayType === type && <Feather name="check" size={18} color="#fff" />}
             </TouchableOpacity>
           ))}
         </View>
@@ -277,17 +268,13 @@ const NutritionScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.containerWithWhiteSpace}>
-      <ScrollView 
-        style={styles.scrollView}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
+      <ScrollView style={styles.scrollView} onScroll={handleScroll} scrollEventThrottle={16}>
         {/* Blue header section with title and calendar */}
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Nutrition</Text>
-          
+
           {/* Replace the Calendar Week View with the WeekCalendar component */}
-          <WeekCalendar 
+          <WeekCalendar
             weekDates={weekDates}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
@@ -297,23 +284,19 @@ const NutritionScreen = ({ navigation }) => {
         {/* White content area */}
         <View style={styles.whiteContent}>
           {/* Day type selector as dropdown */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dayTypeSelector}
-            onPress={() => setShowDayTypeDropdown(true)}
-          >
+            onPress={() => setShowDayTypeDropdown(true)}>
             <Text style={styles.dayTypeText}>
               {dayType.charAt(0).toUpperCase() + dayType.slice(1)} Day
             </Text>
             <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
           </TouchableOpacity>
-          
+
           {/* Meal content */}
           <View style={styles.mealsContainer}>
             {defaultMeals[dayType].map((meal, idx) => (
-              <View
-                key={meal}
-                style={styles.mealCard}
-              >
+              <View key={meal} style={styles.mealCard}>
                 <Text style={styles.mealTitle}>{meal}</Text>
                 {mealFields.map((field) => (
                   <View key={field} style={styles.inputRow}>
@@ -330,7 +313,7 @@ const NutritionScreen = ({ navigation }) => {
                 ))}
               </View>
             ))}
-            
+
             {/* Totals summary */}
             <View style={styles.totalContainer}>
               <Text style={styles.totalTitle}>Daily Totals</Text>
@@ -341,7 +324,7 @@ const NutritionScreen = ({ navigation }) => {
                 </View>
               ))}
             </View>
-            
+
             {/* Daily fiber goal card */}
             <View style={styles.fiberCard}>
               <Text style={styles.fiberTitle}>Daily Fiber Goals</Text>
@@ -354,13 +337,12 @@ const NutritionScreen = ({ navigation }) => {
                 <Text style={styles.fiberValue}>8g</Text>
               </View>
             </View>
-            
+
             {/* Save button */}
-            <TouchableOpacity 
-              style={[styles.saveButton, alreadySubmitted && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.saveButton, alreadySubmitted && styles.disabledButton]}
               onPress={handleSave}
-              disabled={alreadySubmitted || loading}
-            >
+              disabled={alreadySubmitted || loading}>
               <Text style={styles.saveButtonText}>
                 {alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
               </Text>
@@ -373,11 +355,7 @@ const NutritionScreen = ({ navigation }) => {
       {renderDayTypeDropdown()}
 
       {/* Navbar with auto-hide functionality */}
-      <Navbar 
-        ref={navbarRef} 
-        activeScreen="Nutrition" 
-        opacityValue={navOpacity} 
-      />
+      <Navbar ref={navbarRef} activeScreen="Nutrition" opacityValue={navOpacity} />
     </SafeAreaView>
   );
 };

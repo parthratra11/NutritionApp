@@ -318,14 +318,16 @@ export default function ReportPage() {
         subtitle="Progress Overview"
         email={params.email as string}
       />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Client Info Header */}
         <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
+                <h3 className="text-sm font-medium text-gray-500">
+                  Client Name
+                </h3>
                 <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
               </div>
               <div>
@@ -343,7 +345,7 @@ export default function ReportPage() {
                 <p className="text-lg">{clientInfo?.height} cm</p>
               </div>
             </div>
-            <Link 
+            <Link
               href={`/${params.email}/new-upload`}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
             >
@@ -419,8 +421,10 @@ export default function ReportPage() {
                       .filter(([week]) => week !== "firstEntryDate")
                       .sort((a, b) => {
                         // Sort by the first date in each week's data in descending order
-                        const aStartDate = getWeekStartDate(a[1]) || new Date(0);
-                        const bStartDate = getWeekStartDate(b[1]) || new Date(0);
+                        const aStartDate =
+                          getWeekStartDate(a[1]) || new Date(0);
+                        const bStartDate =
+                          getWeekStartDate(b[1]) || new Date(0);
                         return bStartDate.getTime() - aStartDate.getTime(); // Descending order by date
                       })
                       .map(([week, data]) => (
@@ -455,7 +459,9 @@ export default function ReportPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {weeklyData[selectedWeek]?.waist && (
                       <div className="bg-blue-50 p-4 rounded-lg">
-                        <span className="text-sm text-gray-500 block mb-1">Waist:</span>
+                        <span className="text-sm text-gray-500 block mb-1">
+                          Waist:
+                        </span>
                         <span className="text-xl font-medium text-blue-700">
                           {weeklyData[selectedWeek].waist} cm
                         </span>
@@ -463,7 +469,9 @@ export default function ReportPage() {
                     )}
                     {weeklyData[selectedWeek]?.hip && (
                       <div className="bg-purple-50 p-4 rounded-lg">
-                        <span className="text-sm text-gray-500 block mb-1">Hip:</span>
+                        <span className="text-sm text-gray-500 block mb-1">
+                          Hip:
+                        </span>
                         <span className="text-xl font-medium text-purple-700">
                           {weeklyData[selectedWeek].hip} cm
                         </span>
@@ -472,7 +480,9 @@ export default function ReportPage() {
                     {weeklyData[selectedWeek]?.waist &&
                       weeklyData[selectedWeek]?.hip && (
                         <div className="bg-green-50 p-4 rounded-lg">
-                          <span className="text-sm text-gray-500 block mb-1">W/H Ratio:</span>
+                          <span className="text-sm text-gray-500 block mb-1">
+                            W/H Ratio:
+                          </span>
                           <span className="text-xl font-medium text-green-700">
                             {(
                               parseFloat(weeklyData[selectedWeek].waist) /
@@ -592,7 +602,9 @@ export default function ReportPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">Weekly Progress Details</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Weekly Progress Details
+              </h2>
               <div className="overflow-auto">
                 <div className="min-w-[800px]">
                   <table className="min-w-full divide-y divide-gray-200 border">
@@ -679,7 +691,9 @@ export default function ReportPage() {
                 <h2 className="text-lg font-semibold">Progress Timeline</h2>
                 <div className="relative">
                   <button
-                    onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
+                    onClick={() =>
+                      setIsPeriodDropdownOpen(!isPeriodDropdownOpen)
+                    }
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full sm:w-48"
                   >
                     <span>
@@ -711,22 +725,12 @@ export default function ReportPage() {
 
                   {isPeriodDropdownOpen && (
                     <div className="absolute z-10 mt-1 w-full sm:w-48 bg-white rounded-lg shadow-lg overflow-hidden">
-                      {{
-                        id: "all",
-                        label: "All Time",
-                      }}
-                      {{
-                        id: "yearly",
-                        label: "Past Year",
-                      }}
-                      {{
-                        id: "quarterly",
-                        label: "Past Quarter",
-                      }}
-                      {{
-                        id: "monthly",
-                        label: "Past Month",
-                      }}.map((period) => (
+                      {[
+                        { id: "all", label: "All Time" },
+                        { id: "yearly", label: "Past Year" },
+                        { id: "quarterly", label: "Past Quarter" },
+                        { id: "monthly", label: "Past Month" },
+                      ].map((period) => (
                         <button
                           key={period.id}
                           onClick={() => {
@@ -887,7 +891,9 @@ export default function ReportPage() {
 
             {/* Progress Table */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">Weekly Progress Summary</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Weekly Progress Summary
+              </h2>
               <div className="overflow-auto">
                 <div className="min-w-[900px]">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -927,7 +933,8 @@ export default function ReportPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {calculateAverages().map((weekData, index, array) => {
-                        const previousWeek = index > 0 ? array[index - 1] : null;
+                        const previousWeek =
+                          index > 0 ? array[index - 1] : null;
                         const weightChange =
                           previousWeek?.avgWeight && weekData.avgWeight
                             ? (
@@ -966,7 +973,9 @@ export default function ReportPage() {
                                   : "-"}
                               </div>
                             </td>
-                            <td className="px-6 py-4">{weekData.waist || "-"}</td>
+                            <td className="px-6 py-4">
+                              {weekData.waist || "-"}
+                            </td>
                             <td className="px-6 py-4">{weekData.hip || "-"}</td>
                             <td className="px-6 py-4">
                               {weekData.waistHipRatio || "-"}
