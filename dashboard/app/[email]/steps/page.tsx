@@ -31,6 +31,65 @@ const emptyExtendedData = [
   ...emptyStepData,
 ];
 
+// Dummy data generators for each view
+const generateWeeklyData = () =>
+  Array(7)
+    .fill(null)
+    .map((_, i) => ({
+      label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i],
+      steps: 7000 + Math.floor(Math.random() * 5000),
+    }));
+
+const generateMonthlyData = () =>
+  Array(4)
+    .fill(null)
+    .map((_, i) => ({
+      label: `W${i + 1}`,
+      steps: 8000 + Math.floor(Math.random() * 4000),
+    }));
+
+const generate6MData = () =>
+  Array(6)
+    .fill(null)
+    .map((_, i) => ({
+      label: [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ][i],
+      steps: 8500 + Math.floor(Math.random() * 3500),
+    }));
+
+const generateYearlyData = () =>
+  Array(12)
+    .fill(null)
+    .map((_, i) => ({
+      label: [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ][i],
+      steps: 9000 + Math.floor(Math.random() * 3000),
+    }));
+
 export default function StepsPage({ params }) {
   const unwrappedParams = use(params);
   const email = unwrappedParams.email;
@@ -41,6 +100,12 @@ export default function StepsPage({ params }) {
   const [extendedData, setExtendedData] = useState(emptyExtendedData);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState("");
+
+  // State for each view's data
+  const [weeklyData, setWeeklyData] = useState(generateWeeklyData());
+  const [monthlyData, setMonthlyData] = useState(generateMonthlyData());
+  const [sixMData, setSixMData] = useState(generate6MData());
+  const [yearlyData, setYearlyData] = useState(generateYearlyData());
 
   useEffect(() => {
     const generatedStepData = [
@@ -69,19 +134,75 @@ export default function StepsPage({ params }) {
     setIsLoading(false);
   }, []);
 
-  const maxSteps = Math.max(...stepData.map((item) => item.steps), 1);
-  const minSteps = Math.min(...stepData.map((item) => item.steps));
-  const baseValue = Math.floor(minSteps / 1000) * 1000;
-  const range = maxSteps - baseValue;
-
-  const generateYAxisValues = () => {
-    if (range === 0) {
-      return [baseValue + 1000, baseValue];
+  // Helper to get current graph data and axis labels
+  const getGraphData = () => {
+    switch (activeTab) {
+      case "W":
+        return weeklyData;
+      case "M":
+        return monthlyData;
+      case "6M":
+        return sixMData;
+      case "Y":
+        return yearlyData;
+      default:
+        // "D" - daily
+        return stepData.map((item) => ({
+          label: item.day,
+          steps: item.steps,
+          date: item.date,
+        }));
     }
-    const step = Math.ceil(range / 4 / 500) * 500 || 500;
+  };
+
+  // Helper to get current tabular data
+  const getTabularData = () => {
+    switch (activeTab) {
+      case "W":
+        return weeklyData.map((item) => ({
+          label: item.label,
+          value: item.steps,
+        }));
+      case "M":
+        return monthlyData.map((item) => ({
+          label: item.label,
+          value: item.steps,
+        }));
+      case "6M":
+        return sixMData.map((item) => ({
+          label: item.label,
+          value: item.steps,
+        }));
+      case "Y":
+        return yearlyData.map((item) => ({
+          label: item.label,
+          value: item.steps,
+        }));
+      default:
+        // "D" - daily
+        return stepData.map((item) => ({
+          label: item.date,
+          value: item.steps,
+          isSelected: item.date === selectedDate,
+        }));
+    }
+  };
+
+  const tabularData = getTabularData();
+
+  const graphData = getGraphData();
+  const graphMax = Math.max(...graphData.map((item) => item.steps), 1);
+  const graphMin = Math.min(...graphData.map((item) => item.steps));
+  const graphBase = Math.floor(graphMin / 1000) * 1000;
+  const graphRange = graphMax - graphBase;
+  const generateGraphYAxis = () => {
+    if (graphRange === 0) {
+      return [graphBase + 1000, graphBase];
+    }
+    const step = Math.ceil(graphRange / 4 / 500) * 500 || 500;
     const values = [];
     for (let i = 0; i <= 4; i++) {
-      values.push(baseValue + i * step);
+      values.push(graphBase + i * step);
     }
     return values.reverse();
   };
@@ -161,21 +282,23 @@ export default function StepsPage({ params }) {
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold mb-6">Step Count</h2>
-
               <div className="flex">
                 <div className="flex flex-col justify-between pr-4 text-right text-gray-400 text-xs h-64">
-                  {generateYAxisValues().map((value) => (
+                  {generateGraphYAxis().map((value) => (
                     <div key={value}>{value.toLocaleString()}</div>
                   ))}
                 </div>
-
                 <div className="flex-grow">
-                  <div className="flex justify-between items-end h-64 border-b border-gray-300 relative">
-                    {stepData.map((item, index) => {
-                      const isSelected = item.date === selectedDate;
+                  <div
+                    className="flex items-end justify-between h-64 border-b border-gray-300 relative"
+                    style={{ gap: "0.25rem" }}
+                  >
+                    {graphData.map((item, index) => {
+                      const isSelected =
+                        activeTab === "D" ? item.date === selectedDate : false;
                       const heightPercentage =
-                        range > 0
-                          ? ((item.steps - baseValue) / range) * 100
+                        graphRange > 0
+                          ? ((item.steps - graphBase) / graphRange) * 100
                           : 50;
                       return (
                         <div
@@ -191,16 +314,19 @@ export default function StepsPage({ params }) {
                             height: `${Math.max(heightPercentage, 5)}%`,
                             minHeight: "10px",
                           }}
-                          onClick={() => handleBarClick(item.date)}
+                          onClick={
+                            activeTab === "D"
+                              ? () => handleBarClick(item.date)
+                              : undefined
+                          }
                         />
                       );
                     })}
                   </div>
-
                   <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    {stepData.map((item, index) => (
-                      <div key={index} className="text-center w-12">
-                        <div>{item.day}</div>
+                    {graphData.map((item, index) => (
+                      <div key={index} className="text-center w-6">
+                        <div>{item.label}</div>
                         <div>{item.steps.toLocaleString()}</div>
                       </div>
                     ))}
@@ -219,21 +345,19 @@ export default function StepsPage({ params }) {
                   More
                 </button>
               </div>
-
               <div className="space-y-2">
-                {stepData.map((item, index) => (
+                {tabularData.map((item, index) => (
                   <div
                     key={index}
                     className={`flex justify-between items-center py-2 px-3 ${
-                      item.date === selectedDate
+                      item.isSelected
                         ? "bg-red-50 border border-red-200"
                         : "bg-white"
-                    } rounded-lg cursor-pointer`}
-                    onClick={() => handleBarClick(item.date)}
+                    } rounded-lg`}
                   >
-                    <span className="text-sm">{item.date}</span>
+                    <span className="text-sm">{item.label}</span>
                     <span className="text-sm font-medium">
-                      {item.steps.toLocaleString()}
+                      {item.value.toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -278,29 +402,39 @@ export default function StepsPage({ params }) {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl">
-              <div className="flex justify-between bg-[#E0E0E0] px-4 py-3 rounded-t-xl font-bold text-sm">
-                <div>Date</div>
-                <div>Steps</div>
-              </div>
-
-              <div className="max-h-[500px] overflow-y-auto">
-                {extendedData.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex justify-between px-4 py-3 text-sm ${
-                      item.date === selectedDate
-                        ? "bg-red-50"
-                        : index % 2 === 0
-                        ? "bg-[#F5F5F5]"
-                        : "bg-white"
-                    } cursor-pointer`}
-                    onClick={() => handleBarClick(item.date)}
-                  >
-                    <div>{item.date}</div>
-                    <div>{item.steps.toLocaleString()}</div>
+            <div className="overflow-x-auto">
+              <div className="overflow-hidden rounded-xl min-w-[20rem]">
+                <div className="flex justify-between bg-[#E0E0E0] px-4 py-3 rounded-t-xl font-bold text-sm">
+                  <div>
+                    {activeTab === "D"
+                      ? "Date"
+                      : activeTab === "W"
+                      ? "Day"
+                      : activeTab === "M"
+                      ? "Week"
+                      : activeTab === "6M" || activeTab === "Y"
+                      ? "Month"
+                      : "Label"}
                   </div>
-                ))}
+                  <div>Steps</div>
+                </div>
+                <div className="max-h-[500px] overflow-y-auto">
+                  {tabularData.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`flex justify-between px-4 py-3 text-sm ${
+                        item.isSelected
+                          ? "bg-red-50"
+                          : index % 2 === 0
+                          ? "bg-[#F5F5F5]"
+                          : "bg-white"
+                      }`}
+                    >
+                      <div>{item.label}</div>
+                      <div>{item.value.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
