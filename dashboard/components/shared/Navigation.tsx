@@ -138,7 +138,7 @@ export default function Navigation({
     },
     {
       label: "Steps",
-      path: "/report",
+      path: "/steps",
       icon: (
         <path
           strokeLinecap="round"

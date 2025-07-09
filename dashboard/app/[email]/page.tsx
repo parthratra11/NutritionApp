@@ -335,7 +335,7 @@ export default function ClientOverview() {
           {/* Steps Progress */}
           <div
             className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/${params.email}/workout`)}
+            onClick={() => router.push(`/${params.email}/steps`)}
           >
             <h2 className="text-xl font-semibold mb-3 text-gray-800">
               Daily Steps
