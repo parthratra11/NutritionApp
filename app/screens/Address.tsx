@@ -98,7 +98,7 @@ export default function AddressScreen() {
             text: 'OK',
             onPress: () => {
               // Navigate to Home after successful address save
-              navigation.navigate('Home');
+              navigation.navigate('Payment');
             }
           }
         ]

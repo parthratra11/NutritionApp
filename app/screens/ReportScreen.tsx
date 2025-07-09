@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -98,7 +99,7 @@ export default function ReportScreen() {
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
         <View>
-          <Text style={styles.headerSubTitle}>Keeping Moving Today!</Text>
+          <Text style={styles.headerSubTitle}>Keep Moving Today!</Text>
           <Text style={styles.headerTitle}>Hi, {userFullName || 'Aria'}!</Text>
           <Text style={styles.dateText}>{`${currentMonth}, ${currentYear}`}</Text>
         </View>
@@ -354,10 +355,10 @@ export default function ReportScreen() {
     },
   });
 
-  if (loading) {
+ if (loading) {
     return (
-      <View style={[styles.container, isDarkMode && styles.containerDark]}>
-        <Text style={[styles.loadingText, isDarkMode && styles.textDark]}>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -565,18 +566,13 @@ const styles = StyleSheet.create({
   // These styles are only for the loading screen
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  containerDark: {
-    backgroundColor: '#111827',
+    backgroundColor: '#081A2F',
   },
   loadingText: {
-    fontSize: 18,
-    color: '#000',
-  },
-  textDark: {
     color: '#fff',
+    fontSize: 18,
   },
+
 });
