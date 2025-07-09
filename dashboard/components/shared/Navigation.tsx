@@ -346,8 +346,12 @@ export default function Navigation({
 
               <button
                 onClick={() => {
-                  const encodedEmail = encodeURIComponent(email);
-                  window.location.href = `/slack/dms?email=${encodedEmail}`;
+                  // Fix: Check if email is already encoded, if so use it directly
+                  // Otherwise encode it just once
+                  const emailParam = email.includes("%40")
+                    ? email
+                    : encodeURIComponent(email);
+                  router.push(`/slack/dms?email=${emailParam}`);
                 }}
                 className="flex items-center bg-[#4A154B] hover:bg-[#611f64] ml-3 px-3 py-1.5 rounded text-sm transition-colors"
               >
