@@ -84,25 +84,7 @@ export default function LoginScreen() {
           );
         }
 
-        Alert.alert(
-          'Success',
-          'Account created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setIsSignup(false);
-                // Clear the form
-                setFullName('');
-                setPhoneNumber('');
-                setEmail('');
-                setPassword('');
-                setAcceptPolicy(false);
-                navigation.navigate('Address');
-              }
-            }
-          ]
-        );
+        navigation.navigate('Address')
       } else {
         await login(email, password);
        
