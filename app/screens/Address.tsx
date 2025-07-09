@@ -42,7 +42,7 @@ export default function AddressScreen() {
 
         if (userDocSnap.exists() && userDocSnap.data().address) {
           // User already has address, redirect to home
-          navigation.navigate('Home');
+          navigation.navigate('Report');
           return;
         }
       } catch (error) {
@@ -114,109 +114,115 @@ export default function AddressScreen() {
   // Show loading while checking existing address
   if (checkingAddress) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#081A2F" />
         <LinearGradient
           colors={['#081A2F', '#0D2A4C', '#195295']}
           style={[styles.gradient, { justifyContent: 'center', alignItems: 'center' }]}
         >
           <Text style={{ color: '#fff', fontSize: 16 }}>Loading...</Text>
         </LinearGradient>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#081A2F" />
       <LinearGradient
         colors={['#081A2F', '#0D2A4C', '#195295']}
         style={styles.gradient}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-            keyboardShouldPersistTaps="handled"
+        <SafeAreaView style={styles.safeAreaContent}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
           >
-            <View style={styles.container}>
-              <Text style={styles.title}>Address</Text>
-              
-              <TextInput
-                style={styles.input}
-                placeholder="House Number"
-                placeholderTextColor="#B6C3D1"
-                value={houseNumber}
-                onChangeText={setHouseNumber}
-                autoCapitalize="none"
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Street"
-                placeholderTextColor="#B6C3D1"
-                value={street}
-                onChangeText={setStreet}
-                autoCapitalize="words"
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Postal code"
-                placeholderTextColor="#B6C3D1"
-                value={postalCode}
-                onChangeText={setPostalCode}
-                autoCapitalize="characters"
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="City"
-                placeholderTextColor="#B6C3D1"
-                value={city}
-                onChangeText={setCity}
-                autoCapitalize="words"
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Country"
-                placeholderTextColor="#B6C3D1"
-                value={country}
-                onChangeText={setCountry}
-                autoCapitalize="words"
-              />
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.formContainer}>
+                <Text style={styles.title}>Address</Text>
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="House Number"
+                  placeholderTextColor="#B6C3D1"
+                  value={houseNumber}
+                  onChangeText={setHouseNumber}
+                  autoCapitalize="none"
+                />
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="Street"
+                  placeholderTextColor="#B6C3D1"
+                  value={street}
+                  onChangeText={setStreet}
+                  autoCapitalize="words"
+                />
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="Postal code"
+                  placeholderTextColor="#B6C3D1"
+                  value={postalCode}
+                  onChangeText={setPostalCode}
+                  autoCapitalize="characters"
+                />
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="City"
+                  placeholderTextColor="#B6C3D1"
+                  value={city}
+                  onChangeText={setCity}
+                  autoCapitalize="words"
+                />
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="Country"
+                  placeholderTextColor="#B6C3D1"
+                  value={country}
+                  onChangeText={setCountry}
+                  autoCapitalize="words"
+                />
 
-              <TouchableOpacity 
-                style={[styles.buttonMain, loading && styles.buttonDisabled]} 
-                onPress={handleContinue}
-                disabled={loading}
-              >
-                <Text style={styles.buttonMainText}>
-                  {loading ? 'Saving...' : 'Continue'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+                <TouchableOpacity 
+                  style={[styles.buttonMain, loading && styles.buttonDisabled]} 
+                  onPress={handleContinue}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonMainText}>
+                    {loading ? 'Saving...' : 'Continue'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </LinearGradient>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#081A2F',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#081A2F', // Match gradient starting color
   },
   gradient: {
     flex: 1,
   },
-  container: {
+  safeAreaContent: {
+    flex: 1,
+  },
+  formContainer: {
     flex: 1,
     paddingHorizontal: 28,
     alignItems: 'center',
