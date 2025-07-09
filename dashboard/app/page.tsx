@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "../firebaseConfig";
 import { collection, getDocs } from "@firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,100 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<"name" | "date">("date");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showNav, setShowNav] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  const generateDateStrip = () => {
+    const days = ["S", "M", "T", "W", "T", "F", "S"];
+    const today = new Date();
+    const currentDay = today.getDay();
+    const selectedDay = selectedDate.getDay();
+
+    // Get the first day of the week (Sunday)
+    const startOfWeek = new Date(selectedDate);
+    startOfWeek.setDate(selectedDate.getDate() - selectedDay);
+
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      dates.push({
+        day: days[i],
+        date: date.getDate(),
+        fullDate: new Date(date),
+        isSelected: date.toDateString() === selectedDate.toDateString(),
+        isToday: date.toDateString() === today.toDateString(),
+      });
+    }
+    return dates;
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setShowCalendar(false);
+  };
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Get the day of the week the month starts on (0-6, Sunday-Saturday)
+    const startDayOfWeek = firstDay.getDay();
+
+    // Total days in month
+    const daysInMonth = lastDay.getDate();
+
+    // Create array for all days to display
+    const days = [];
+
+    // Add empty spaces for days before the first of month
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push(null);
+    }
+
+    // Add all days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayDate = new Date(year, month, i);
+      days.push({
+        date: i,
+        fullDate: dayDate,
+        isSelected: dayDate.toDateString() === selectedDate.toDateString(),
+        isToday: dayDate.toDateString() === new Date().toDateString(),
+      });
+    }
+
+    return days;
+  };
+
+  const changeMonth = (amount: number) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + amount);
+    setCurrentMonth(newMonth);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(event.target as Node)
+      ) {
+        setShowCalendar(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchIntakeForms = async () => {
@@ -43,26 +137,6 @@ export default function Home() {
 
     fetchIntakeForms();
   }, []);
-
-  // Create date strip for current week
-  const generateDateStrip = () => {
-    const days = ["S", "M", "T", "W", "T", "F", "S"];
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sunday
-
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() - currentDay + i);
-      dates.push({
-        day: days[i],
-        date: date.getDate(),
-        isToday: i === currentDay,
-      });
-    }
-
-    return dates;
-  };
 
   const dateStrip = generateDateStrip();
 
@@ -221,21 +295,151 @@ export default function Home() {
               />
             </div>
           </div>
-
-          {/* Date Strip - on right side of navbar */}
-          <div className="flex space-x-4">
-            {dateStrip.map((item, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <span className="text-xs text-gray-300">{item.day}</span>
-                <span
-                  className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                    item.isToday ? "bg-red-500 text-white" : "text-white"
+          {/* New Date Picker */}
+          <div className="flex items-center bg-[#0F1D3C] px-3 h-[60px] rounded-lg relative">
+            <div className="flex space-x-1 items-center">
+              {generateDateStrip().map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedDate(item.fullDate)}
+                  className={`flex flex-col items-center justify-center w-[34px] h-[54px] rounded-full ${
+                    item.isSelected
+                      ? "bg-[#616A77]/50"
+                      : "bg-transparent border border-[#D9D9D9]/50 border-opacity-30"
                   }`}
                 >
-                  {item.date}
-                </span>
-              </div>
-            ))}
+                  <span className="text-sm font-medium text-white">
+                    {item.day}
+                  </span>
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 mt-1 ${
+                      item.isSelected ? "bg-[#DD3333] rounded-full" : ""
+                    }`}
+                  >
+                    <span
+                      className={`text-sm ${
+                        item.isSelected ? "font-bold" : ""
+                      }`}
+                    >
+                      {item.date}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="ml-3 relative" ref={calendarRef}>
+              <button
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="text-white p-1"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {showCalendar && (
+                <div
+                  className="absolute right-0 top-10 z-50 bg-white rounded-lg shadow-lg p-3"
+                  style={{ width: "280px" }}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <button
+                      onClick={() => changeMonth(-1)}
+                      className="p-1 bg-gray-300 hover:bg-gray-500 rounded"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+
+                    <div className="font-semibold text-gray-800">
+                      {currentMonth.toLocaleString("default", {
+                        month: "long",
+                      })}{" "}
+                      {currentMonth.getFullYear()}
+                    </div>
+
+                    <button
+                      onClick={() => changeMonth(1)}
+                      className="p-1 bg-gray-300 hover:bg-grey-500 rounded"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <div
+                        key={i}
+                        className="text-xs font-medium text-gray-500"
+                      >
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {generateCalendarDays().map((day, index) => (
+                      <div
+                        key={index}
+                        className="h-8 w-8 flex items-center justify-center"
+                      >
+                        {day ? (
+                          <button
+                            onClick={() => handleDateSelect(day.fullDate)}
+                            className={`h-7 w-7 rounded-full flex items-center justify-center text-sm
+                              ${
+                                day.isSelected
+                                  ? "bg-[#DD3333] text-white"
+                                  : day.isToday
+                                  ? "bg-gray-200"
+                                  : "hover:bg-gray-100 text-gray-800"
+                              }`}
+                          >
+                            {day.date}
+                          </button>
+                        ) : (
+                          <span></span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
