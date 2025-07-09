@@ -1,14 +1,16 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
-import { 
-  View, 
-  Image, 
-  Pressable, 
-  StyleSheet, 
-  Animated, 
-  Dimensions 
+import {
+  View,
+  Image,
+  Pressable,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useModal } from '../context/ModalContext'; // Add this import
+import { useModal } from '../context/ModalContext';
 
 // Import assets
 const HomeIcon = require('../assets/home.png');
@@ -20,13 +22,13 @@ const NavRectangle = require('../assets/NavRectangle.png');
 
 type NavbarProps = {
   activeScreen?: 'Home' | 'Nutrition' | 'WeeklyForm' | 'Slack' | 'Workout';
-  opacityValue?: Animated.Value;  // Add prop to pass in opacity value from parent
+  opacityValue?: Animated.Value; // Add prop to pass in opacity value from parent
 };
 
 // Convert to forwardRef to expose methods
 const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref) => {
   const navigation = useNavigation();
-  const { setShowTrackingModal } = useModal(); // Add this line
+  const { setShowTrackingModal } = useModal();
   // Use provided opacity value or create our own
   const navOpacity = opacityValue || useRef(new Animated.Value(1)).current;
   const { width: screenWidth } = Dimensions.get('window');
@@ -37,11 +39,33 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
       navigation.navigate(screen);
     }
   };
-  
+
   // Function to handle the WeeklyForm/Add button
   const handleTrackingButton = () => {
     // Show the tracking modal instead of navigating
     setShowTrackingModal(true);
+  };
+
+  // Function to open Slack app or redirect to store if not installed
+  const openSlackApp = async () => {
+    const slackUrl = Platform.OS === 'ios' ? 'slack://' : 'slack://open';
+
+    const slackStoreUrl =
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com/app/slack-app/id618783545'
+        : 'https://play.google.com/store/apps/details?id=com.Slack';
+
+    try {
+      const canOpen = await Linking.canOpenURL(slackUrl);
+      if (canOpen) {
+        await Linking.openURL(slackUrl);
+      } else {
+        // If Slack is not installed, open the app store
+        await Linking.openURL(slackStoreUrl);
+      }
+    } catch (error) {
+      console.error('Error opening Slack app:', error);
+    }
   };
 
   // Expose methods to parent component
@@ -59,58 +83,43 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
         duration: 200,
         useNativeDriver: true,
       }).start();
-    }
+    },
   }));
 
   return (
     <Animated.View style={[styles.bottomNavContainer, { opacity: navOpacity }]}>
       <Image source={NavRectangle} style={styles.bottomNavBg} />
       <View style={styles.bottomNavContent}>
-        <Pressable 
-          onPress={() => handleNavigate('Reports')} 
-          style={styles.navItem}
-        >
+        <Pressable onPress={() => handleNavigate('Reports')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={HomeIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'Home' && <View style={styles.activeEclipse} />}
           </View>
         </Pressable>
-        
-        <Pressable 
-          onPress={() => handleNavigate('Nutrition')} 
-          style={styles.navItem}
-        >
+
+        <Pressable onPress={() => handleNavigate('Nutrition')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={NutritionIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'Nutrition' && <View style={styles.activeEclipse} />}
           </View>
         </Pressable>
-        
+
         {/* Change this Pressable to use handleTrackingButton */}
-        <Pressable 
-          onPress={handleTrackingButton}  
-          style={styles.navItem}
-        >
+        <Pressable onPress={handleTrackingButton} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={AddIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'WeeklyForm' && <View style={styles.activeEclipse} />}
           </View>
         </Pressable>
-        
-        <Pressable 
-          onPress={() => handleNavigate('Slack')} 
-          style={styles.navItem}
-        >
+
+        <Pressable onPress={openSlackApp} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={ChatIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'Slack' && <View style={styles.activeEclipse} />}
           </View>
         </Pressable>
-        
-        <Pressable 
-          onPress={() => handleNavigate('Workout')} 
-          style={styles.navItem}
-        >
+
+        <Pressable onPress={() => handleNavigate('Workout')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={WorkoutIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'Workout' && <View style={styles.activeEclipse} />}
@@ -120,8 +129,6 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
     </Animated.View>
   );
 });
-
-
 
 const styles = StyleSheet.create({
   bottomNavContainer: {
