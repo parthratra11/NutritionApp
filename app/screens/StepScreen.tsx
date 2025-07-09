@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: screenHeight * 0.10, // Reduced from 60 to 20 to move it up
+    marginTop: screenHeight * 0.01, // Reduced from 60 to 20 to move it up
   },
 
   progressContent: {
