@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { useParams } from "next/navigation";
 import Papa from "papaparse";
+import Navigation from "@/components/shared/Navigation";
 
 // Replace the getDayNameForDate function with this UTC-safe version:
 function getDayNameForDate(date: Date): string {
@@ -101,11 +102,15 @@ function createDailyEntry(date: Date, weight: string, email: string) {
 
 export default function UploadPage() {
   const params = useParams();
-  const decodedEmail = decodeURIComponent(params.email as string);
+  const email = params.email as string;
+  const decodedEmail = decodeURIComponent(email);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [jsonPreview, setJsonPreview] = useState<any>(null);
+  const [selectedDataType, setSelectedDataType] = useState<string>("bodyComp");
+  const [showPreview, setShowPreview] = useState<boolean>(false);
 
   // Changed this array to match the ordering used in WeeklyForm.tsx
   // Note: WeeklyForm.tsx uses ['Sunday', 'Monday', ...] but the app logic expects Monday as first
@@ -158,6 +163,33 @@ export default function UploadPage() {
     "Sleep Timing",
   ];
 
+  const dataTypes = [
+    {
+      id: "bodyComp",
+      name: "Body Composition",
+      collection: "weeklyForms",
+      enabled: true,
+    },
+    {
+      id: "intakeForm",
+      name: "Intake Form",
+      collection: "intakeForms",
+      enabled: false,
+    },
+    {
+      id: "workout",
+      name: "Workout Data",
+      collection: "Workout",
+      enabled: false,
+    },
+    {
+      id: "nutrition",
+      name: "Nutrition Plan",
+      collection: "Nutrition",
+      enabled: false,
+    },
+  ];
+
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
@@ -166,6 +198,21 @@ export default function UploadPage() {
     }
     setIsUploading(true);
     setStatus("Processing CSV...");
+    setShowPreview(false);
+
+    // Show an error for unsupported data types
+    const selectedType = dataTypes.find((type) => type.id === selectedDataType);
+    if (!selectedType?.enabled) {
+      setTimeout(() => {
+        setStatus(
+          `Upload for ${
+            selectedType?.name || selectedDataType
+          } is not yet supported.`
+        );
+        setIsUploading(false);
+      }, 1500);
+      return;
+    }
 
     Papa.parse(file, {
       header: false,
@@ -355,9 +402,14 @@ export default function UploadPage() {
           }
 
           setJsonPreview(jsonData); // Show JSON preview
+          setShowPreview(true);
 
           // Upload all weeks at once (no batching)
-          const userDocRef = doc(db, "weeklyForms", decodedEmail.toLowerCase());
+          const userDocRef = doc(
+            db,
+            selectedType.collection,
+            decodedEmail.toLowerCase()
+          );
           const userDocSnap = await getDoc(userDocRef);
           let firestoreData = userDocSnap.exists() ? userDocSnap.data() : {};
 
@@ -389,44 +441,180 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Upload Body Composition CSV</h1>
-      <input
-        type="file"
-        accept=".csv"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={handleCsvUpload}
-        disabled={isUploading}
+    <div className="min-h-screen bg-gray-50">
+      <Navigation
+        title="Data Upload"
+        subtitle="Import client data from CSV"
+        email={email}
       />
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isUploading}
-        className={`w-full py-2 rounded ${
-          isUploading
-            ? "bg-gray-400"
-            : "bg-blue-500 text-white hover:bg-blue-600"
-        }`}
-      >
-        {isUploading ? "Uploading..." : "Upload CSV"}
-      </button>
-      {status && (
-        <p
-          className={`mt-4 p-2 rounded ${
-            status.includes("Success") ? "bg-green-100" : "bg-red-100"
-          }`}
-        >
-          {status}
-        </p>
-      )}
-      {jsonPreview && (
-        <div className="mt-6">
-          <h2 className="font-semibold mb-2">Extracted JSON Preview:</h2>
-          <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto max-h-96">
-            {JSON.stringify(jsonPreview, null, 2)}
-          </pre>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">
+            Select Data Type
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {dataTypes.map((type) => (
+              <button
+                key={type.id}
+                onClick={() => setSelectedDataType(type.id)}
+                className={`px-4 py-4 rounded-lg border transition-all flex flex-col items-center justify-center h-24
+                  ${
+                    selectedDataType === type.id
+                      ? "bg-[#0a1c3f] text-white border-[#0a1c3f] shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }
+                  ${!type.enabled && "opacity-60 cursor-not-allowed"}
+                `}
+              >
+                <div className="text-lg font-medium">{type.name}</div>
+                {!type.enabled && (
+                  <div className="text-xs mt-1 italic">Coming soon</div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <h3 className="font-semibold mb-4 text-gray-700">
+              Upload{" "}
+              {dataTypes.find((t) => t.id === selectedDataType)?.name || "Data"}
+            </h3>
+
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="w-full">
+                <input
+                  type="file"
+                  accept=".csv"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleCsvUpload}
+                  disabled={isUploading}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2
+                    ${
+                      isUploading
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-[#0a1c3f] text-white hover:bg-[#0b2552]"
+                    }
+                  `}
+                >
+                  {isUploading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                        />
+                      </svg>
+                      <span>Select CSV File to Upload</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {status && (
+              <div
+                className={`mt-4 p-4 rounded-lg ${
+                  status.includes("Success")
+                    ? "bg-green-50 text-green-800 border border-green-200"
+                    : "bg-red-50 text-red-800 border border-red-200"
+                }`}
+              >
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    {status.includes("Success") ? (
+                      <svg
+                        className="h-5 w-5 text-green-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="h-5 w-5 text-red-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm">{status}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {jsonPreview && showPreview && (
+            <div className="mt-6 bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold text-gray-800">Data Preview</h3>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Hide Preview
+                </button>
+              </div>
+              <pre className="bg-gray-50 p-4 rounded-lg text-xs overflow-x-auto max-h-96 border border-gray-100">
+                {JSON.stringify(jsonPreview, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

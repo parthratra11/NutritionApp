@@ -186,8 +186,11 @@ export default function WorkoutDashboard() {
           );
 
           if (matchingTemplateExercise) {
+            // Ensure exercise.sets is always an array
+            const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
+
             sessions[sessionType][matchingTemplateExercise][date] = {
-              sets: exercise.sets,
+              sets: sets,
               workoutNote: dayData.workoutNote || "",
               duration,
             };
@@ -467,54 +470,63 @@ export default function WorkoutDashboard() {
                                   >
                                     {data ? (
                                       <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
-                                        {data.sets.map((set, index) => (
-                                          <div
-                                            key={set.id}
-                                            className={`${
-                                              set.completed
-                                                ? "text-green-600"
-                                                : "text-gray-500"
-                                            } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
-                                          >
-                                            <span className="font-medium whitespace-nowrap">
-                                              {set.weight}
-                                              <span className="mx-0.5">×</span>
-                                              {set.reps}
-                                            </span>
-                                            <span className="ml-1">
-                                              {set.completed ? (
-                                                <svg
-                                                  className="h-3 w-3 text-green-500"
-                                                  fill="none"
-                                                  viewBox="0 0 24 24"
-                                                  stroke="currentColor"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M5 13l4 4L19 7"
-                                                  />
-                                                </svg>
-                                              ) : (
-                                                <svg
-                                                  className="h-3 w-3 text-gray-400"
-                                                  fill="none"
-                                                  viewBox="0 0 24 24"
-                                                  stroke="currentColor"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                  />
-                                                </svg>
-                                              )}
-                                            </span>
+                                        {/* Check if sets exists and is an array before mapping */}
+                                        {Array.isArray(data.sets) &&
+                                        data.sets.length > 0 ? (
+                                          data.sets.map((set, index) => (
+                                            <div
+                                              key={set.id || index}
+                                              className={`${
+                                                set.completed
+                                                  ? "text-green-600"
+                                                  : "text-gray-500"
+                                              } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
+                                            >
+                                              <span className="font-medium whitespace-nowrap">
+                                                {set.weight}
+                                                <span className="mx-0.5">
+                                                  ×
+                                                </span>
+                                                {set.reps}
+                                              </span>
+                                              <span className="ml-1">
+                                                {set.completed ? (
+                                                  <svg
+                                                    className="h-3 w-3 text-green-500"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                  >
+                                                    <path
+                                                      strokeLinecap="round"
+                                                      strokeLinejoin="round"
+                                                      strokeWidth={2}
+                                                      d="M5 13l4 4L19 7"
+                                                    />
+                                                  </svg>
+                                                ) : (
+                                                  <svg
+                                                    className="h-3 w-3 text-gray-400"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                  >
+                                                    <path
+                                                      strokeLinecap="round"
+                                                      strokeLinejoin="round"
+                                                      strokeWidth={2}
+                                                      d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                  </svg>
+                                                )}
+                                              </span>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div className="text-xs text-gray-500">
+                                            No set data
                                           </div>
-                                        ))}
-                                        {/* Remove the note and duration from individual exercise cells */}
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="text-center text-gray-400">
