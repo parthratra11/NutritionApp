@@ -137,7 +137,7 @@ export default function ReportScreen() {
           datasets: [
             {
               data: weightData,
-              color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
+              color: (opacity = 1) => `rgba(255, 49, 43, ${opacity})`,
               strokeWidth: 3,
             },
           ],
@@ -149,12 +149,12 @@ export default function ReportScreen() {
           backgroundGradientFrom: '#fff',
           backgroundGradientTo: '#fff',
           decimalPlaces: 1,
-          color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
+          color: (opacity = 1) => `rgba(199, 49, 43, ${opacity})`,
           labelColor: (opacity = 1) => `rgba(102, 102, 102, ${opacity})`,
           propsForDots: {
             r: '5',
             strokeWidth: '0',
-            fill: '#ff6384',
+            fill: '#C7312B',
           },
           propsForBackgroundLines: {
             strokeWidth: 1,
@@ -162,9 +162,9 @@ export default function ReportScreen() {
             stroke: '#f0f0f0',
           },
           propsForLabels: {
-            fontSize: 12,
+            fontSize: 8,
           },
-          fillShadowGradient: 'rgba(255, 99, 132, 0.2)',
+          fillShadowGradient: 'rgba(199, 49, 43, 0.2)',
           fillShadowGradientOpacity: 0.6,
           style: {
             borderRadius: 16,
@@ -236,7 +236,7 @@ export default function ReportScreen() {
             return colors[index] || colors[0];
           },
           labelColor: (opacity = 1) => `rgba(102, 102, 102, ${opacity})`,
-          barPercentage: 0.7,
+          barPercentage: 0.8,
           barRadius: 8,
           propsForLabels: {
             fontSize: 8,
@@ -244,8 +244,8 @@ export default function ReportScreen() {
         }}
         style={styles.chart}
         withInnerLines={false}
-        withHorizontalLines={true}
         withVerticalLines={false}
+        withHorizontalLines={true}
         fromZero
         showBarTops={false}
         flatColor={true}
@@ -272,7 +272,7 @@ export default function ReportScreen() {
           datasets: [
             {
               data: hungerData,
-              color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
+              color: (opacity = 1) => `rgba(199, 49, 43, ${opacity})`,
               strokeWidth: 3,
             },
           ],
@@ -284,12 +284,12 @@ export default function ReportScreen() {
           backgroundGradientFrom: '#fff',
           backgroundGradientTo: '#fff',
           decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
+          color: (opacity = 1) => `rgba(199, 49, 43, ${opacity})`,
           labelColor: (opacity = 1) => `rgba(102, 102, 102, 0.5)`,
           propsForDots: {
             r: '3',
             strokeWidth: '0',
-            fill: '#ff6384',
+            fill: '#C7312B',
           },
           propsForBackgroundLines: {
             strokeWidth: 1,
@@ -299,7 +299,7 @@ export default function ReportScreen() {
           propsForLabels: {
             fontSize: 8,
           },
-          fillShadowGradient: 'rgba(255, 99, 132, 0.2)',
+          fillShadowGradient: 'rgba(255, 49, 43, 0.2)',
           fillShadowGradientOpacity: 0.5,
           style: {
             borderRadius: 16,
@@ -333,15 +333,15 @@ export default function ReportScreen() {
       <View style={styles.sleepContainer}>
         <View style={styles.sleepLegend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#ff6384' }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#C7312B' }]} />
             <Text style={styles.legendText}>Deep - {sleepData.deep}%</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#ff8c9e' }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#E05C55' }]} />
             <Text style={styles.legendText}>Light - {sleepData.light}%</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#ffb6c1' }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#F3918B' }]} />
             <Text style={styles.legendText}>Awake - {sleepData.awake}%</Text>
           </View>
           <View style={styles.legendItem}>
@@ -393,7 +393,7 @@ export default function ReportScreen() {
                   {
                     width: size,
                     height: size,
-                    backgroundColor: `rgba(255, ${99 - mood * 10}, ${132 - mood * 8}, ${opacity})`,
+                    backgroundColor: `rgba(225, ${39 + mood * 5}, ${53 + mood * 5}, ${opacity})`,
                   },
                 ]}
               />
@@ -637,17 +637,17 @@ const styles = StyleSheet.create({
   deepSleepRing: {
     width: 80,
     height: 80,
-    borderColor: '#ff6384',
+    borderColor: '#C7312B',
   },
   lightSleepRing: {
     width: 60,
     height: 60,
-    borderColor: '#ff8c9e',
+    borderColor: '#E05C55',
   },
   awakeSleepRing: {
     width: 40,
     height: 40,
-    borderColor: '#ffb6c1',
+    borderColor: '#F3918B',
   },
   qualitySleepRing: {
     backgroundColor: '#4CAF50',
