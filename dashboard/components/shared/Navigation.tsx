@@ -125,7 +125,7 @@ export default function Navigation({
       ),
     },
     {
-      label: "Form Responses",
+      label: "Form Response",
       path: "/details",
       icon: (
         <path
@@ -232,18 +232,18 @@ export default function Navigation({
         />
       ),
     },
-    // {
-    //   label: "Slack DM",
-    //   path: "/slack/dms",
-    //   icon: (
-    //     <path
-    //       strokeLinecap="round"
-    //       strokeLinejoin="round"
-    //       strokeWidth={2}
-    //       d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-    //     />
-    //   ),
-    // },
+    {
+      label: "Data Upload",
+      path: "/new-upload",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+        />
+      ),
+    },
   ];
 
   return (
@@ -332,13 +332,35 @@ export default function Navigation({
               <p className="font-bold text-lg">{title}</p>
               {subtitle && <p className="text-xs opacity-80">{subtitle}</p>}
             </div>
-            <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
-              <Image
-                src="/User.png"
-                alt="Profile"
-                fill
-                style={{ objectFit: "cover" }}
-              />
+
+            {/* Add Contact via Slack button and user profile next to each other */}
+            <div className="flex items-center">
+              <div className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0 relative">
+                <Image
+                  src="/User.png"
+                  alt="Profile"
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  const encodedEmail = encodeURIComponent(email);
+                  window.location.href = `/slack/dms?email=${encodedEmail}`;
+                }}
+                className="flex items-center bg-[#4A154B] hover:bg-[#611f64] ml-3 px-3 py-1.5 rounded text-sm transition-colors"
+              >
+                <svg
+                  className="h-4 w-4 mr-1.5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm12-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2a5 5 0 1 1 0-10 5 5 0 0 1 0 10zM6 15h12a5 5 0 0 1 5 5v2h-2v-2a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v2H1v-2a5 5 0 0 1 5-5z" />
+                </svg>
+                Contact
+              </button>
             </div>
           </div>
 
