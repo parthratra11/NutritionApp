@@ -67,7 +67,7 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
       <Image source={NavRectangle} style={styles.bottomNavBg} />
       <View style={styles.bottomNavContent}>
         <Pressable 
-          onPress={() => handleNavigate('Home')} 
+          onPress={() => handleNavigate('Reports')} 
           style={styles.navItem}
         >
           <View style={styles.iconContainer}>

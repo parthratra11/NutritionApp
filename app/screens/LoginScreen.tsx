@@ -105,7 +105,8 @@ export default function LoginScreen() {
         );
       } else {
         await login(email, password);
-        Alert.alert('Success', 'Logged in successfully');
+       
+        navigation.navigate('Reports');
       }
     } catch (error: any) {
       if (isSignup && error.code === 'auth/email-already-in-use') {

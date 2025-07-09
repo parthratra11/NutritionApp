@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Animated,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -20,10 +21,11 @@ import Navbar from '../components/navbar';
 // Import assets
 const UserImage = require('../assets/User.png');
 const EditIcon = require('../assets/edit.png');
+
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const { isDarkMode } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userFullName, setUserFullName] = useState('');
   const [userData, setUserData] = useState(null);
@@ -71,6 +73,33 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Handle logout with confirmation
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              // Navigation will be handled by AuthNavigator since the user state will change
+            } catch (error) {
+              console.error('Error logging out:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, isDarkMode && styles.containerDark]}>
@@ -116,9 +145,13 @@ export default function ProfileScreen() {
               <Feather name="chevron-right" size={20} color="#9E9E9E" />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.settingsItem}>
-              <Text style={styles.settingsText}>Logout</Text>
-              <Feather name="chevron-right" size={20} color="#9E9E9E" />
+            {/* Logout button with handler */}
+            <TouchableOpacity 
+              style={styles.settingsItem} 
+              onPress={handleLogout}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+              <Feather name="log-out" size={20} color="#FF3B30" />
             </TouchableOpacity>
           </View>
         </View>
@@ -189,7 +222,7 @@ const styles = StyleSheet.create({
   editIcon: {
     width: 16,
     height: 16,
-    tintColor: 'black', // Original comment mentioned "white" but value is "black"
+    tintColor: 'black',
   },
   profileContainer: {
     paddingTop: 50,  // Space after the avatar
@@ -197,7 +230,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingBottom: 10,
   },
-    userName: {
+  userName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
@@ -209,7 +242,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 20,
     paddingVertical: 5,
-
   },
   settingsItem: {
     flexDirection: 'row',
@@ -217,11 +249,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 20,
-
   },
   settingsText: {
     fontSize: 16,
     color: '#333333',
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#FF3B30', // Red color for logout text
+    fontWeight: '500',
   },
   container: {
     flex: 1,

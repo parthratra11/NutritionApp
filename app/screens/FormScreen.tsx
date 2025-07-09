@@ -6574,7 +6574,7 @@ const StrikeAPoseScreen: React.FC<{
           [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Welcome')
+              onPress: () => navigation.navigate('Reports')
             }
           ]
         );
