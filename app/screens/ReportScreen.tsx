@@ -10,6 +10,8 @@ import {
   SafeAreaView,
   Animated,
   TouchableOpacity,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -360,13 +362,20 @@ export default function ReportScreen() {
     );
   }
 
+  // Update the return statement to fix the SafeAreaView issue
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <StatusBar 
+        barStyle="light-content"
+        backgroundColor="#081A2F"
+        translucent
+      />
+      
       <ScrollView
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{...styles.scrollViewContent, paddingBottom: 5}}>
+        contentContainerStyle={styles.scrollViewContent}>
         
         {renderHeader()}
         
@@ -389,36 +398,40 @@ export default function ReportScreen() {
         activeScreen="Home" 
         opacityValue={navOpacity} 
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
+// Update the styles to fix the border radius and spacing issues
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f5f5f5', // Match the header color
   },
   scrollView: {
     flex: 1,
-    
   },
   scrollViewContent: {
-    paddingBottom: 100,
+    paddingBottom: 0, // Space for the navbar
   },
   headerContainer: {
     backgroundColor: '#081A2F',
-    paddingTop: 20,
-    paddingBottom: 30,
     paddingHorizontal: 20,
+    paddingBottom: 30,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
+      zIndex: 1,
+  // Change overflow to 'hidden' to ensure the border radius is visible
+  overflow: 'hidden',
+   // Important for the border radius to show properly
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 30,
-    top:20
+    marginTop: 5,
   },
   headerSubTitle: {
     color: '#fff',
@@ -449,8 +462,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     paddingTop: 20,
     paddingHorizontal: 20,
-    flex:1,
+    flex: 1,
     paddingBottom: 10,
+    borderTopLeftRadius: 0, // Make sure there's no conflicting border radius
+    borderTopRightRadius: 0,
+    marginTop: 10, // Adjust to overlap with the header
   },
   cardContainer: {
     backgroundColor: '#fff',
@@ -546,7 +562,8 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     opacity: 0.8,
   },
-  container: {
+  // These styles are only for the loading screen
+  loadingContainer: {
     flex: 1,
     backgroundColor: '#f0f2f5',
     justifyContent: 'center',

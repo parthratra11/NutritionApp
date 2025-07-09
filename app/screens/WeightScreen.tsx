@@ -16,6 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart } from 'react-native-chart-kit';
 import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
 import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -29,12 +32,18 @@ const lbsToKg = (lbs) => {
 };
 
 const WeightScreen = ({ navigation }) => {
+  // Add user from auth context
+  const { user } = useAuth();
+  
+  // Add state for tracking first entry date
+  const [firstEntryDate, setFirstEntryDate] = useState(null);
+  
   const [weight, setWeight] = useState(53);
   const [weightUnit, setWeightUnit] = useState('Kgs'); // 'Kgs' or 'Lbs'
   const [weightHistory, setWeightHistory] = useState([]);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
-
+  
   // For graph data
   const [chartData, setChartData] = useState({
     labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
@@ -47,7 +56,7 @@ const WeightScreen = ({ navigation }) => {
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
-
+  
   // Handle date selection
   const handleDateSelect = (selectedDate) => {
     console.log('Selected date:', selectedDate.full);
@@ -55,8 +64,24 @@ const WeightScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    const fetchFirstEntryDate = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists() && userDocSnap.data().firstEntryDate) {
+          setFirstEntryDate(userDocSnap.data().firstEntryDate);
+        }
+      } catch (error) {
+        console.error('Error fetching first entry date:', error);
+      }
+    };
+    
+    fetchFirstEntryDate();
     loadWeightHistory();
-  }, []);
+  }, [user?.email]);
 
   const loadWeightHistory = async () => {
     try {
@@ -64,19 +89,19 @@ const WeightScreen = ({ navigation }) => {
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory);
         setWeightHistory(parsedHistory);
-
+        
         // Update chart with recent weights if available
         if (parsedHistory.length > 0) {
           const recentWeights = parsedHistory
             .slice(0, 7)
-            .map((entry) => entry.weight)
+            .map(entry => entry.weight)
             .reverse();
-
+            
           // Ensure we have 7 data points for the chart
           while (recentWeights.length < 7) {
             recentWeights.push(parsedHistory[0]?.weight || 0);
           }
-
+          
           setChartData({
             labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
             datasets: [{ data: recentWeights }],
@@ -88,50 +113,143 @@ const WeightScreen = ({ navigation }) => {
     }
   };
 
+  // Helper to get the current day name
+  const getCurrentDayName = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+  };
+
+  // Helper to calculate week number from a date and first entry date
+  const getWeekNumber = (currentDate, firstEntryDateStr) => {
+    if (!firstEntryDateStr) return 1;
+    
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const firstDate = new Date(firstEntryDateStr);
+    const diffTime = Math.abs(currentDate.getTime() - firstDate.getTime());
+    const diffWeeks = Math.floor(diffTime / msPerWeek);
+    return diffWeeks + 1; // Week numbers are 1-based
+  };
+
+  // Update the saveWeight function to also save to Firebase
   const saveWeight = async () => {
+    if (!user?.email) {
+      alert('Please login to save your weight');
+      return;
+    }
+
     try {
+      const now = new Date();
+      const today = now.toISOString();
+      const dayName = getCurrentDayName();
+      
+      // Save to AsyncStorage as before
       const newEntry = {
         id: Date.now().toString(),
         weight: weight,
         unit: weightUnit,
-        date: new Date().toISOString(),
+        date: today,
       };
 
       const updatedHistory = [newEntry, ...weightHistory];
       setWeightHistory(updatedHistory);
       await AsyncStorage.setItem('weightHistory', JSON.stringify(updatedHistory));
-
-      // Update chart data
+      
+      // Update chart data as before
       const recentWeights = updatedHistory
         .slice(0, 7)
-        .map((entry) => entry.weight)
+        .map(entry => entry.weight)
         .reverse();
-
+        
       while (recentWeights.length < 7) {
         recentWeights.push(updatedHistory[0]?.weight || 0);
       }
-
+      
       setChartData({
         labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
         datasets: [{ data: recentWeights }],
       });
+
+      // Now save to Firebase WeeklyForms collection
+      const userDocRef = doc(db, 'weeklyForms', user.email.toLowerCase());
+      const userDocSnap = await getDoc(userDocRef);
+      
+      let data = {};
+      let entryDate = firstEntryDate;
+      
+      if (userDocSnap.exists()) {
+        data = userDocSnap.data();
+        
+        // If this is the first entry ever, set the firstEntryDate
+        if (!data.firstEntryDate) {
+          entryDate = today.slice(0, 10);
+          data.firstEntryDate = entryDate;
+          setFirstEntryDate(entryDate);
+        } else {
+          entryDate = data.firstEntryDate;
+        }
+        
+        // Calculate which week this entry belongs to
+        const weekNum = getWeekNumber(now, entryDate);
+        const weekKey = `week${weekNum}`;
+        
+        // Prepare the update object - integrate with existing day data
+        let update = {
+          ...data,
+          [weekKey]: {
+            ...(data[weekKey] || {}),
+            [dayName]: {
+              ...(data[weekKey]?.[dayName] || {}),
+              weight: weight,
+              // Add the unit so you know if it's kg or lbs
+              weightUnit: weightUnit
+            }
+          },
+          firstEntryDate: entryDate,
+        };
+        
+        // Save to Firestore
+        await setDoc(userDocRef, update, { merge: true });
+      } else {
+        // First ever entry for this user
+        entryDate = today.slice(0, 10);
+        
+        // Create new data object
+        const newData = {
+          firstEntryDate: entryDate,
+          week1: {
+            [dayName]: {
+              weight: weight,
+              weightUnit: weightUnit
+            }
+          }
+        };
+        
+        // Save to Firestore
+        await setDoc(userDocRef, newData);
+        setFirstEntryDate(entryDate);
+      }
+      
+      // Show success message
+      alert('Weight saved successfully!');
+      
     } catch (error) {
       console.error('Failed to save weight:', error);
+      alert('Failed to save weight. Please try again.');
     }
   };
-
+  
   const incrementWeight = () => {
-    setWeight((prev) => prev + 1);
+    setWeight(prev => prev + 1);
   };
-
+  
   const decrementWeight = () => {
-    setWeight((prev) => Math.max(prev - 1, 0));
+    setWeight(prev => Math.max(prev - 1, 0));
   };
 
   // Add this function to handle unit change with conversion
   const handleUnitChange = (newUnit) => {
     if (newUnit === weightUnit) return; // No change needed
-
+    
     if (newUnit === 'Lbs') {
       // Convert kg to lbs
       setWeight(kgToLbs(weight));
@@ -139,7 +257,7 @@ const WeightScreen = ({ navigation }) => {
       // Convert lbs to kg
       setWeight(lbsToKg(weight));
     }
-
+    
     setWeightUnit(newUnit);
   };
 
@@ -148,9 +266,9 @@ const WeightScreen = ({ navigation }) => {
       <View style={styles.contentWrapper}>
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Weight</Text>
-
+          
           {/* Use the reusable WeekCalendar component */}
-          <WeekCalendar
+          <WeekCalendar 
             weekDates={weekDates}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
@@ -160,43 +278,47 @@ const WeightScreen = ({ navigation }) => {
         <View style={styles.whiteContent}>
           {/* Unit selector buttons */}
           <View style={styles.unitSelectorContainer}>
-            <TouchableOpacity
-              style={[styles.unitButton, weightUnit === 'Kgs' && styles.activeUnitButton]}
-              onPress={() => handleUnitChange('Kgs')}>
-              <Text style={[styles.unitButtonText, weightUnit === 'Kgs' && styles.activeUnitText]}>
-                Kgs
-              </Text>
+            <TouchableOpacity 
+              style={[styles.unitButton, weightUnit === 'Kgs' && styles.activeUnitButton]} 
+              onPress={() => handleUnitChange('Kgs')}
+            >
+              <Text style={[styles.unitButtonText, weightUnit === 'Kgs' && styles.activeUnitText]}>Kgs</Text>
             </TouchableOpacity>
-            <TouchableOpacity
+            <TouchableOpacity 
               style={[styles.unitButton, weightUnit === 'Lbs' && styles.activeUnitButton]}
-              onPress={() => handleUnitChange('Lbs')}>
-              <Text style={[styles.unitButtonText, weightUnit === 'Lbs' && styles.activeUnitText]}>
-                Lbs
-              </Text>
+              onPress={() => handleUnitChange('Lbs')}
+            >
+              <Text style={[styles.unitButtonText, weightUnit === 'Lbs' && styles.activeUnitText]}>Lbs</Text>
             </TouchableOpacity>
           </View>
-
+          
           {/* Weight selector wheel */}
           <View style={styles.weightSelectorContainer}>
-            <TouchableOpacity style={styles.weightControlButton} onPress={decrementWeight}>
+            <TouchableOpacity 
+              style={styles.weightControlButton} 
+              onPress={decrementWeight}
+            >
               <Feather name="minus" size={24} color="#333" />
             </TouchableOpacity>
-
+            
             <View style={styles.weightDisplayContainer}>
               <Text style={styles.weightValue}>{weight}</Text>
               <Text style={styles.weightUnit}>{weightUnit === 'Kgs' ? 'kg' : 'lb'}</Text>
-
+              
               {/* Save button inside the weight selector */}
               <TouchableOpacity style={styles.saveButton} onPress={saveWeight}>
                 <Feather name="chevron-right" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.weightControlButton} onPress={incrementWeight}>
+            
+            <TouchableOpacity 
+              style={styles.weightControlButton}
+              onPress={incrementWeight}
+            >
               <Feather name="plus" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-
+          
           {/* Frequency selector */}
           <View style={styles.frequencySelector}>
             <TouchableOpacity style={[styles.frequencyOption, styles.activeFrequency]}>
@@ -215,7 +337,7 @@ const WeightScreen = ({ navigation }) => {
               <Text style={styles.frequencyText}>Y</Text>
             </TouchableOpacity>
           </View>
-
+          
           {/* Weight chart */}
           <View style={styles.chartContainer}>
             <LineChart
@@ -230,12 +352,12 @@ const WeightScreen = ({ navigation }) => {
                 color: (opacity = 1) => `rgba(199, 49, 43, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                 style: {
-                  borderRadius: 16,
+                  borderRadius: 16
                 },
                 propsForDots: {
                   r: '2',
                   strokeWidth: '2',
-                  stroke: '#C7312B',
+                  stroke: '#C7312B'
                 },
                 fillShadowGradient: '#C7312B',
                 fillShadowGradientOpacity: 0.3,

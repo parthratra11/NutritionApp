@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: 20,
     marginBottom: 40,
+    marginTop: 20,
   },
   sleepSection: {
     width: '100%',

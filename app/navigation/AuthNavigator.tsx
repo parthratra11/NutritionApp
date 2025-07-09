@@ -87,7 +87,7 @@ export default function AuthNavigator() {
             component={WeeklyCheckInForm}
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="Slack" component={SlackScreen} />
+          <Stack.Screen name="Slack" component={SlackScreen} options={{ headerShown: false }} />
         </>
       ) : (
         // Auth screens
