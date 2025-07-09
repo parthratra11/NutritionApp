@@ -9,14 +9,17 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Navbar from '../components/navbar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
-import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
+import WeekCalendar from '../components/WeekCalendar'; 
+import { getCurrentWeekDates } from '../utils/dateUtils'; 
+import { useAuth } from '../context/AuthContext'; // Import Auth context
+import { db } from '../firebaseConfig'; // Import Firebase config
+import { doc, setDoc, getDoc } from 'firebase/firestore'; // Import Firestore functions
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -27,18 +30,62 @@ const moodOptions = [
   { id: 3, name: 'Happy', icon: 'happy-outline', iconType: 'ionicon', value: 3, color: '#C7312B' },
 ];
 
+// Helper to get the week and day for storing data
+const getWeekAndDay = () => {
+  const now = new Date();
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return {
+    day: dayNames[now.getDay()],
+    date: now.toISOString().slice(0, 10) // YYYY-MM-DD format
+  };
+};
+
+// Helper to calculate week number from first entry date
+const getWeekNumber = (currentDate, firstEntryDate) => {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const firstDate = new Date(firstEntryDate);
+  const diffTime = Math.abs(currentDate.getTime() - firstDate.getTime());
+  const diffWeeks = Math.floor(diffTime / msPerWeek);
+  return diffWeeks + 1; // Week numbers are 1-based
+};
+
 // Mood graph showing mood history
-const MoodGraph = () => {
-  // Sample data for the mood graph
+const MoodGraph = ({ moodHistory }) => {
+  // Create data for the mood graph from the history
   const moodData = [
-    { day: 'Mon', value: 1.5, size: 10 },
-    { day: 'Tue', value: 2.8, size: 18 },
-    { day: 'Wed', value: 1.2, size: 8 },
-    { day: 'Thu', value: 2.5, size: 15 },
-    { day: 'Fri', value: 3.0, size: 25 },
-    { day: 'Sat', value: 2.2, size: 14 },
-    { day: 'Sun', value: 2.7, size: 22 },
+    { day: 'Mon', value: 0, size: 0 },
+    { day: 'Tue', value: 0, size: 0 },
+    { day: 'Wed', value: 0, size: 0 },
+    { day: 'Thu', value: 0, size: 0 },
+    { day: 'Fri', value: 0, size: 0 },
+    { day: 'Sat', value: 0, size: 0 },
+    { day: 'Sun', value: 0, size: 0 },
   ];
+
+  // If there's history data, update the moodData
+  if (moodHistory && moodHistory.length > 0) {
+    // Sort by date (newest first) and take the last 7 days
+    const sortedHistory = [...moodHistory]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 7);
+
+    // Update mood data for each entry
+    sortedHistory.forEach(entry => {
+      const date = new Date(entry.date);
+      const dayIndex = date.getDay();
+      const dayName = moodData[dayIndex].day;
+      
+      // Calculate dot size based on mood value (1-3)
+      const value = entry.mood.value;
+      const size = value * 7 + 8; // Scale factor for visualization
+      
+      moodData[dayIndex] = {
+        day: dayName,
+        value: value,
+        size: size
+      };
+    });
+  }
 
   return (
     <View style={styles.graphContainer}>
@@ -49,9 +96,10 @@ const MoodGraph = () => {
               style={[
                 styles.moodDot, 
                 { 
-                  width: item.size * 2, 
-                  height: item.size * 2,
+                  width: item.size > 0 ? item.size : 0, 
+                  height: item.size > 0 ? item.size : 0,
                   backgroundColor: item.value > 2 ? '#C7312B' : '#607D8B',
+                  opacity: item.size > 0 ? 0.8 : 0,
                 }
               ]} 
             />
@@ -67,10 +115,14 @@ const MoodScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState(moodOptions[1]); // Default to neutral
   const [scrollY, setScrollY] = useState(0);
   const [moodSubmitted, setMoodSubmitted] = useState(false);
+  const [alreadySubmittedToday, setAlreadySubmittedToday] = useState(false);
+  const [moodHistory, setMoodHistory] = useState([]);
+  const [firstEntryDate, setFirstEntryDate] = useState(null);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef(null);
   const moodItemHeight = 120; // Height of each mood item
+  const { user } = useAuth(); // Use auth context
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
@@ -80,6 +132,52 @@ const MoodScreen = ({ navigation }) => {
     console.log('Selected date:', selectedDate.full);
     // You can add your logic here to update data based on the selected date
   };
+
+  // Check if already submitted for today
+  useEffect(() => {
+    const checkIfSubmitted = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format
+        const moodRef = doc(db, 'moods', user.email.toLowerCase());
+        const moodSnap = await getDoc(moodRef);
+        
+        if (moodSnap.exists()) {
+          const data = moodSnap.data();
+          const history = data.history || [];
+          setMoodHistory(history);
+          
+          // Check if there's an entry for today
+          const todayEntry = history.find(entry => 
+            entry.date.slice(0, 10) === today
+          );
+          
+          if (todayEntry) {
+            setAlreadySubmittedToday(true);
+            setSelectedMood(moodOptions.find(m => m.value === todayEntry.mood.value) || moodOptions[1]);
+            setMoodSubmitted(true);
+          } else {
+            setAlreadySubmittedToday(false);
+            setMoodSubmitted(false);
+          }
+          
+          // Set firstEntryDate if it exists
+          if (data.firstEntryDate) {
+            setFirstEntryDate(data.firstEntryDate);
+          }
+        } else {
+          setAlreadySubmittedToday(false);
+          setMoodSubmitted(false);
+          setMoodHistory([]);
+        }
+      } catch (error) {
+        console.error('Error checking submission status:', error);
+      }
+    };
+    
+    checkIfSubmitted();
+  }, [user?.email]);
 
   useEffect(() => {
     // Center the scroll view to the middle mood initially
@@ -97,8 +195,7 @@ const MoodScreen = ({ navigation }) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     setScrollY(offsetY);
     
-    // Calculate which mood is centered based on the middle of the viewport, not just scroll position
-    // The viewport center is at offsetY + (container height / 2)
+    // Calculate which mood is centered based on the middle of the viewport
     const viewportCenter = offsetY + (220 / 2); // 220 is the container height
     const index = Math.floor(viewportCenter / moodItemHeight) - 1; // Subtract 1 for the empty space at top
     
@@ -106,32 +203,151 @@ const MoodScreen = ({ navigation }) => {
     setSelectedMood(moodOptions[moodIndex]);
   };
 
+  // Helper to get color tag for a mood value
+  const getMoodColorTag = (value) => {
+    if (value <= 1) return 'red';
+    if (value === 2) return 'amber';
+    if (value >= 3) return 'green';
+    return null;
+  };
+
   const handleSubmit = async () => {
+    if (!user?.email) {
+      Alert.alert('Login Required', 'Please log in to save your mood.');
+      return;
+    }
+    
+    if (alreadySubmittedToday) {
+      Alert.alert('Already Submitted', 'You have already submitted your mood for today.');
+      return;
+    }
+    
     try {
-      // First set the mood as submitted to trigger the UI change
+      // Set the mood as submitted to trigger UI change
       setMoodSubmitted(true);
       
-      // Save selected mood
+      const now = new Date();
+      const today = now.toISOString();
+      const { day } = getWeekAndDay();
+      
+      // Create a new mood entry with color tag
+      const moodColorTag = getMoodColorTag(selectedMood.value);
       const newMoodEntry = {
-        id: Date.now().toString(),
         mood: selectedMood,
-        date: new Date().toISOString()
+        date: today,
+        day: day,
+        timestamp: now.getTime(),
+        colorTag: moodColorTag
       };
       
-      // Get existing mood history
-      const existingHistory = await AsyncStorage.getItem('moodHistory');
-      const moodHistory = existingHistory ? JSON.parse(existingHistory) : [];
+      // === SAVE TO WEEKLY FORMS COLLECTION ===
+      const weeklyFormRef = doc(db, 'weeklyForms', user.email.toLowerCase());
+      const weeklyFormSnap = await getDoc(weeklyFormRef);
       
-      // Add new entry and save
-      const updatedHistory = [newMoodEntry, ...moodHistory];
-      await AsyncStorage.setItem('moodHistory', JSON.stringify(updatedHistory));
+      let data = {};
+      let entryDate = firstEntryDate;
       
-      // No navigation - stay on this screen to show the selected mood
-      // setTimeout(() => {
-      //   navigation.goBack();
-      // }, 1500);
+      if (weeklyFormSnap.exists()) {
+        data = weeklyFormSnap.data();
+        
+        // If this is the first entry ever, set firstEntryDate
+        if (!data.firstEntryDate) {
+          entryDate = today.slice(0, 10);
+          data.firstEntryDate = entryDate;
+          setFirstEntryDate(entryDate);
+        } else {
+          entryDate = data.firstEntryDate;
+        }
+        
+        // Calculate which week this entry belongs to
+        const weekNum = getWeekNumber(now, entryDate);
+        const weekKey = `week${weekNum}`;
+        
+        // Prepare the update object - match the format in your image
+        let update = {
+          ...data,
+          [weekKey]: {
+            ...(data[weekKey] || {}),
+            [day]: {
+              ...(data[weekKey]?.[day] || {}),
+              Mood: {
+                value: selectedMood.value,
+                color: moodColorTag
+              }
+            }
+          },
+          firstEntryDate: entryDate,
+        };
+        
+        // Save to Firestore
+        await setDoc(weeklyFormRef, update, { merge: true });
+        
+        // === ALSO SAVE TO MOODS COLLECTION (for history graph) ===
+        // Get existing history or create a new array for the moods collection
+        const moodRef = doc(db, 'moods', user.email.toLowerCase());
+        const moodSnap = await getDoc(moodRef);
+        
+        if (moodSnap.exists()) {
+          const moodData = moodSnap.data();
+          const history = moodData.history || [];
+          history.unshift(newMoodEntry);
+          
+          await setDoc(moodRef, {
+            ...moodData,
+            history: history,
+            firstEntryDate: entryDate
+          }, { merge: true });
+          
+          setMoodHistory(history);
+        } else {
+          // First entry for moods collection
+          const history = [newMoodEntry];
+          await setDoc(moodRef, {
+            history: history,
+            firstEntryDate: entryDate
+          });
+          
+          setMoodHistory(history);
+        }
+        
+      } else {
+        // First ever entry for this user in weeklyForms
+        entryDate = today.slice(0, 10);
+        
+        // Create new data object for weeklyForms - match the format in your image
+        const newData = {
+          firstEntryDate: entryDate,
+          week1: {
+            [day]: {
+              Mood: {
+                value: selectedMood.value,
+                color: moodColorTag
+              }
+            }
+          }
+        };
+        
+        // Save to Firestore weeklyForms
+        await setDoc(weeklyFormRef, newData);
+        
+        // Also save to moods collection for history tracking
+        const history = [newMoodEntry];
+        await setDoc(doc(db, 'moods', user.email.toLowerCase()), {
+          history: history,
+          firstEntryDate: entryDate
+        });
+        
+        setFirstEntryDate(entryDate);
+        setMoodHistory(history);
+      }
+      
+      setAlreadySubmittedToday(true);
+      Alert.alert('Success', 'Your mood has been saved!');
+      
     } catch (error) {
       console.error('Error saving mood:', error);
+      Alert.alert('Error', 'Failed to save your mood. Please try again.');
+      setMoodSubmitted(false);
     }
   };
 
@@ -254,13 +470,15 @@ const MoodScreen = ({ navigation }) => {
                 <Text style={styles.enterButtonText}>Enter</Text>
               </TouchableOpacity>
             ) : (
-              // Empty view to maintain spacing
-              <View style={styles.buttonPlaceholder} />
+              // Show status message when already submitted
+              <Text style={styles.submittedText}>
+                {alreadySubmittedToday ? 'Mood submitted for today' : ''}
+              </Text>
             )}
           </View>
           
-          {/* Mood graph */}
-          <MoodGraph />
+          {/* Mood graph with actual data from Firebase */}
+          <MoodGraph moodHistory={moodHistory} />
         </View>
       </View>
 
@@ -348,7 +566,7 @@ const styles = StyleSheet.create({
   },
   enterButton: {
     backgroundColor: '#C7312B',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 30,
     marginTop: 20,
@@ -359,6 +577,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  submittedText: {
+    color: '#ffffff',
+    fontSize: 16,
+    opacity: 0.7,
+    fontStyle: 'italic',
+    marginTop: 20,
   },
   // Graph styles
   graphContainer: {
