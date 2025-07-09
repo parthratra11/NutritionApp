@@ -45,7 +45,11 @@ export default function AuthNavigator() {
             component={DetailedFitnessScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="Cronometer" component={CronoScreen} />
+          <Stack.Screen
+            name="Cronometer"
+            component={CronoScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="Exercise"
             component={ExerciseScreen}
@@ -66,13 +70,13 @@ export default function AuthNavigator() {
               presentation: 'transparentModal',
             }}
           />
-            <Stack.Screen 
-               name="Profile" 
-              component={ProfileScreen} 
-            options={{ 
-            headerShown: false 
-          }} 
-           />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
           <Stack.Screen name="Steps" component={StepScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Weight" component={WeightScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Mood" component={MoodScreen} options={{ headerShown: false }} />

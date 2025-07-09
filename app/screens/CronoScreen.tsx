@@ -9,7 +9,10 @@ import {
   Alert,
   Linking,
   ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import * as HealthConnectLibrary from 'react-native-health-connect';
 
 // Update required permissions to match what's shown in logs
@@ -19,7 +22,7 @@ const REQUIRED_PERMISSIONS = [
 ];
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
 
-export default function CronoScreen() {
+export default function CronoScreen({ navigation }) {
   const [nutritionData, setNutritionData] = useState({
     calories: null,
     protein: null,
@@ -234,231 +237,335 @@ export default function CronoScreen() {
 
   if (!hasPermission) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.title}>Nutrition Tracker</Text>
-        <Text style={styles.warning}>Nutrition permissions not granted</Text>
-        {permissionError && <Text style={styles.errorDetails}>{permissionError}</Text>}
-        <Text style={styles.instructions}>
-          To access nutrition data, please:
-          {'\n\n'}
-          1. Make sure Health Connect is updated to the latest version
-          {'\n'}
-          2. Open Health Connect
-          {'\n'}
-          3. Go to "Data and access"
-          {'\n'}
-          4. Find this app and grant nutrition access
-          {'\n'}
-          5. Connect Cronometer in Health Connect
-          {'\n'}
-          6. Enable nutrition data sharing for Cronometer
-          {'\n\n'}
-          Note: Health Connect shows you have these permissions, but data might not be syncing
-          correctly from Cronometer.
-        </Text>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Open Health Connect"
-            onPress={() =>
-              Linking.openURL('package:com.google.android.apps.healthdata').catch(() =>
-                Linking.openURL('market://details?id=com.google.android.apps.healthdata')
-              )
-            }
-          />
-          <View style={styles.buttonSpacer} />
-          <Button
-            title="Try Again"
-            onPress={async () => {
-              const ok = await ensurePermissions();
-              setHasPermission(ok);
-              if (ok) await fetchNutritionData();
-            }}
-          />
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Cronometer Import</Text>
         </View>
-      </View>
+        <ScrollView contentContainerStyle={styles.center}>
+          <Ionicons name="nutrition" size={48} color="#C7312B" style={{ marginBottom: 10 }} />
+          <Text style={styles.title}>Nutrition Tracker</Text>
+          <Text style={styles.warning}>Nutrition permissions not granted</Text>
+          {permissionError && <Text style={styles.errorDetails}>{permissionError}</Text>}
+          <Text style={styles.instructions}>
+            To access nutrition data, please:
+            {'\n\n'}
+            1. Make sure Health Connect is updated to the latest version
+            {'\n'}
+            2. Open Health Connect
+            {'\n'}
+            3. Go to "Data and access"
+            {'\n'}
+            4. Find this app and grant nutrition access
+            {'\n'}
+            5. Connect Cronometer in Health Connect
+            {'\n'}
+            6. Enable nutrition data sharing for Cronometer
+            {'\n\n'}
+            Note: Health Connect shows you have these permissions, but data might not be syncing
+            correctly from Cronometer.
+          </Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() =>
+                Linking.openURL('package:com.google.android.apps.healthdata').catch(() =>
+                  Linking.openURL('market://details?id=com.google.android.apps.healthdata')
+                )
+              }>
+              <Ionicons name="open-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.actionButtonText}>Open Health Connect</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={async () => {
+                const ok = await ensurePermissions();
+                setHasPermission(ok);
+                if (ok) await fetchNutritionData();
+              }}>
+              <Feather name="refresh-ccw" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.actionButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Nutrition Data (Today)</Text>
-      {loading ? (
-        <ActivityIndicator size="large" style={styles.loader} />
-      ) : (
-        <>
-          <View style={styles.calorieCard}>
-            <Text style={styles.calorieCount}>
-              {nutritionData.calories !== null ? Math.round(nutritionData.calories) : '—'} kcal
-            </Text>
-            <Text style={styles.calorieLabel}>Daily Calories</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Cronometer Import</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="nutrition" size={32} color="#C7312B" style={{ marginRight: 10 }} />
+            <Text style={styles.cardTitle}>Today's Nutrition</Text>
           </View>
-
-          <View style={styles.macrosContainer}>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>
-                {nutritionData.protein !== null ? nutritionData.protein.toFixed(1) : '—'}g
-              </Text>
-              <Text style={styles.macroLabel}>Protein</Text>
-            </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>
-                {nutritionData.fat !== null ? nutritionData.fat.toFixed(1) : '—'}g
-              </Text>
-              <Text style={styles.macroLabel}>Fat</Text>
-            </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>
-                {nutritionData.carbs !== null ? nutritionData.carbs.toFixed(1) : '—'}g
-              </Text>
-              <Text style={styles.macroLabel}>Carbs</Text>
-            </View>
-          </View>
-
-          <View style={styles.nutritionCard}>
-            <Text style={styles.sectionTitle}>Additional Nutrients</Text>
-            <View style={styles.nutrientRow}>
-              <Text style={styles.nutrientLabel}>Fiber:</Text>
-              <Text style={styles.nutrientValue}>
-                {nutritionData.fiber !== null ? nutritionData.fiber.toFixed(1) : '—'}g
-              </Text>
-            </View>
-            <View style={styles.nutrientRow}>
-              <Text style={styles.nutrientLabel}>Sugar:</Text>
-              <Text style={styles.nutrientValue}>
-                {nutritionData.sugar !== null ? nutritionData.sugar.toFixed(1) : '—'}g
-              </Text>
-            </View>
-            <View style={styles.nutrientRow}>
-              <Text style={styles.nutrientLabel}>Sodium:</Text>
-              <Text style={styles.nutrientValue}>
-                {nutritionData.sodium !== null ? nutritionData.sodium.toFixed(0) : '—'}mg
-              </Text>
-            </View>
-            <View style={styles.nutrientRow}>
-              <Text style={styles.nutrientLabel}>Water:</Text>
-              <Text style={styles.nutrientValue}>
-                {nutritionData.water !== null ? (nutritionData.water * 1000).toFixed(0) : '—'}ml
-              </Text>
-            </View>
-          </View>
-
-          {nutritionData.meals.length > 0 ? (
-            <>
-              <Text style={styles.sectionTitle}>Today's Meals</Text>
-              {nutritionData.meals.map((meal, index) => (
-                <View key={index} style={styles.mealCard}>
-                  <View style={styles.mealHeader}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealTime}>{meal.time}</Text>
-                  </View>
-                  <View style={styles.mealNutrition}>
-                    <Text>Calories: {meal.calories.toFixed(0)} kcal</Text>
-                    <Text>
-                      P: {meal.protein.toFixed(1)}g | F: {meal.fat.toFixed(1)}g | C:{' '}
-                      {meal.carbs.toFixed(1)}g
-                    </Text>
-                    {meal.nutrients.map((nutrient, i) => (
-                      <Text key={i} style={styles.mealNutrient}>
-                        {nutrient}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </>
+          {loading ? (
+            <ActivityIndicator size="large" style={styles.loader} color="#C7312B" />
           ) : (
-            <Text style={styles.noData}>No meals recorded today</Text>
+            <>
+              <View style={styles.calorieCard}>
+                <Text style={styles.calorieCount}>
+                  {nutritionData.calories !== null ? Math.round(nutritionData.calories) : '—'} kcal
+                </Text>
+                <Text style={styles.calorieLabel}>Calories</Text>
+              </View>
+              <View style={styles.macrosContainer}>
+                <View style={styles.macroItem}>
+                  <Text style={styles.macroValue}>
+                    {nutritionData.protein !== null ? nutritionData.protein.toFixed(1) : '—'}g
+                  </Text>
+                  <Text style={styles.macroLabel}>Protein</Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <Text style={styles.macroValue}>
+                    {nutritionData.fat !== null ? nutritionData.fat.toFixed(1) : '—'}g
+                  </Text>
+                  <Text style={styles.macroLabel}>Fat</Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <Text style={styles.macroValue}>
+                    {nutritionData.carbs !== null ? nutritionData.carbs.toFixed(1) : '—'}g
+                  </Text>
+                  <Text style={styles.macroLabel}>Carbs</Text>
+                </View>
+              </View>
+              <View style={styles.nutritionCard}>
+                <Text style={styles.sectionTitle}>Additional Nutrients</Text>
+                <View style={styles.nutrientRow}>
+                  <Text style={styles.nutrientLabel}>Fiber:</Text>
+                  <Text style={styles.nutrientValue}>
+                    {nutritionData.fiber !== null ? nutritionData.fiber.toFixed(1) : '—'}g
+                  </Text>
+                </View>
+                <View style={styles.nutrientRow}>
+                  <Text style={styles.nutrientLabel}>Sugar:</Text>
+                  <Text style={styles.nutrientValue}>
+                    {nutritionData.sugar !== null ? nutritionData.sugar.toFixed(1) : '—'}g
+                  </Text>
+                </View>
+                <View style={styles.nutrientRow}>
+                  <Text style={styles.nutrientLabel}>Sodium:</Text>
+                  <Text style={styles.nutrientValue}>
+                    {nutritionData.sodium !== null ? nutritionData.sodium.toFixed(0) : '—'}mg
+                  </Text>
+                </View>
+                <View style={styles.nutrientRow}>
+                  <Text style={styles.nutrientLabel}>Water:</Text>
+                  <Text style={styles.nutrientValue}>
+                    {nutritionData.water !== null ? (nutritionData.water * 1000).toFixed(0) : '—'}ml
+                  </Text>
+                </View>
+              </View>
+              {nutritionData.meals.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>Today's Meals</Text>
+                  {nutritionData.meals.map((meal, index) => (
+                    <View key={index} style={styles.mealCard}>
+                      <View style={styles.mealHeader}>
+                        <Text style={styles.mealName}>{meal.name}</Text>
+                        <Text style={styles.mealTime}>{meal.time}</Text>
+                      </View>
+                      <View style={styles.mealNutrition}>
+                        <Text style={styles.mealNutritionText}>
+                          Calories: {meal.calories.toFixed(0)} kcal
+                        </Text>
+                        <Text style={styles.mealNutritionText}>
+                          P: {meal.protein.toFixed(1)}g | F: {meal.fat.toFixed(1)}g | C:{' '}
+                          {meal.carbs.toFixed(1)}g
+                        </Text>
+                        {meal.nutrients.map((nutrient, i) => (
+                          <Text key={i} style={styles.mealNutrient}>
+                            {nutrient}
+                          </Text>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={styles.noData}>No meals recorded today</Text>
+              )}
+              <Text style={styles.dataSource}>Data Source: Cronometer via Health Connect</Text>
+              <Text style={styles.refreshTime}>
+                Last updated: {new Date().toLocaleTimeString()}
+              </Text>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={fetchNutritionData}
+                disabled={loading}>
+                <Feather name="refresh-ccw" size={18} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.refreshButtonText}>Refresh Now</Text>
+              </TouchableOpacity>
+            </>
           )}
-
-          <Text style={styles.dataSource}>Data Source: Cronometer via Health Connect</Text>
-          <Text style={styles.refreshTime}>Last updated: {new Date().toLocaleTimeString()}</Text>
-          <View style={styles.buttonContainer}>
-            <Button title="Refresh Now" onPress={fetchNutritionData} disabled={loading} />
-          </View>
-        </>
-      )}
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f8f8f8' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
-  loader: { marginTop: 30 },
-  calorieCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+  container: { flex: 1, backgroundColor: '#f8f8f8', paddingHorizontal: 0 },
+  header: {
+    backgroundColor: '#081A2F',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 18,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 10,
+  },
+  backButton: {
+    marginRight: 10,
+    padding: 4,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 30,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 18,
+    margin: 18,
+    marginTop: 0,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
-  calorieCount: { fontSize: 48, fontWeight: 'bold', color: '#3a86ff' },
-  calorieLabel: { fontSize: 16, color: '#666', marginTop: 4 },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#081A2F',
+  },
+  calorieCard: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  calorieCount: { fontSize: 40, fontWeight: 'bold', color: '#C7312B' },
+  calorieLabel: { fontSize: 16, color: '#666', marginTop: 2 },
   macrosContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   macroItem: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 15,
+    backgroundColor: '#f5f5f5',
+    padding: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginHorizontal: 4,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  macroValue: { fontSize: 24, fontWeight: 'bold' },
+  macroValue: { fontSize: 20, fontWeight: 'bold', color: '#081A2F' },
   macroLabel: { fontSize: 14, color: '#666' },
   nutritionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 1,
+    padding: 12,
+    marginBottom: 12,
   },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginVertical: 8, color: '#081A2F' },
   nutrientRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  nutrientLabel: { fontSize: 16, color: '#444' },
-  nutrientValue: { fontSize: 16, fontWeight: '500' },
+  nutrientLabel: { fontSize: 15, color: '#444' },
+  nutrientValue: { fontSize: 15, fontWeight: '500', color: '#C7312B' },
   mealCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 10,
     elevation: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: '#C7312B',
   },
   mealHeader: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  mealName: { fontSize: 15, fontWeight: 'bold', color: '#081A2F' },
+  mealTime: { fontSize: 13, color: '#666' },
+  mealNutrition: { marginTop: 2 },
+  mealNutritionText: { fontSize: 14, color: '#333' },
+  mealNutrient: { fontSize: 13, color: '#666', marginTop: 2 },
+  noData: { textAlign: 'center', marginVertical: 20, color: '#666', fontStyle: 'italic' },
+  dataSource: { fontSize: 13, color: '#666', textAlign: 'center', marginTop: 10 },
+  refreshTime: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 10 },
+  refreshButton: {
+    backgroundColor: '#C7312B',
+    paddingVertical: 12,
+    borderRadius: 30,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
     marginBottom: 8,
   },
-  mealName: { fontSize: 16, fontWeight: 'bold' },
-  mealTime: { fontSize: 14, color: '#666' },
-  mealNutrition: { marginTop: 4 },
-  mealNutrient: { fontSize: 14, color: '#666', marginTop: 2 },
-  noData: { textAlign: 'center', marginVertical: 30, color: '#666', fontStyle: 'italic' },
+  refreshButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  center: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
   warning: { fontSize: 16, color: 'red', marginBottom: 10, textAlign: 'center' },
   errorDetails: { fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' },
-  instructions: { fontSize: 16, textAlign: 'center', marginVertical: 15, paddingHorizontal: 20 },
-  dataSource: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 20 },
-  refreshTime: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 10 },
-  buttonContainer: { width: '80%', marginVertical: 20, alignSelf: 'center' },
-  buttonSpacer: { height: 15 },
+  instructions: { fontSize: 15, textAlign: 'center', marginVertical: 15, paddingHorizontal: 10 },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 18,
+    gap: 10,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#C7312B',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    marginHorizontal: 6,
+    marginBottom: 6,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  loader: { marginTop: 30 },
 });

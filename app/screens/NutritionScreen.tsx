@@ -283,6 +283,14 @@ const NutritionScreen = ({ navigation }) => {
 
         {/* White content area */}
         <View style={styles.whiteContent}>
+          {/* Cronometer Button */}
+          <TouchableOpacity
+            style={styles.cronoButton}
+            onPress={() => navigation.navigate('Cronometer')}>
+            <Ionicons name="nutrition" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.cronoButtonText}>Import from Cronometer</Text>
+            <Feather name="chevron-right" size={18} color="#fff" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
           {/* Day type selector as dropdown */}
           <TouchableOpacity
             style={styles.dayTypeSelector}
@@ -575,6 +583,28 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  cronoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#C7312B',
+    padding: 14,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 18,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cronoButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
 });
 
