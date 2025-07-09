@@ -651,6 +651,7 @@ const styles = StyleSheet.create({
   },
   qualitySleepRing: {
     backgroundColor: '#4CAF50',
+    borderColor: 'white',
   },
   moodDotsContainer: {
     flexDirection: 'row',
