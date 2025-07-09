@@ -288,7 +288,7 @@ export default function WorkoutDashboard() {
         {/* View/Edit Toggle */}
         <div className="flex space-x-4 mb-6">
           <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
-            View Template
+            View Progress
           </button>
           <Link
             href={`/${params.email}/workout/edit-template`}
@@ -343,94 +343,218 @@ export default function WorkoutDashboard() {
         {(selectedSession === "all"
           ? Object.entries(sessionData)
           : [[selectedSession, sessionData[selectedSession]]]
-        ).map(([session, exercises]) => (
-          <div key={session} className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">
-              Session {session}
-            </h2>
-            <div className="overflow-auto">
-              <div className="min-w-[800px]">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b w-48">
-                        Exercise
-                      </th>
-                      {Array.from(
-                        new Set(
-                          Object.values(exercises)
-                            .flatMap((exercise) => Object.keys(exercise))
-                            .sort(
-                              (a, b) =>
-                                new Date(b).getTime() - new Date(a).getTime()
+        ).map(([session, exercises]) => {
+          // Create a map to track notes by date to show only once per day
+          const dailyNotes = new Map<string, string>();
+          const dailyDurations = new Map<string, string>();
+
+          // Collect all unique notes and durations per date
+          Object.values(exercises).forEach((dates) => {
+            Object.entries(dates).forEach(([date, data]) => {
+              if (data.workoutNote && !dailyNotes.has(date)) {
+                dailyNotes.set(date, data.workoutNote);
+              }
+              if (data.duration && !dailyDurations.has(date)) {
+                dailyDurations.set(date, data.duration);
+              }
+            });
+          });
+
+          return (
+            <div
+              key={session}
+              className="bg-white rounded-lg shadow-sm p-6 mb-6"
+            >
+              <h3 className="text-[#333333] font-semibold mb-3 text-right">
+                Session {session}
+              </h3>
+
+              <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-4">
+                <div
+                  className="overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: "touch" }}
+                >
+                  <div className="min-w-full">
+                    <table className="w-full border-separate border-spacing-0">
+                      <thead className="sticky top-0">
+                        <tr className="text-left text-gray-600 text-sm">
+                          <th className="sticky left-0 z-10 bg-[#F5F5F5] pb-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px]">
+                            Exercise
+                          </th>
+                          {Array.from(
+                            new Set(
+                              Object.values(exercises)
+                                .flatMap((exercise) => Object.keys(exercise))
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b).getTime() -
+                                    new Date(a).getTime()
+                                )
                             )
-                        )
-                      ).map((date) => (
-                        <th
-                          key={date}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b"
-                        >
-                          {date}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {Object.entries(exercises).map(([exercise, dates]) => (
-                      <tr key={exercise} className="hover:bg-gray-50">
-                        <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r w-48">
-                          {exercise}
-                        </td>
-                        {Array.from(
-                          new Set(
-                            Object.values(exercises)
-                              .flatMap((exercise) => Object.keys(exercise))
-                              .sort(
-                                (a, b) =>
-                                  new Date(b).getTime() - new Date(a).getTime()
-                              )
-                          )
-                        ).map((date) => {
-                          const data = dates[date];
-                          return (
-                            <td
+                          ).map((date) => (
+                            <th
                               key={date}
-                              className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                              className="pb-3 px-2 font-medium whitespace-nowrap min-w-[100px] max-w-[120px]"
                             >
-                              {data ? (
-                                <div>
-                                  {data.sets.map((set, index) => (
-                                    <div
-                                      key={set.id}
-                                      className={`text-xs ${
-                                        set.completed
-                                          ? "text-green-600"
-                                          : "text-gray-500"
-                                      }`}
-                                    >
-                                      {set.weight}kg × {set.reps}
-                                    </div>
-                                  ))}
-                                  {data.duration && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      {data.duration}
-                                    </div>
-                                  )}
+                              <div className="font-medium text-sm text-gray-600">
+                                {date}
+                              </div>
+                              {dailyDurations.get(date) && (
+                                <div className="text-xs text-gray-500 font-normal">
+                                  <span className="font-medium">Time:</span>{" "}
+                                  {dailyDurations.get(date)}
                                 </div>
-                              ) : (
-                                "—"
                               )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                              {dailyNotes.get(date) && (
+                                <div className="text-xs text-gray-500 font-normal relative group">
+                                  <span className="font-medium">Note:</span>{" "}
+                                  <span className="truncate inline-block max-w-[80px] cursor-help align-middle">
+                                    {dailyNotes.get(date)!.length > 15
+                                      ? `${dailyNotes
+                                          .get(date)!
+                                          .substring(0, 15)}...`
+                                      : dailyNotes.get(date)}
+                                  </span>
+                                  <div className="hidden group-hover:block absolute z-50 mb-0 left-0 bg-gray-800 text-white rounded p-2 text-xs min-w-[200px] max-w-[300px] shadow-lg whitespace-normal break-words">
+                                    {dailyNotes.get(date)}
+                                  </div>
+                                </div>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="text-[#333333] text-sm divide-y divide-gray-200">
+                        {Object.entries(exercises).map(
+                          ([exercise, dates], exerciseIndex) => (
+                            <tr
+                              key={exercise}
+                              className={
+                                exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
+                              }
+                            >
+                              <td
+                                className={`sticky left-0 z-10 ${
+                                  exerciseIndex % 2 === 0
+                                    ? "bg-gray-50"
+                                    : "bg-[#F5F5F5]"
+                                } py-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px] overflow-hidden text-ellipsis border-l-4 border-[#0a1c3f]`}
+                              >
+                                {exercise}
+                              </td>
+                              {Array.from(
+                                new Set(
+                                  Object.values(exercises)
+                                    .flatMap((exercise) =>
+                                      Object.keys(exercise)
+                                    )
+                                    .sort(
+                                      (a, b) =>
+                                        new Date(b).getTime() -
+                                        new Date(a).getTime()
+                                    )
+                                )
+                              ).map((date) => {
+                                const data = dates[date];
+                                return (
+                                  <td
+                                    key={date}
+                                    className={`py-2 px-2 min-w-[100px] max-w-[120px] ${
+                                      exerciseIndex % 2 === 0
+                                        ? "bg-gray-50"
+                                        : ""
+                                    }`}
+                                  >
+                                    {data ? (
+                                      <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+                                        {data.sets.map((set, index) => (
+                                          <div
+                                            key={set.id}
+                                            className={`${
+                                              set.completed
+                                                ? "text-green-600"
+                                                : "text-gray-500"
+                                            } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
+                                          >
+                                            <span className="font-medium whitespace-nowrap">
+                                              {set.weight}
+                                              <span className="mx-0.5">×</span>
+                                              {set.reps}
+                                            </span>
+                                            <span className="ml-1">
+                                              {set.completed ? (
+                                                <svg
+                                                  className="h-3 w-3 text-green-500"
+                                                  fill="none"
+                                                  viewBox="0 0 24 24"
+                                                  stroke="currentColor"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M5 13l4 4L19 7"
+                                                  />
+                                                </svg>
+                                              ) : (
+                                                <svg
+                                                  className="h-3 w-3 text-gray-400"
+                                                  fill="none"
+                                                  viewBox="0 0 24 24"
+                                                  stroke="currentColor"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                  />
+                                                </svg>
+                                              )}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {/* Remove the note and duration from individual exercise cells */}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center text-gray-400">
+                                        —
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Scroll indicator */}
+                <div className="flex justify-center mt-2">
+                  <div className="text-xs text-gray-500 flex items-center">
+                    <svg
+                      className="h-4 w-4 mr-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                    Scroll horizontally to see more dates
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

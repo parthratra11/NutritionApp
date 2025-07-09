@@ -34,7 +34,7 @@ const WeightScreen = ({ navigation }) => {
   const [weightHistory, setWeightHistory] = useState([]);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
-  
+
   // For graph data
   const [chartData, setChartData] = useState({
     labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
@@ -47,7 +47,7 @@ const WeightScreen = ({ navigation }) => {
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
-  
+
   // Handle date selection
   const handleDateSelect = (selectedDate) => {
     console.log('Selected date:', selectedDate.full);
@@ -64,19 +64,19 @@ const WeightScreen = ({ navigation }) => {
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory);
         setWeightHistory(parsedHistory);
-        
+
         // Update chart with recent weights if available
         if (parsedHistory.length > 0) {
           const recentWeights = parsedHistory
             .slice(0, 7)
-            .map(entry => entry.weight)
+            .map((entry) => entry.weight)
             .reverse();
-            
+
           // Ensure we have 7 data points for the chart
           while (recentWeights.length < 7) {
             recentWeights.push(parsedHistory[0]?.weight || 0);
           }
-          
+
           setChartData({
             labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
             datasets: [{ data: recentWeights }],
@@ -100,17 +100,17 @@ const WeightScreen = ({ navigation }) => {
       const updatedHistory = [newEntry, ...weightHistory];
       setWeightHistory(updatedHistory);
       await AsyncStorage.setItem('weightHistory', JSON.stringify(updatedHistory));
-      
+
       // Update chart data
       const recentWeights = updatedHistory
         .slice(0, 7)
-        .map(entry => entry.weight)
+        .map((entry) => entry.weight)
         .reverse();
-        
+
       while (recentWeights.length < 7) {
         recentWeights.push(updatedHistory[0]?.weight || 0);
       }
-      
+
       setChartData({
         labels: ['S', 'M', 'T', 'W', 'Th', 'F', 'S'],
         datasets: [{ data: recentWeights }],
@@ -119,19 +119,19 @@ const WeightScreen = ({ navigation }) => {
       console.error('Failed to save weight:', error);
     }
   };
-  
+
   const incrementWeight = () => {
-    setWeight(prev => prev + 1);
+    setWeight((prev) => prev + 1);
   };
-  
+
   const decrementWeight = () => {
-    setWeight(prev => Math.max(prev - 1, 0));
+    setWeight((prev) => Math.max(prev - 1, 0));
   };
 
   // Add this function to handle unit change with conversion
   const handleUnitChange = (newUnit) => {
     if (newUnit === weightUnit) return; // No change needed
-    
+
     if (newUnit === 'Lbs') {
       // Convert kg to lbs
       setWeight(kgToLbs(weight));
@@ -139,7 +139,7 @@ const WeightScreen = ({ navigation }) => {
       // Convert lbs to kg
       setWeight(lbsToKg(weight));
     }
-    
+
     setWeightUnit(newUnit);
   };
 
@@ -148,9 +148,9 @@ const WeightScreen = ({ navigation }) => {
       <View style={styles.contentWrapper}>
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Weight</Text>
-          
+
           {/* Use the reusable WeekCalendar component */}
-          <WeekCalendar 
+          <WeekCalendar
             weekDates={weekDates}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
@@ -160,47 +160,43 @@ const WeightScreen = ({ navigation }) => {
         <View style={styles.whiteContent}>
           {/* Unit selector buttons */}
           <View style={styles.unitSelectorContainer}>
-            <TouchableOpacity 
-              style={[styles.unitButton, weightUnit === 'Kgs' && styles.activeUnitButton]} 
-              onPress={() => handleUnitChange('Kgs')}
-            >
-              <Text style={[styles.unitButtonText, weightUnit === 'Kgs' && styles.activeUnitText]}>Kgs</Text>
+            <TouchableOpacity
+              style={[styles.unitButton, weightUnit === 'Kgs' && styles.activeUnitButton]}
+              onPress={() => handleUnitChange('Kgs')}>
+              <Text style={[styles.unitButtonText, weightUnit === 'Kgs' && styles.activeUnitText]}>
+                Kgs
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.unitButton, weightUnit === 'Lbs' && styles.activeUnitButton]}
-              onPress={() => handleUnitChange('Lbs')}
-            >
-              <Text style={[styles.unitButtonText, weightUnit === 'Lbs' && styles.activeUnitText]}>Lbs</Text>
+              onPress={() => handleUnitChange('Lbs')}>
+              <Text style={[styles.unitButtonText, weightUnit === 'Lbs' && styles.activeUnitText]}>
+                Lbs
+              </Text>
             </TouchableOpacity>
           </View>
-          
+
           {/* Weight selector wheel */}
           <View style={styles.weightSelectorContainer}>
-            <TouchableOpacity 
-              style={styles.weightControlButton} 
-              onPress={decrementWeight}
-            >
+            <TouchableOpacity style={styles.weightControlButton} onPress={decrementWeight}>
               <Feather name="minus" size={24} color="#333" />
             </TouchableOpacity>
-            
+
             <View style={styles.weightDisplayContainer}>
               <Text style={styles.weightValue}>{weight}</Text>
               <Text style={styles.weightUnit}>{weightUnit === 'Kgs' ? 'kg' : 'lb'}</Text>
-              
+
               {/* Save button inside the weight selector */}
               <TouchableOpacity style={styles.saveButton} onPress={saveWeight}>
                 <Feather name="chevron-right" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.weightControlButton}
-              onPress={incrementWeight}
-            >
+
+            <TouchableOpacity style={styles.weightControlButton} onPress={incrementWeight}>
               <Feather name="plus" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-          
+
           {/* Frequency selector */}
           <View style={styles.frequencySelector}>
             <TouchableOpacity style={[styles.frequencyOption, styles.activeFrequency]}>
@@ -219,7 +215,7 @@ const WeightScreen = ({ navigation }) => {
               <Text style={styles.frequencyText}>Y</Text>
             </TouchableOpacity>
           </View>
-          
+
           {/* Weight chart */}
           <View style={styles.chartContainer}>
             <LineChart
@@ -234,12 +230,12 @@ const WeightScreen = ({ navigation }) => {
                 color: (opacity = 1) => `rgba(199, 49, 43, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                 style: {
-                  borderRadius: 16
+                  borderRadius: 16,
                 },
                 propsForDots: {
                   r: '2',
                   strokeWidth: '2',
-                  stroke: '#C7312B'
+                  stroke: '#C7312B',
                 },
                 fillShadowGradient: '#C7312B',
                 fillShadowGradientOpacity: 0.3,

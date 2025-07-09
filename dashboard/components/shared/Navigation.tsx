@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface NavigationProps {
   title: string;
@@ -155,18 +156,18 @@ export default function Navigation({
         />
       ),
     },
-    {
-      label: "Slack DM",
-      path: "/slack/dms",
-      icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
-      ),
-    },
+    // {
+    //   label: "Slack DM",
+    //   path: "/slack/dms",
+    //   icon: (
+    //     <path
+    //       strokeLinecap="round"
+    //       strokeLinejoin="round"
+    //       strokeWidth={2}
+    //       d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+    //     />
+    //   ),
+    // },
   ];
 
   return (
@@ -254,6 +255,14 @@ export default function Navigation({
             <div className="mr-3">
               <p className="font-bold text-lg">{title}</p>
               {subtitle && <p className="text-xs opacity-80">{subtitle}</p>}
+            </div>
+            <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+              <Image
+                src="/User.png"
+                alt="Profile"
+                fill
+                style={{ objectFit: "cover" }}
+              />
             </div>
           </div>
 

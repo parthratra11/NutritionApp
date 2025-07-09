@@ -18,16 +18,16 @@ const warmUpExercises = [
 
 interface Exercise {
   name: string;
-  sets: string;
-  reps: string;
-  link: string;
+  Sets: string;
+  Reps: string;
+  Link: string;
 }
 
 interface Session {
   [exerciseName: string]: {
-    sets: string;
-    reps: string;
-    link: string;
+    Sets: string;
+    Reps: string;
+    Link: string;
   };
 }
 
@@ -74,88 +74,88 @@ const exerciseOptions = [
 const defaultTemplate: WorkoutTemplate = {
   "Session A": {
     "Barbell Hip Thrust": {
-      sets: "2",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "2",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Cable Overhead Triceps Extension": {
-      sets: "2",
-      reps: "<=15-20 Rep Range",
-      link: "",
+      Sets: "2",
+      Reps: "<=15-20",
+      Link: "",
     },
     "Heels Elevated Zercher Squat": {
-      sets: "4",
-      reps: "<=8-12 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=8-12",
+      Link: "",
     },
     "One-leg Leg Extension": {
-      sets: "3",
-      reps: "<=15-20 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=15-20",
+      Link: "",
     },
     "Scrape Rack L-Seated Shoulder Press": {
-      sets: "4",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Seated DB Lateral Raise": {
-      sets: "2",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "2",
+      Reps: "<=12-15",
+      Link: "",
     },
   },
   "Session B": {
     "Face Pull (Half-kneeling)": {
-      sets: "4",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Leg Curl Seated Calf Raise": {
-      sets: "3",
-      reps: "<=20-30 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=20-30",
+      Link: "",
     },
     "One-leg Lying Leg Curl": {
-      sets: "3",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Snatch-grip Romanian Deadlift": {
-      sets: "4",
-      reps: "<=8-12 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=8-12",
+      Link: "",
     },
     "Wide Cable Shrug": {
-      sets: "3",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=12-15",
+      Link: "",
     },
   },
   "Session C": {
     "Cable Fly (High-to-Low)": {
-      sets: "3",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Deficit Push-up": {
-      sets: "4",
-      reps: "<=8-12 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=8-12",
+      Link: "",
     },
     "Facing Cable Bicep Curl (Fwd Lean)": {
-      sets: "3",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=12-15",
+      Link: "",
     },
     "Neutral Grip Chin-up": {
-      sets: "4",
-      reps: "<=5-8 Rep Range",
-      link: "",
+      Sets: "4",
+      Reps: "<=5-8",
+      Link: "",
     },
     "One-Arm DB Row": {
-      sets: "3",
-      reps: "<=12-15 Rep Range",
-      link: "",
+      Sets: "3",
+      Reps: "<=12-15",
+      Link: "",
     },
   },
 };
@@ -269,7 +269,7 @@ export default function EditTemplate() {
   const handleValueChange = (
     session: string,
     exerciseName: string,
-    field: "sets" | "reps" | "link",
+    field: "Sets" | "Reps" | "Link",
     value: string
   ) => {
     if (!template) return;
@@ -326,7 +326,7 @@ export default function EditTemplate() {
             href={`/${params.email}/workout`}
             className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
           >
-            View Template
+            View Progress
           </Link>
           <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
             Edit Template
@@ -417,12 +417,12 @@ export default function EditTemplate() {
                           <div>
                             <input
                               type="text"
-                              value={details.sets}
+                              value={details.Sets}
                               onChange={(e) =>
                                 handleValueChange(
                                   sessionName,
                                   exerciseName,
-                                  "sets",
+                                  "Sets",
                                   e.target.value
                                 )
                               }
@@ -433,12 +433,12 @@ export default function EditTemplate() {
                           <div>
                             <input
                               type="text"
-                              value={details.reps}
+                              value={details.Reps}
                               onChange={(e) =>
                                 handleValueChange(
                                   sessionName,
                                   exerciseName,
-                                  "reps",
+                                  "Reps",
                                   e.target.value
                                 )
                               }
@@ -449,12 +449,12 @@ export default function EditTemplate() {
                           <div>
                             <input
                               type="text"
-                              value={details.link}
+                              value={details.Link}
                               onChange={(e) =>
                                 handleValueChange(
                                   sessionName,
                                   exerciseName,
-                                  "link",
+                                  "Link",
                                   e.target.value
                                 )
                               }

@@ -22,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "date">("date");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showNav, setShowNav] = useState(false);
 
   useEffect(() => {
     const fetchIntakeForms = async () => {
@@ -65,6 +66,46 @@ export default function Home() {
 
   const dateStrip = generateDateStrip();
 
+  // Menu items for side navigation
+  const menuItems = [
+    {
+      label: "Slack Channel",
+      path: "/slack",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        />
+      ),
+    },
+    {
+      label: "Slack DMs",
+      path: "/slack/dms",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        />
+      ),
+    },
+    {
+      label: "Logout",
+      path: "/",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
+      ),
+    },
+  ];
+
   // Sort intake forms based on selected option
   const sortedIntakeForms = [...intakeForms].sort((a, b) => {
     if (sortBy === "name") {
@@ -86,11 +127,72 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Side Navigation */}
+      <div
+        className={`fixed inset-y-0 left-0 transform ${
+          showNav ? "translate-x-0" : "-translate-x-full"
+        } bg-[#0a1c3f] text-white w-64 z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
+      >
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-bold">Menu</h2>
+            <button onClick={() => setShowNav(false)} className="text-white">
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <nav>
+            <ul className="space-y-4">
+              {menuItems.map((item) => (
+                <li key={`${item.path}-${item.label}`}>
+                  <button
+                    onClick={() => {
+                      router.push(item.path);
+                      setShowNav(false);
+                    }}
+                    className="flex items-center text-gray-300 hover:text-white w-full py-2"
+                  >
+                    <svg
+                      className="h-5 w-5 mr-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      {item.icon}
+                    </svg>
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-black transition-opacity duration-300 ${
+          showNav ? "opacity-50 z-20" : "opacity-0 -z-10"
+        }`}
+        onClick={() => setShowNav(false)}
+      />
+
       {/* Header Bar with greeting and date strip side by side */}
       <div className="bg-[#0a1c3f] text-white p-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <button className="mr-3">
+            <button className="mr-3" onClick={() => setShowNav(true)}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -110,9 +212,13 @@ export default function Home() {
               <p className="font-medium">Hi, Cymron</p>
               <p className="text-xs opacity-80">See their progress!</p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-gray-300 overflow-hidden">
-              {/* Placeholder for coach's profile image */}
-              <div className="h-full w-full bg-gray-400"></div>
+            <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+              <Image
+                src="/User.png"
+                alt="Profile"
+                fill
+                style={{ objectFit: "cover" }}
+              />
             </div>
           </div>
 
@@ -179,9 +285,13 @@ export default function Home() {
               className="bg-[#0a1c3f] text-white rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer flex items-center"
               onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
             >
-              <div className="h-12 w-12 rounded-full bg-gray-300 mr-3 overflow-hidden flex-shrink-0">
-                {/* Placeholder for client profile image */}
-                <div className="h-full w-full bg-gray-400"></div>
+              <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+                <Image
+                  src="/User.png"
+                  alt="Profile"
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
               </div>
               <div className="overflow-hidden">
                 <h2 className="font-semibold text-white">{form.fullName}</h2>

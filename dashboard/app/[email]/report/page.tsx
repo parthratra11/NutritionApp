@@ -318,29 +318,37 @@ export default function ReportPage() {
         subtitle="Progress Overview"
         email={params.email as string}
       />
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Client Info Header */}
         <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
-              <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
+          <div className="flex justify-between items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Client Name</h3>
+                <p className="text-lg font-semibold">{clientInfo?.fullName}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Age</h3>
+                <p className="text-lg">{clientInfo?.age} years</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">
+                  Starting Weight
+                </h3>
+                <p className="text-lg">{clientInfo?.weight} kg</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Height</h3>
+                <p className="text-lg">{clientInfo?.height} cm</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Age</h3>
-              <p className="text-lg">{clientInfo?.age} years</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">
-                Starting Weight
-              </h3>
-              <p className="text-lg">{clientInfo?.weight} kg</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Height</h3>
-              <p className="text-lg">{clientInfo?.height} cm</p>
-            </div>
+            <Link 
+              href={`/${params.email}/new-upload`}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+            >
+              Upload Data
+            </Link>
           </div>
           <div className="mt-4">
             <h3 className="text-sm font-medium text-gray-500">Goals</h3>
