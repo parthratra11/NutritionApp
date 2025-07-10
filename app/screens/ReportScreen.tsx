@@ -323,48 +323,20 @@ export default function ReportScreen() {
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
           <MaterialCommunityIcons name="sleep" size={20} color="#333" />
-          <Text style={styles.cardTitle}>Sleep</Text>
+          <Text style={styles.cardTitle}>Sleep Quality</Text>
         </View>
         <TouchableOpacity>
           <Feather name="chevron-right" size={20} color="#ccc" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.sleepContainer}>
-        <View style={styles.sleepLegend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#C7312B' }]} />
-            <Text style={styles.legendText}>Deep - {sleepData.deep}%</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#E05C55' }]} />
-            <Text style={styles.legendText}>Light - {sleepData.light}%</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#F3918B' }]} />
-            <Text style={styles.legendText}>Awake - {sleepData.awake}%</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-            <Text style={styles.legendText}>Quality - {sleepData.quality}%</Text>
-          </View>
-        </View>
-
-        <View style={styles.donutContainer}>
-          {/* Render concentric circles to represent sleep data */}
-          <View style={styles.donutRings}>
-            <View style={[styles.donutRing, styles.deepSleepRing]} />
-            <View style={[styles.donutRing, styles.lightSleepRing]} />
-            <View style={[styles.donutRing, styles.awakeSleepRing]} />
-            <View
-              style={[
-                styles.donutRing,
-                styles.qualitySleepRing,
-                { width: 30, height: 30, borderRadius: 15 },
-              ]}
-            />
-          </View>
-        </View>
+      {/* Replace the previous chart with the image */}
+      <View style={styles.sleepImageContainer}>
+        <Image
+          source={require('../assets/sleepgraph.png')}
+          style={styles.sleepGraphImage}
+          resizeMode="contain"
+        />
       </View>
     </View>
   );
@@ -685,5 +657,16 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#fff',
     fontSize: 18,
+  },
+  sleepImageContainer: {
+    width: '100%',
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  sleepGraphImage: {
+    width: '140%',
+    height: '130%',
   },
 });
