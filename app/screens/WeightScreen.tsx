@@ -8,6 +8,8 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
+  Pressable
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -41,6 +43,9 @@ const WeightScreen = ({ navigation }) => {
   const [weight, setWeight] = useState(53);
   const [weightUnit, setWeightUnit] = useState('Kgs'); // 'Kgs' or 'Lbs'
   const [weightHistory, setWeightHistory] = useState([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
   
@@ -133,7 +138,8 @@ const WeightScreen = ({ navigation }) => {
   // Update the saveWeight function to also save to Firebase
   const saveWeight = async () => {
     if (!user?.email) {
-      alert('Please login to save your weight');
+      setErrorMessage('Please login to save your weight');
+      setShowErrorModal(true);
       return;
     }
 
@@ -229,12 +235,13 @@ const WeightScreen = ({ navigation }) => {
         setFirstEntryDate(entryDate);
       }
       
-      // Show success message
-      alert('Weight saved successfully!');
+      // Show success modal instead of alert
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Failed to save weight:', error);
-      alert('Failed to save weight. Please try again.');
+      setErrorMessage('Failed to save weight. Please try again.');
+      setShowErrorModal(true);
     }
   };
   
@@ -376,6 +383,74 @@ const WeightScreen = ({ navigation }) => {
       </View>
 
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <LinearGradient
+              colors={['#081A2F', '#0D2A4C', '#195295']}
+              style={styles.modalHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.modalTitle}>Success</Text>
+            </LinearGradient>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="checkmark-circle" size={48} color="#2EB67D" />
+              </View>
+              <Text style={styles.modalMessage}>Weight saved successfully!</Text>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowSuccessModal(false)}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <LinearGradient
+              colors={['#081A2F', '#0D2A4C', '#195295']}
+              style={styles.modalHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.modalTitle}>Error</Text>
+            </LinearGradient>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="alert-circle" size={48} color="#C7312B" />
+              </View>
+              <Text style={styles.modalMessage}>{errorMessage}</Text>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -529,6 +604,62 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '120%', // Ensure chart uses full width
     marginHorizontal: 0, // Remove horizontal margins
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 320,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  modalBody: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    marginBottom: 15,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#C7312B',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 
