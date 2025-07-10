@@ -430,7 +430,7 @@ export default function ClientOverview() {
                     name="Fat"
                     stackId="a"
                     fill="#f3a7a2"
-                    radius={[4, 4, 0, 0]}
+                    radius={[0, 0, 0, 0]}
                   />
                   <Bar
                     dataKey="carbs"
@@ -444,7 +444,7 @@ export default function ClientOverview() {
                     name="Protein"
                     stackId="a"
                     fill="#c2362c"
-                    radius={[0, 0, 0, 0]}
+                    radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
