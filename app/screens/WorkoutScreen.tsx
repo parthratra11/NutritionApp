@@ -43,7 +43,7 @@ export default function WorkoutScreen() {
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
-  
+
   // Handle date selection
   const handleDateSelect = (selectedDate) => {
     console.log('Selected date:', selectedDate.full);
@@ -90,8 +90,8 @@ export default function WorkoutScreen() {
           )
           .map(([exerciseName, details]) => ({
             name: exerciseName,
-            sets: details?.Sets || '0' ,
-            repRange: details?.Reps || '0' ,
+            sets: details?.Sets || '0',
+            repRange: details?.Reps || '0',
           }));
 
         setExerciseData(formattedExercises);
@@ -150,7 +150,7 @@ export default function WorkoutScreen() {
       </View>
 
       {/* Replace the Calendar Week View with the WeekCalendar component */}
-      <WeekCalendar 
+      <WeekCalendar
         weekDates={weekDates}
         onDatePress={handleDateSelect}
         containerStyle={styles.calendarContainerStyle}
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#081A2F',
-    paddingTop: 10,
+    paddingTop: 30,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 50,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 16,
     padding: Dimensions.get('window').width * 0.04, // 4% of screen width
-    marginTop: Dimensions.get('window').height * 0.05, // 5% of screen height
+    marginTop: Dimensions.get('window').height * 0.03, // 5% of screen height
   },
   sessionHeader: {
     flexDirection: 'row',
