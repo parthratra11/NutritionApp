@@ -14,6 +14,7 @@ import {
   StatusBar,
   Modal,
   FlatList,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -29,55 +30,50 @@ type ExerciseItemProps = {
   isCompleted: boolean;
   onToggleComplete: () => void;
   onEditPress: () => void;
+  onHelpPress: () => void;
 };
 
-const ExerciseItem = ({ 
-  name, 
-  sets, 
-  repRange, 
-  isCompleted, 
-  onToggleComplete, 
-  onEditPress 
+const ExerciseItem = ({
+  name,
+  sets,
+  repRange,
+  isCompleted,
+  onToggleComplete,
+  onEditPress,
+  onHelpPress,
 }: ExerciseItemProps) => (
-  <TouchableOpacity 
-    style={[styles.exerciseItem, isCompleted && styles.completedExercise]} 
+  <TouchableOpacity
+    style={[styles.exerciseItem, isCompleted && styles.completedExercise]}
     onPress={onToggleComplete}
-    activeOpacity={0.7}
-  >
+    activeOpacity={0.7}>
     <View style={styles.exerciseRow}>
       <View style={styles.exerciseLeftSection}>
         <View style={[styles.exerciseCheckCircle, isCompleted && styles.completedCheckCircle]}>
           {isCompleted && <Ionicons name="checkmark" size={14} color="#fff" />}
         </View>
-        <Text style={[styles.exerciseName, isCompleted && styles.completedText]}>
-          {name}
-        </Text>
+        <Text style={[styles.exerciseName, isCompleted && styles.completedText]}>{name}</Text>
+        <TouchableOpacity onPress={onHelpPress} style={styles.helpButton}>
+          <Ionicons name="help-circle-outline" size={20} color={isCompleted ? '#fff' : '#fff'} />
+        </TouchableOpacity>
       </View>
-      
+
       <View style={styles.exerciseRightSection}>
-        <Text style={[styles.exerciseSets, isCompleted && styles.completedText]}>
-          {sets}
-        </Text>
+        <Text style={[styles.exerciseSets, isCompleted && styles.completedText]}>{sets}</Text>
         <Text style={[styles.exerciseRepRange, isCompleted && styles.completedText]}>
-          <Text style={styles.repRangePrefix}></Text>{repRange}
+          <Text style={styles.repRangePrefix}></Text>
+          {repRange}
         </Text>
         <TouchableOpacity onPress={onEditPress} style={styles.editButton}>
-          <Feather name="edit-2" size={16} color={isCompleted ? "#fff" : "#fff"} />
+          <Feather name="edit-2" size={16} color={isCompleted ? '#fff' : '#fff'} />
         </TouchableOpacity>
       </View>
     </View>
   </TouchableOpacity>
 );
 
-const EditExerciseModal = ({ 
-  visible, 
-  onClose, 
-  exerciseName, 
-  initialSets = 4, 
-  onSave 
-}) => {
+const EditExerciseModal = ({ visible, onClose, exerciseName, initialSets = 4, onSave }) => {
   const [sets, setSets] = useState(initialSets);
-  const [weights, setWeights] = useState(Array(initialSets).fill('')); 
+  const [weights, setWeights] = useState(Array(initialSets).fill(''));
   const [reps, setReps] = useState(Array(initialSets).fill(''));
 
   const handleAddSet = () => {
@@ -114,22 +110,19 @@ const EditExerciseModal = ({
   const renderSetRow = (index) => {
     return (
       <View key={index} style={styles.editRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.editCell}
-          onPress={() => console.log(`Set ${index + 1} clicked`)}
-        >
+          onPress={() => console.log(`Set ${index + 1} clicked`)}>
           <Text style={styles.editCellText}>{index + 1}</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.editCell}
-          onPress={() => console.log(`Weight ${index + 1} clicked`)}
-        >
+          onPress={() => console.log(`Weight ${index + 1} clicked`)}>
           <Text style={styles.editCellText}>{weights[index] || ''}</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.editCell}
-          onPress={() => console.log(`Reps ${index + 1} clicked`)}
-        >
+          onPress={() => console.log(`Reps ${index + 1} clicked`)}>
           <Text style={styles.editCellText}>{reps[index] || ''}</Text>
         </TouchableOpacity>
       </View>
@@ -137,46 +130,43 @@ const EditExerciseModal = ({
   };
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.editModalOverlay}>
         {/* Exercise name outside the container */}
         <Text style={styles.editModalExerciseName}>{exerciseName}</Text>
-        
+
         <View style={styles.editModalContent}>
           <View style={styles.editModalHeader}>
             <TouchableOpacity onPress={onClose} style={styles.editModalClose}>
               <Feather name="x" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.editTableHeader}>
             <Text style={styles.editHeaderText}>Set</Text>
             <Text style={styles.editHeaderText}>Kg</Text>
             <Text style={styles.editHeaderText}>Reps</Text>
           </View>
-          
+
           <ScrollView style={styles.editTableContent}>
             {Array.from({ length: sets }).map((_, index) => renderSetRow(index))}
           </ScrollView>
-          
+
           <View style={styles.editButtonsRow}>
-            <TouchableOpacity 
-              style={[styles.editButton, styles.editRemoveButton, sets <= 1 && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[
+                styles.editButton,
+                styles.editRemoveButton,
+                sets <= 1 && styles.disabledButton,
+              ]}
               onPress={handleRemoveSet}
-              disabled={sets <= 1}
-            >
+              disabled={sets <= 1}>
               <Text style={styles.editButtonText}>Remove Set</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.editButton, styles.editAddButton]} 
-              onPress={handleAddSet}
-            >
+
+            <TouchableOpacity
+              style={[styles.editButton, styles.editAddButton]}
+              onPress={handleAddSet}>
               <Text style={styles.editButtonText}>Add Set</Text>
             </TouchableOpacity>
           </View>
@@ -191,7 +181,7 @@ const Exercise = () => {
   const route = useRoute();
   const { isDarkMode } = useTheme();
   const [exercises, setExercises] = useState([]);
-  const [sessionName, setSessionName] = useState("Session A");
+  const [sessionName, setSessionName] = useState('Session A');
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const [startTime, setStartTime] = useState(new Date());
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -200,7 +190,7 @@ const Exercise = () => {
   const scrollViewRef = useRef(null);
   const isScrolling = useRef(false);
   const isDragging = useRef(false);
-  
+
   // Pan responder for drag down to close
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -220,7 +210,7 @@ const Exercise = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       isDragging.current = false;
-      
+
       if (gestureState.dy > dragThreshold) {
         // If dragged down beyond threshold, close the screen
         handleGoBack();
@@ -235,27 +225,27 @@ const Exercise = () => {
       }
     },
   });
-  
+
   const handleScroll = (event) => {
     // Track if the scroll view is at the top
     const offsetY = event.nativeEvent.contentOffset.y;
     isScrolling.current = offsetY > 0;
   };
-  
+
   useEffect(() => {
     // Get exercises from route params if available
     if (route.params?.exercises) {
-      const initialExercises = route.params.exercises.map(ex => ({
+      const initialExercises = route.params.exercises.map((ex) => ({
         ...ex,
-        isCompleted: true // Start with all exercises marked as completed
+        isCompleted: true, // Start with all exercises marked as completed
       }));
       setExercises(initialExercises);
     }
-    
+
     if (route.params?.sessionName) {
       setSessionName(route.params.sessionName);
     }
-    
+
     // Slide up animation
     Animated.spring(slideAnim, {
       toValue: 0,
@@ -263,10 +253,10 @@ const Exercise = () => {
       friction: 10,
       useNativeDriver: true,
     }).start();
-    
+
     // Start timer
     startTimer();
-    
+
     return () => {
       // Clean up timer on unmount
       if (timerRef.current) {
@@ -274,7 +264,7 @@ const Exercise = () => {
       }
     };
   }, []);
-  
+
   const startTimer = () => {
     timerRef.current = setInterval(() => {
       const now = new Date();
@@ -282,14 +272,14 @@ const Exercise = () => {
       setElapsedTime(diff);
     }, 1000);
   };
-  
+
   const formatTime = (totalSeconds) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}.${seconds.toString().padStart(2, '0')}`;
   };
-  
+
   const handleGoBack = () => {
     // Slide down animation before navigating back
     Animated.timing(slideAnim, {
@@ -300,24 +290,24 @@ const Exercise = () => {
       navigation.goBack();
     });
   };
-  
+
   const handleToggleComplete = (index) => {
     const updatedExercises = [...exercises];
     updatedExercises[index].isCompleted = !updatedExercises[index].isCompleted;
     setExercises(updatedExercises);
   };
-  
+
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
-  
+
   const handleEditExercise = (index) => {
     setEditingExercise({
       index,
-      ...exercises[index]
+      ...exercises[index],
     });
     setEditModalVisible(true);
   };
-  
+
   const handleSaveEdit = (editData) => {
     if (editingExercise) {
       const updatedExercises = [...exercises];
@@ -337,20 +327,29 @@ const Exercise = () => {
     // You might want to pass the completed exercises back to the WorkoutScreen
     handleGoBack();
   };
-  
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
   });
 
-return (
+  const handleHelpPress = (exerciseName) => {
+    // Create a search query for YouTube based on the exercise name
+    const searchQuery = encodeURIComponent(`${exerciseName} exercise tutorial`);
+    const youtubeUrl = `https://www.youtube.com/results?search_query=${searchQuery}`;
+
+    // Open YouTube with the search query
+    Linking.openURL(youtubeUrl).catch((err) => console.error('Error opening YouTube:', err));
+  };
+
+  return (
     <View style={styles.modalContainer}>
       <StatusBar barStyle="light-content" />
-      
+
       {/* This is the transparent overlay that shows the previous screen */}
       <View style={styles.backgroundOverlay} />
-      
+
       <Animated.View
         style={[
           styles.safeArea,
@@ -359,35 +358,34 @@ return (
             opacity: slideAnim.interpolate({
               inputRange: [0, screenHeight * 0.5],
               outputRange: [1, 0.7],
-              extrapolate: 'clamp'
-            })
-          }
-        ]}
-      >
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}>
         {/* Pull-down handle indicator */}
         <View style={styles.pullDownContainer} {...panResponder.panHandlers}>
           <View style={styles.pullDownIndicator} />
         </View>
-        
+
         <View style={styles.header}>
           <View style={styles.timerIconContainer}>
             <Ionicons name="time-outline" size={24} color="#fff" />
           </View>
-          
+
           <View style={styles.timeContainer}>
             <Text style={styles.dateText}>{currentDate}</Text>
             <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
           </View>
-          
+
           <TouchableOpacity onPress={handleFinish} style={styles.finishButton}>
             <Text style={styles.finishText}>Finish</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.sessionHeader}>
           <Text style={styles.sessionName}>{sessionName}</Text>
         </View>
-        
+
         <View style={styles.exerciseListHeader}>
           <Text style={styles.exerciseHeaderText}>Exercise</Text>
           <View style={styles.exerciseHeaderRight}>
@@ -396,14 +394,13 @@ return (
             <View style={styles.editHeaderSpacer} />
           </View>
         </View>
-        
-        <ScrollView 
+
+        <ScrollView
           style={styles.scrollView}
           ref={scrollViewRef}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {exercises.map((exercise, index) => (
             <ExerciseItem
               key={index}
@@ -413,22 +410,21 @@ return (
               isCompleted={exercise.isCompleted}
               onToggleComplete={() => handleToggleComplete(index)}
               onEditPress={() => handleEditExercise(index)}
+              onHelpPress={() => handleHelpPress(exercise.name)}
             />
           ))}
-          
+
           <View style={styles.bottomPadding} />
         </ScrollView>
-        
+
         <TouchableOpacity style={styles.cancelButton}>
           <Text style={styles.cancelButtonText}>Cancel Workout</Text>
         </TouchableOpacity>
-        
+
         {/* Blur overlay when edit modal is open */}
-        {editModalVisible && (
-          <View style={styles.blurOverlay} />
-        )}
+        {editModalVisible && <View style={styles.blurOverlay} />}
       </Animated.View>
-      
+
       {/* Edit Exercise Modal */}
       <EditExerciseModal
         visible={editModalVisible}
@@ -438,7 +434,7 @@ return (
         onSave={handleSaveEdit}
       />
     </View>
-);
+  );
 };
 
 const styles = StyleSheet.create({
@@ -458,19 +454,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.3)', // Semi-transparent overlay
   },
-safeArea: {
-  flex: 1,
-  backgroundColor: '#081A2F',
-  borderTopLeftRadius: 15,
-  borderTopRightRadius: 15,
-  overflow: 'hidden',
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  top: 25, // Use the actual status bar height
-
-},
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#081A2F',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    overflow: 'hidden',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 25, // Use the actual status bar height
+  },
   pullDownContainer: {
     height: 30,
     justifyContent: 'center',
@@ -500,7 +495,6 @@ safeArea: {
   },
   timeContainer: {
     alignItems: 'center',
-    
   },
   dateText: {
     color: '#7A7A7A',
@@ -570,7 +564,6 @@ safeArea: {
     marginHorizontal: screenWidth * 0.02,
     marginVertical: screenHeight * 0.005,
     borderRadius: 20,
-   
   },
   exerciseRow: {
     flexDirection: 'row',
@@ -630,7 +623,7 @@ safeArea: {
     padding: 8,
   },
   cancelButton: {
-    marginBottom: screenHeight * 0.10,
+    marginBottom: screenHeight * 0.1,
     marginHorizontal: screenWidth * 0.1,
     padding: screenHeight * 0.016,
     backgroundColor: '#562424',
@@ -746,6 +739,10 @@ safeArea: {
     bottom: 0,
     backgroundColor: 'rgba(8, 26, 47, 0.9)', // Darkened blue background
     backdropFilter: 'blur(100px)', // This works on web, for native use BlurView
+  },
+  helpButton: {
+    marginLeft: 8,
+    padding: 4,
   },
 });
 

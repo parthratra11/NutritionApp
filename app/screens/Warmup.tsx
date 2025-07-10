@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   PanResponder,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -22,34 +23,34 @@ type WarmupItemProps = {
   repsBreaths: string;
   isCompleted: boolean;
   onToggleComplete: () => void;
+  onHelpPress: () => void;
 };
 
-const WarmupItem = ({ 
-  name, 
-  sets, 
-  repsBreaths, 
-  isCompleted, 
-  onToggleComplete 
+const WarmupItem = ({
+  name,
+  sets,
+  repsBreaths,
+  isCompleted,
+  onToggleComplete,
+  onHelpPress,
 }: WarmupItemProps) => (
-  <TouchableOpacity 
-    style={[styles.warmupItem, isCompleted && styles.completedWarmup]} 
+  <TouchableOpacity
+    style={[styles.warmupItem, isCompleted && styles.completedWarmup]}
     onPress={onToggleComplete}
-    activeOpacity={0.7}
-  >
+    activeOpacity={0.7}>
     <View style={styles.warmupRow}>
       <View style={styles.warmupLeftSection}>
         <View style={[styles.warmupCheckCircle, isCompleted && styles.completedCheckCircle]}>
           {isCompleted && <Ionicons name="checkmark" size={14} color="#fff" />}
         </View>
-        <Text style={[styles.warmupName, isCompleted && styles.completedText]}>
-          {name}
-        </Text>
+        <Text style={[styles.warmupName, isCompleted && styles.completedText]}>{name}</Text>
+        <TouchableOpacity onPress={onHelpPress} style={styles.helpButton}>
+          <Ionicons name="help-circle-outline" size={20} color={isCompleted ? '#fff' : '#fff'} />
+        </TouchableOpacity>
       </View>
-      
+
       <View style={styles.warmupRightSection}>
-        <Text style={[styles.warmupSets, isCompleted && styles.completedText]}>
-          {sets}
-        </Text>
+        <Text style={[styles.warmupSets, isCompleted && styles.completedText]}>{sets}</Text>
         <Text style={[styles.warmupRepsBreaths, isCompleted && styles.completedText]}>
           {repsBreaths}
         </Text>
@@ -69,7 +70,7 @@ const Warmup = () => {
   const dragThreshold = screenHeight * 0.2;
   const scrollViewRef = useRef(null);
   const isScrolling = useRef(false);
-  
+
   // Hardcoded warmup exercises
   const [warmupExercises, setWarmupExercises] = useState([
     { name: 'Foam Roller Walkover', sets: '1', repsBreaths: '8 Reps/Breaths', isCompleted: true },
@@ -78,7 +79,7 @@ const Warmup = () => {
     { name: '1/4 Wall Squat w/Reach', sets: '1', repsBreaths: '8 Reps/Breaths', isCompleted: true },
     { name: 'Toe Touch to Bench', sets: '1', repsBreaths: '8 Reps/Breaths', isCompleted: true },
   ]);
-  
+
   // Pan responder for drag down to close
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -104,12 +105,12 @@ const Warmup = () => {
       }
     },
   });
-  
+
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     isScrolling.current = offsetY > 0;
   };
-  
+
   useEffect(() => {
     // Slide up animation
     Animated.spring(slideAnim, {
@@ -118,17 +119,17 @@ const Warmup = () => {
       friction: 10,
       useNativeDriver: true,
     }).start();
-    
+
     // Start timer
     startTimer();
-    
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
   }, []);
-  
+
   const startTimer = () => {
     timerRef.current = setInterval(() => {
       const now = new Date();
@@ -136,14 +137,14 @@ const Warmup = () => {
       setElapsedTime(diff);
     }, 1000);
   };
-  
+
   const formatTime = (totalSeconds) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}.${seconds.toString().padStart(2, '0')}`;
   };
-  
+
   const handleGoBack = () => {
     Animated.timing(slideAnim, {
       toValue: screenHeight,
@@ -153,29 +154,38 @@ const Warmup = () => {
       navigation.goBack();
     });
   };
-  
+
   const handleToggleComplete = (index) => {
     const updatedExercises = [...warmupExercises];
     updatedExercises[index].isCompleted = !updatedExercises[index].isCompleted;
     setWarmupExercises(updatedExercises);
   };
-  
+
   const handleFinish = () => {
     handleGoBack();
   };
-  
+
+  const handleHelpPress = (exerciseName) => {
+    // Create a search query for YouTube based on the exercise name
+    const searchQuery = encodeURIComponent(`${exerciseName} warmup tutorial`);
+    const youtubeUrl = `https://www.youtube.com/results?search_query=${searchQuery}`;
+
+    // Open YouTube with the search query
+    Linking.openURL(youtubeUrl).catch((err) => console.error('Error opening YouTube:', err));
+  };
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
   });
-  
+
   return (
     <View style={styles.modalContainer}>
       <StatusBar barStyle="light-content" />
-      
+
       <View style={styles.backgroundOverlay} />
-      
+
       <Animated.View
         style={[
           styles.safeArea,
@@ -184,44 +194,40 @@ const Warmup = () => {
             opacity: slideAnim.interpolate({
               inputRange: [0, screenHeight * 0.5],
               outputRange: [1, 0.7],
-              extrapolate: 'clamp'
-            })
-          }
-        ]}
-      >
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}>
         {/* Pull-down handle indicator */}
         <View style={styles.pullDownContainer} {...panResponder.panHandlers}>
           <View style={styles.pullDownIndicator} />
         </View>
-        
+
         <View style={styles.header}>
           <View style={styles.timerIconContainer}>
             <Ionicons name="time-outline" size={24} color="#fff" />
           </View>
-          
+
           <View style={styles.timeContainer}>
             <Text style={styles.dateText}>{currentDate}</Text>
             <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
           </View>
-          
+
           <TouchableOpacity onPress={handleFinish} style={styles.finishButton}>
             <Text style={styles.finishText}>Finish</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.warmupHeader}>
           <Text style={styles.warmupTitle}>Warm Up</Text>
         </View>
-        
-      
-        
-        <ScrollView 
+
+        <ScrollView
           style={styles.scrollView}
           ref={scrollViewRef}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {warmupExercises.map((exercise, index) => (
             <WarmupItem
               key={index}
@@ -230,12 +236,13 @@ const Warmup = () => {
               repsBreaths={exercise.repsBreaths}
               isCompleted={exercise.isCompleted}
               onToggleComplete={() => handleToggleComplete(index)}
+              onHelpPress={() => handleHelpPress(exercise.name)}
             />
           ))}
-          
+
           <View style={styles.bottomPadding} />
         </ScrollView>
-        
+
         <TouchableOpacity style={styles.cancelButton}>
           <Text style={styles.cancelButtonText}>Cancel Workout</Text>
         </TouchableOpacity>
@@ -262,16 +269,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)', // Semi-transparent overlay
   },
   safeArea: {
-  flex: 1,
-  backgroundColor: '#081A2F',
-  borderTopLeftRadius: 15,
-  borderTopRightRadius: 15,
-  overflow: 'hidden',
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  top: 25, // Use the actual status bar height
+    flex: 1,
+    backgroundColor: '#081A2F',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    overflow: 'hidden',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 25, // Use the actual status bar height
   },
   pullDownContainer: {
     height: 30,
@@ -438,6 +445,10 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  helpButton: {
+    marginLeft: 8,
+    padding: 4,
   },
 });
 
