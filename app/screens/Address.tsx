@@ -90,19 +90,15 @@ export default function AddressScreen() {
         return;
       }
 
-      Alert.alert(
-        'Success',
-        'Address information saved successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to Home after successful address save
-              navigation.navigate('Payment');
-            }
-          }
-        ]
-      );
+      Alert.alert('Success', 'Address information saved successfully!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Navigate to Home after successful address save
+            navigation.navigate('Payment');
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error saving address:', error);
       Alert.alert('Error', 'Failed to save address information. Please try again.');
@@ -118,8 +114,7 @@ export default function AddressScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#081A2F" />
         <LinearGradient
           colors={['#081A2F', '#0D2A4C', '#195295']}
-          style={[styles.gradient, { justifyContent: 'center', alignItems: 'center' }]}
-        >
+          style={[styles.gradient, { justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={{ color: '#fff', fontSize: 16 }}>Loading...</Text>
         </LinearGradient>
       </View>
@@ -133,21 +128,18 @@ export default function AddressScreen() {
         colors={['#081A2F', '#0D2A4C', '#195295']}
         style={styles.gradient}
         start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
+        end={{ x: 0.5, y: 1 }}>
         <SafeAreaView style={styles.safeAreaContent}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-          >
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
             <ScrollView
               contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-              keyboardShouldPersistTaps="handled"
-            >
+              keyboardShouldPersistTaps="handled">
               <View style={styles.formContainer}>
                 <Text style={styles.title}>Address</Text>
-                
+
                 <TextInput
                   style={styles.input}
                   placeholder="House Number"
@@ -156,7 +148,7 @@ export default function AddressScreen() {
                   onChangeText={setHouseNumber}
                   autoCapitalize="none"
                 />
-                
+
                 <TextInput
                   style={styles.input}
                   placeholder="Street"
@@ -165,7 +157,7 @@ export default function AddressScreen() {
                   onChangeText={setStreet}
                   autoCapitalize="words"
                 />
-                
+
                 <TextInput
                   style={styles.input}
                   placeholder="Postal code"
@@ -174,7 +166,7 @@ export default function AddressScreen() {
                   onChangeText={setPostalCode}
                   autoCapitalize="characters"
                 />
-                
+
                 <TextInput
                   style={styles.input}
                   placeholder="City"
@@ -183,7 +175,7 @@ export default function AddressScreen() {
                   onChangeText={setCity}
                   autoCapitalize="words"
                 />
-                
+
                 <TextInput
                   style={styles.input}
                   placeholder="Country"
@@ -193,14 +185,11 @@ export default function AddressScreen() {
                   autoCapitalize="words"
                 />
 
-                <TouchableOpacity 
-                  style={[styles.buttonMain, loading && styles.buttonDisabled]} 
+                <TouchableOpacity
+                  style={[styles.buttonMain, loading && styles.buttonDisabled]}
                   onPress={handleContinue}
-                  disabled={loading}
-                >
-                  <Text style={styles.buttonMainText}>
-                    {loading ? 'Saving...' : 'Continue'}
-                  </Text>
+                  disabled={loading}>
+                  <Text style={styles.buttonMainText}>{loading ? 'Saving...' : 'Continue'}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

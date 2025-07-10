@@ -28,7 +28,7 @@ const SleepScreen = ({ navigation }) => {
   const [sleepHour, setSleepHour] = useState(8);
   const [sleepMinute, setSleepMinute] = useState(30);
   const [sleepAmPm, setSleepAmPm] = useState('PM');
-  
+
   const [wakeHour, setWakeHour] = useState(5);
   const [wakeMinute, setWakeMinute] = useState(30);
   const [wakeAmPm, setWakeAmPm] = useState('AM');
@@ -47,7 +47,7 @@ const SleepScreen = ({ navigation }) => {
 
   // Get the week dates using our utility function
   const weekDates = getCurrentWeekDates();
-  
+
   // Handle date selection
   const handleDateSelect = (selectedDate) => {
     console.log('Selected date:', selectedDate.full);
@@ -84,17 +84,17 @@ const SleepScreen = ({ navigation }) => {
         sleepTime: `${sleepHour}:${sleepMinute} ${sleepAmPm}`,
         wakeTime: `${wakeHour}:${wakeMinute} ${wakeAmPm}`,
       };
-      
+
       // Get existing history
       const existingData = await AsyncStorage.getItem('sleepHistory');
       const sleepHistory = existingData ? JSON.parse(existingData) : [];
-      
+
       // Add new entry
       sleepHistory.unshift(sleepData);
-      
+
       // Save to storage
       await AsyncStorage.setItem('sleepHistory', JSON.stringify(sleepHistory));
-      
+
       // Show success feedback
       // You could add some UI feedback here
     } catch (error) {
@@ -111,16 +111,13 @@ const SleepScreen = ({ navigation }) => {
 
   // Handle failed scroll attempts
   const handleScrollToIndexFailed = (info) => {
-    const wait = new Promise(resolve => setTimeout(resolve, 500));
+    const wait = new Promise((resolve) => setTimeout(resolve, 500));
     wait.then(() => {
       if (info.averageItemLength) {
-        const index = Math.min(
-          info.highestMeasuredFrameIndex,
-          Math.max(0, info.index)
-        );
+        const index = Math.min(info.highestMeasuredFrameIndex, Math.max(0, info.index));
         info.viewRef.scrollToIndex({
           index,
-          animated: false
+          animated: false,
         });
       }
     });
@@ -138,21 +135,21 @@ const SleepScreen = ({ navigation }) => {
             animated: false,
           });
         }
-        
+
         if (sleepMinuteRef.current) {
           sleepMinuteRef.current.scrollToIndex({
             index: sleepMinute,
             animated: false,
           });
         }
-        
+
         if (sleepAmPmRef.current) {
           sleepAmPmRef.current.scrollToIndex({
             index: sleepAmPm === 'AM' ? 0 : 1,
             animated: false,
           });
         }
-        
+
         // Wake time pickers
         if (wakeHourRef.current) {
           wakeHourRef.current.scrollToIndex({
@@ -160,14 +157,14 @@ const SleepScreen = ({ navigation }) => {
             animated: false,
           });
         }
-        
+
         if (wakeMinuteRef.current) {
           wakeMinuteRef.current.scrollToIndex({
             index: wakeMinute,
             animated: false,
           });
         }
-        
+
         if (wakeAmPmRef.current) {
           wakeAmPmRef.current.scrollToIndex({
             index: wakeAmPm === 'AM' ? 0 : 1,
@@ -176,7 +173,7 @@ const SleepScreen = ({ navigation }) => {
         }
       }, 300); // Slightly longer timeout for reliability
     };
-    
+
     scrollToInitialPositions();
   }, []);
 
@@ -215,13 +212,12 @@ const SleepScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.containerWithWhiteSpace}>
       <View style={styles.blueContent}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingContainer}
-        >
+          style={styles.keyboardAvoidingContainer}>
           <View style={styles.contentWrapper}>
             {/* Replace the calendar row with the WeekCalendar component */}
-            <WeekCalendar 
+            <WeekCalendar
               weekDates={weekDates}
               onDatePress={handleDateSelect}
               containerStyle={styles.calendarContainerStyle}
@@ -233,7 +229,7 @@ const SleepScreen = ({ navigation }) => {
                 <Ionicons name="moon" size={24} color="white" />
                 <Text style={styles.sectionTitle}>When did you sleep last night?</Text>
               </View>
-              
+
               <View style={styles.timePickersRow}>
                 {/* Hour picker */}
                 <View style={styles.pickerOuterContainer}>
@@ -243,11 +239,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={sleepHourRef}
@@ -267,7 +262,7 @@ const SleepScreen = ({ navigation }) => {
                     />
                   </LinearGradient>
                 </View>
-                
+
                 {/* Minute picker */}
                 <View style={styles.pickerOuterContainer}>
                   <LinearGradient
@@ -276,11 +271,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={sleepMinuteRef}
@@ -290,7 +284,11 @@ const SleepScreen = ({ navigation }) => {
                       showsVerticalScrollIndicator={false}
                       snapToInterval={ITEM_HEIGHT}
                       decelerationRate="fast"
-                      onMomentumScrollEnd={handleScrollEndHour(sleepMinuteRef, setSleepMinute, minutes)}
+                      onMomentumScrollEnd={handleScrollEndHour(
+                        sleepMinuteRef,
+                        setSleepMinute,
+                        minutes
+                      )}
                       contentContainerStyle={styles.pickerListContent}
                       ListHeaderComponent={<View style={styles.pickerSpacerHeader} />}
                       ListFooterComponent={<View style={styles.pickerSpacerFooter} />}
@@ -300,7 +298,7 @@ const SleepScreen = ({ navigation }) => {
                     />
                   </LinearGradient>
                 </View>
-                
+
                 {/* AM/PM picker */}
                 <View style={styles.pickerOuterContainer}>
                   <LinearGradient
@@ -309,11 +307,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={sleepAmPmRef}
@@ -323,7 +320,11 @@ const SleepScreen = ({ navigation }) => {
                       showsVerticalScrollIndicator={false}
                       snapToInterval={ITEM_HEIGHT}
                       decelerationRate="fast"
-                      onMomentumScrollEnd={handleScrollEndHour(sleepAmPmRef, setSleepAmPm, amPmOptions)}
+                      onMomentumScrollEnd={handleScrollEndHour(
+                        sleepAmPmRef,
+                        setSleepAmPm,
+                        amPmOptions
+                      )}
                       contentContainerStyle={styles.pickerListContent}
                       ListHeaderComponent={<View style={styles.pickerSpacerHeader} />}
                       ListFooterComponent={<View style={styles.pickerSpacerFooter} />}
@@ -335,14 +336,14 @@ const SleepScreen = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            
+
             {/* Wake up time section */}
             <View style={styles.wakeSection}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="sunny" size={24} color="white" />
-                <Text style={styles.sectionTitle}>When did wake up this morning?</Text>
+                <Text style={styles.sectionTitle}>When did you wake up this morning?</Text>
               </View>
-              
+
               <View style={styles.timePickersRow}>
                 {/* Hour picker */}
                 <View style={styles.pickerOuterContainer}>
@@ -352,11 +353,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={wakeHourRef}
@@ -376,7 +376,7 @@ const SleepScreen = ({ navigation }) => {
                     />
                   </LinearGradient>
                 </View>
-                
+
                 {/* Minute picker */}
                 <View style={styles.pickerOuterContainer}>
                   <LinearGradient
@@ -385,11 +385,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={wakeMinuteRef}
@@ -399,7 +398,11 @@ const SleepScreen = ({ navigation }) => {
                       showsVerticalScrollIndicator={false}
                       snapToInterval={ITEM_HEIGHT}
                       decelerationRate="fast"
-                      onMomentumScrollEnd={handleScrollEndHour(wakeMinuteRef, setWakeMinute, minutes)}
+                      onMomentumScrollEnd={handleScrollEndHour(
+                        wakeMinuteRef,
+                        setWakeMinute,
+                        minutes
+                      )}
                       contentContainerStyle={styles.pickerListContent}
                       ListHeaderComponent={<View style={styles.pickerSpacerHeader} />}
                       ListFooterComponent={<View style={styles.pickerSpacerFooter} />}
@@ -409,7 +412,7 @@ const SleepScreen = ({ navigation }) => {
                     />
                   </LinearGradient>
                 </View>
-                
+
                 {/* AM/PM picker */}
                 <View style={styles.pickerOuterContainer}>
                   <LinearGradient
@@ -418,11 +421,10 @@ const SleepScreen = ({ navigation }) => {
                       'rgba(43, 58, 76, 0.41)',
                       'rgba(217, 217, 217, 0.41)',
                       'rgba(42, 44, 46, 0.41)',
-                      'rgba(10, 43, 82, 0.41)'
+                      'rgba(10, 43, 82, 0.41)',
                     ]}
                     locations={[0, 0.101, 0.4567, 0.899, 0.976]}
-                    style={styles.pickerGradient}
-                  >
+                    style={styles.pickerGradient}>
                     <View style={styles.pickerHighlight} />
                     <FlatList
                       ref={wakeAmPmRef}
@@ -432,7 +434,11 @@ const SleepScreen = ({ navigation }) => {
                       showsVerticalScrollIndicator={false}
                       snapToInterval={ITEM_HEIGHT}
                       decelerationRate="fast"
-                      onMomentumScrollEnd={handleScrollEndHour(wakeAmPmRef, setWakeAmPm, amPmOptions)}
+                      onMomentumScrollEnd={handleScrollEndHour(
+                        wakeAmPmRef,
+                        setWakeAmPm,
+                        amPmOptions
+                      )}
                       contentContainerStyle={styles.pickerListContent}
                       ListHeaderComponent={<View style={styles.pickerSpacerHeader} />}
                       ListFooterComponent={<View style={styles.pickerSpacerFooter} />}
@@ -452,7 +458,7 @@ const SleepScreen = ({ navigation }) => {
           <Text style={styles.enterButtonText}>Enter</Text>
         </TouchableOpacity>
       </View>
-      
+
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
     </SafeAreaView>
   );
@@ -532,7 +538,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '35%',  // Position to highlight the middle item
+    top: '35%', // Position to highlight the middle item
     height: ITEM_HEIGHT,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     zIndex: 1,

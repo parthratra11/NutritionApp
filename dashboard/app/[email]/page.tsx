@@ -16,6 +16,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Area,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
 
 interface IntakeForm {
@@ -60,6 +63,35 @@ export default function ClientOverview() {
   const [error, setError] = useState<string | null>(null);
   const [showNav, setShowNav] = useState(false);
   const [weightData, setWeightData] = useState<WeightDataPoint[]>([]);
+  // Add stepData state
+  const [stepData, setStepData] = useState({
+    current: 5000,
+    goal: 10000,
+  });
+
+  // Sample data for visualization charts - refine the hunger data for stacked visualization
+  const hungerData = [
+    { name: "Pre Workout", protein: 30, carbs: 20, fat: 15, total: 65 },
+    { name: "Lunch", protein: 45, carbs: 60, fat: 30, total: 135 },
+    { name: "Afternoon", protein: 25, carbs: 40, fat: 20, total: 85 },
+    { name: "Dinner", protein: 40, carbs: 50, fat: 35, total: 125 },
+  ];
+
+  const sleepData = {
+    deep: 45,
+    light: 32,
+    awake: 23,
+  };
+
+  const moodData = [
+    { day: "Sun", mood: "Happy", size: 40, yPosition: 20 },
+    { day: "Mon", mood: "Tired", size: 30, yPosition: 50 },
+    { day: "Tue", mood: "Energetic", size: 45, yPosition: 15 },
+    { day: "Wed", mood: "Calm", size: 35, yPosition: 40 },
+    { day: "Thu", mood: "Low", size: 25, yPosition: 60 },
+    { day: "Fri", mood: "Happy", size: 42, yPosition: 30 },
+    { day: "Sat", mood: "Energetic", size: 50, yPosition: 10 },
+  ];
 
   // Create date strip for current week
   const generateDateStrip = () => {
@@ -332,109 +364,367 @@ export default function ClientOverview() {
             </div>
           </div>
 
-          {/* Steps Progress */}
+          {/* Hunger Distribution - UPDATED TO STACKED BARS */}
           <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/${params.email}/workout`)}
-          >
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Daily Steps
-            </h2>
-            <div className="flex justify-center">
-              <div className="relative h-40 w-40">
-                <div className="h-full w-full rounded-full border-8 border-gray-200"></div>
-                <div
-                  className="absolute inset-0 rounded-full border-8 border-red-500"
-                  style={{
-                    clipPath: "polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)",
-                    transform: "rotate(0deg)",
-                  }}
-                ></div>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <p className="font-bold text-lg">5,000</p>
-                  <p className="text-xs text-gray-500">out of 10,000 steps</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Hunger Distribution */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
             onClick={() => router.push(`/${params.email}/nutrition`)}
           >
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Hunger Distribution
-            </h2>
-            <div className="h-48 space-y-2">
-              {["Pre Workout", "Lunch", "Afternoon", "Dinner"].map(
-                (meal, i) => (
-                  <div key={meal} className="flex items-center">
-                    <span className="w-24 text-sm">{meal}</span>
-                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-red-400"
-                        style={{ width: `${(i + 1) * 20}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )
-              )}
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold text-gray-800">
+                <span className="mr-2"></span> Hunger Distribution
+              </h2>
+              <span className="text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            </div>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={hungerData}
+                  margin={{ top: 5, right: 5, bottom: 20, left: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    opacity={0.3}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#0a1c3f", fontSize: 10 }}
+                    interval={0}
+                    height={40}
+                    tickMargin={5}
+                  />
+                  <YAxis hide domain={[0, 150]} />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      const formattedName =
+                        {
+                          protein: "Protein",
+                          carbs: "Carbs",
+                          fat: "Fat",
+                        }[name] || name;
+                      return [`${value}g`, formattedName];
+                    }}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                  <Bar
+                    dataKey="fat"
+                    name="Fat"
+                    stackId="a"
+                    fill="#f3a7a2"
+                    radius={[0, 0, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="carbs"
+                    name="Carbs"
+                    stackId="a"
+                    fill="#e05e55"
+                    radius={[0, 0, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="protein"
+                    name="Protein"
+                    stackId="a"
+                    fill="#c2362c"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Sleep Breakdown */}
+          {/* Steps Progress Card - FIXED */}
           <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/${params.email}/report`)}
+            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
+            onClick={() => router.push(`/${params.email}/steps`)}
           >
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Sleep Breakdown
-            </h2>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold text-gray-800">
+                <span className="mr-2"></span> Steps
+              </h2>
+              <span className="text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            </div>
             <div className="flex justify-center">
               <div className="relative h-40 w-40">
-                <div className="h-full w-full rounded-full bg-red-200"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-3/4 w-3/4 rounded-full bg-red-400"></div>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-1/2 w-1/2 rounded-full bg-red-600"></div>
-                </div>
-                <div className="absolute inset-x-0 bottom-0 mt-2">
-                  <div className="flex justify-between text-xs text-gray-600 px-2">
-                    <span>Deep: 45%</span>
-                    <span>Light: 32%</span>
-                    <span>Awake: 28%</span>
-                  </div>
+                {/* Fixed SVG donut chart with proper calculations */}
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  {/* Background circle (complete ring) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#f3a7a2"
+                    strokeWidth="12"
+                  />
+
+                  {/* Calculate the circumference and the progress stroke */}
+                  {(() => {
+                    const radius = 40;
+                    const circumference = 2 * Math.PI * radius;
+                    const progressPercent = stepData.current / stepData.goal;
+                    const progressOffset =
+                      circumference * (1 - progressPercent);
+
+                    return (
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#c2362c"
+                        strokeWidth="12"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={progressOffset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 50 50)"
+                      />
+                    );
+                  })()}
+                </svg>
+
+                {/* Center text */}
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <p className="font-bold text-2xl text-gray-800">
+                    {stepData.current.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-800">Steps</p>
+                  <p className="text-xs text-gray-500">
+                    Out of {stepData.goal.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Moods Bubble Chart */}
+          {/* Sleep Breakdown - UPDATED TO DONUT */}
           <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
             onClick={() => router.push(`/${params.email}/report`)}
           >
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Mood Patterns
-            </h2>
-            <div className="h-40 flex items-center justify-around">
-              {["Happy", "Tired", "Low", "Energetic", "Calm"].map((mood, i) => {
-                const size = 20 + i * 10;
-                return (
-                  <div
-                    key={mood}
-                    className="rounded-full bg-red-400 flex items-center justify-center text-white text-xs"
-                    style={{
-                      height: `${size}px`,
-                      width: `${size}px`,
-                    }}
-                  >
-                    {size > 30 ? mood : ""}
-                  </div>
-                );
-              })}
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold text-gray-800">
+                <span className="mr-2"></span> Sleep Breakdown
+              </h2>
+              <span className="text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="relative h-40 w-40">
+                {/* Implement a more reliable donut chart with SVG arcs */}
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  {/* Background circles for each ring */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="none"
+                    stroke="#white"
+                    strokeWidth="10"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="27"
+                    fill="none"
+                    stroke="#white"
+                    strokeWidth="10"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="16"
+                    fill="none"
+                    stroke="#white"
+                    strokeWidth="10"
+                  />
+
+                  {/* Center white circle for donut hole */}
+                  <circle cx="50" cy="50" r="10" fill="white" />
+
+                  {/* Progress arcs for each ring */}
+                  {(() => {
+                    // Outer ring - awake
+                    const r1 = 38;
+                    const c1 = 2 * Math.PI * r1;
+                    const pct1 = sleepData.awake / 100;
+                    const dashArray1 = `${c1 * pct1} ${c1 * (1 - pct1)}`;
+
+                    // Middle ring - light
+                    const r2 = 27;
+                    const c2 = 2 * Math.PI * r2;
+                    const pct2 = sleepData.light / 100;
+                    const dashArray2 = `${c2 * pct2} ${c2 * (1 - pct2)}`;
+
+                    // Inner ring - deep
+                    const r3 = 16;
+                    const c3 = 2 * Math.PI * r3;
+                    const pct3 = sleepData.deep / 100;
+                    const dashArray3 = `${c3 * pct3} ${c3 * (1 - pct3)}`;
+
+                    return (
+                      <>
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="38"
+                          fill="none"
+                          stroke="#c2362c"
+                          strokeWidth="10"
+                          strokeDasharray={dashArray1}
+                          strokeDashoffset="0"
+                          transform="rotate(-90 50 50)"
+                          strokeLinecap="round"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="27"
+                          fill="none"
+                          stroke="#e05e55"
+                          strokeWidth="10"
+                          strokeDasharray={dashArray2}
+                          strokeDashoffset="0"
+                          transform="rotate(-90 50 50)"
+                          strokeLinecap="round"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="16"
+                          fill="none"
+                          stroke="#f3a7a2"
+                          strokeWidth="10"
+                          strokeDasharray={dashArray3}
+                          strokeDashoffset="0"
+                          transform="rotate(-90 50 50)"
+                          strokeLinecap="round"
+                        />
+                      </>
+                    );
+                  })()}
+                </svg>
+              </div>
+
+              <div className="flex justify-between w-full text-xs text-gray-600 mt-3">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full mr-1 bg-[#f3a7a2]"></div>
+                  <span>Deep: {sleepData.deep}%</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full mr-1 bg-[#e05e55]"></div>
+                  <span>Light: {sleepData.light}%</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full mr-1 bg-[#c2362c]"></div>
+                  <span>Awake: {sleepData.awake}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Moods Bubble Chart - UPDATED */}
+          <div
+            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
+            onClick={() => router.push(`/${params.email}/report`)}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold text-gray-800">
+                <span className="mr-2"></span> Mood Patterns
+              </h2>
+              <span className="text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            </div>
+            <div className="h-40 relative">
+              {/* Labels for days of week at bottom */}
+              <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-500">
+                {moodData.map((item) => (
+                  <div key={item.day}>{item.day}</div>
+                ))}
+              </div>
+
+              {/* Mood bubbles with vertical variation */}
+              <div className="h-36 relative">
+                {moodData.map((item, index) => {
+                  // Calculate horizontal position (evenly spaced)
+                  const leftPosition = `${
+                    (index / (moodData.length - 1)) * 92 + 4
+                  }%`;
+
+                  return (
+                    <div
+                      key={item.day}
+                      className="absolute rounded-full flex items-center justify-center text-white text-xs transition-transform hover:scale-110"
+                      style={{
+                        backgroundColor: "#c2362c",
+                        opacity: 0.7 + item.size / 100,
+                        height: `${item.size * 1.2}px`,
+                        width: `${item.size * 1.2}px`,
+                        left: leftPosition,
+                        top: `${item.yPosition * 1.4}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    >
+                      {item.size > 30 ? item.mood : ""}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
