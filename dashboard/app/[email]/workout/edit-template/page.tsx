@@ -459,7 +459,7 @@ export default function EditTemplate() {
                                 )
                               }
                               className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                              placeholder="Demo link"
+                              placeholder="https://www.youtube.com"
                             />
                           </div>
                         </div>
