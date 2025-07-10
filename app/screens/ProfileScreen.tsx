@@ -9,6 +9,9 @@ import {
   TouchableOpacity,
   Animated,
   Alert,
+  Modal,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +20,7 @@ import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { Feather } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Import assets
 const UserImage = require('../assets/User.png');
@@ -29,6 +33,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [userFullName, setUserFullName] = useState('');
   const [userData, setUserData] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navbarRef = React.useRef(null);
   const navOpacity = React.useRef(new Animated.Value(1)).current;
 
@@ -73,31 +78,24 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // Handle logout with confirmation
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              // Navigation will be handled by AuthNavigator since the user state will change
-            } catch (error) {
-              console.error('Error logging out:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+  // Handle logout with confirmation that matches app theme
+  const handleLogout = () => {
+    // Show our custom styled modal instead of using Alert
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      setShowLogoutModal(false);
+      // Small delay for better UX - modal closes before logout processing starts
+      setTimeout(async () => {
+        await logout();
+        // Navigation will be handled by AuthNavigator since the user state will change
+      }, 150);
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
  if (loading) {
@@ -162,6 +160,49 @@ export default function ProfileScreen() {
         activeScreen="Home" 
         opacityValue={navOpacity} 
       />
+      
+      {/* Custom Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <LinearGradient
+              colors={['#081A2F', '#0D2A4C', '#195295']}
+              style={styles.modalHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.modalTitle}>Logout</Text>
+            </LinearGradient>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+              
+              <View style={styles.modalButtons}>
+                <Pressable 
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowLogoutModal(false)}
+                  android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                
+                <Pressable 
+                  style={[styles.modalButton, styles.logoutButton]}
+                  onPress={confirmLogout}
+                  android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
+                >
+                  <Text style={styles.logoutButtonText}>Logout</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -280,5 +321,70 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 340,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#E0E0E0',
+  },
+  logoutButton: {
+    backgroundColor: '#C7312B', // Using your app's red accent color for the primary action
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
