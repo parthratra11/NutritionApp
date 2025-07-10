@@ -121,15 +121,19 @@ export default function ReportScreen() {
   );
 
   const renderWeightChart = () => (
-    <View style={styles.cardContainer}>
+    <TouchableOpacity
+      style={styles.cardContainer}
+      activeOpacity={0.7}
+      onPress={() => navigation.navigate('Weight')}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
           <MaterialCommunityIcons name="scale-bathroom" size={20} color="#333" />
           <Text style={styles.cardTitle}>Weight</Text>
         </View>
-        <TouchableOpacity>
+        <View style={styles.chevronContainer}>
           <Feather name="chevron-right" size={20} color="#ccc" />
-        </TouchableOpacity>
+        </View>
       </View>
       <LineChart
         data={{
@@ -182,7 +186,7 @@ export default function ReportScreen() {
         fromZero={false}
         yAxisInterval={1}
       />
-    </View>
+    </TouchableOpacity>
   );
 
   const renderStepsChart = () => (
