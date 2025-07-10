@@ -42,7 +42,7 @@ export default function AddressScreen() {
 
         if (userDocSnap.exists() && userDocSnap.data().address) {
           // User already has address, redirect to home
-          navigation.navigate('Report');
+          navigation.navigate('Reports');
           return;
         }
       } catch (error) {
