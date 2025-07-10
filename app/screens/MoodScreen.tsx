@@ -10,6 +10,8 @@ import {
   Dimensions,
   Image,
   Alert,
+  Modal,
+  Pressable
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -118,6 +120,9 @@ const MoodScreen = ({ navigation }) => {
   const [alreadySubmittedToday, setAlreadySubmittedToday] = useState(false);
   const [moodHistory, setMoodHistory] = useState([]);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef(null);
@@ -213,12 +218,14 @@ const MoodScreen = ({ navigation }) => {
 
   const handleSubmit = async () => {
     if (!user?.email) {
-      Alert.alert('Login Required', 'Please log in to save your mood.');
+      setModalMessage('Please log in to save your mood.');
+      setShowErrorModal(true);
       return;
     }
     
     if (alreadySubmittedToday) {
-      Alert.alert('Already Submitted', 'You have already submitted your mood for today.');
+      setModalMessage('You have already submitted your mood for today.');
+      setShowErrorModal(true);
       return;
     }
     
@@ -342,11 +349,15 @@ const MoodScreen = ({ navigation }) => {
       }
       
       setAlreadySubmittedToday(true);
-      Alert.alert('Success', 'Your mood has been saved!');
+      
+      // Show success modal instead of Alert
+      setModalMessage('Your mood has been saved!');
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error saving mood:', error);
-      Alert.alert('Error', 'Failed to save your mood. Please try again.');
+      setModalMessage('Failed to save your mood. Please try again.');
+      setShowErrorModal(true);
       setMoodSubmitted(false);
     }
   };
@@ -482,6 +493,78 @@ const MoodScreen = ({ navigation }) => {
         </View>
       </View>
 
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <LinearGradient
+              colors={['#081A2F', '#0D2A4C', '#195295']}
+              style={styles.modalHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.modalTitle}>Success</Text>
+            </LinearGradient>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.iconContainer}>
+                {selectedMood && selectedMood.iconType === 'fontawesome6' ? (
+                  <FontAwesome6 name={selectedMood.icon} size={48} color="#2EB67D" />
+                ) : selectedMood && (
+                  <Ionicons name={selectedMood.icon} size={48} color="#2EB67D" />
+                )}
+              </View>
+              <Text style={styles.modalMessage}>{modalMessage}</Text>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowSuccessModal(false)}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <LinearGradient
+              colors={['#081A2F', '#0D2A4C', '#195295']}
+              style={styles.modalHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.modalTitle}>Error</Text>
+            </LinearGradient>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="alert-circle" size={48} color="#C7312B" />
+              </View>
+              <Text style={styles.modalMessage}>{modalMessage}</Text>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
     </SafeAreaView>
   );
@@ -611,6 +694,62 @@ const styles = StyleSheet.create({
   graphDayText: {
     fontSize: 12,
     color: '#666',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 320,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  modalBody: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    marginBottom: 15,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#C7312B',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 
