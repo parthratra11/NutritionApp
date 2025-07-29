@@ -517,7 +517,7 @@ export default function EditTemplate() {
                     {session.exercises.map((exercise, index) => (
                       <div
                         key={`${sessionName}-${exercise.name}-${index}`}
-                        className="grid grid-cols-14 gap-2 items-center py-1"
+                        className="grid grid-cols-15 gap-2 items-center py-1"
                       >
                         <div className="col-span-5">
                           <select
@@ -586,7 +586,7 @@ export default function EditTemplate() {
                             placeholder="kg"
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-3">
                           <input
                             type="text"
                             value={exercise.Link}
