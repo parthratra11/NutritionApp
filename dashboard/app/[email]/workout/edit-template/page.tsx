@@ -4,23 +4,23 @@ import Navigation from "@/components/shared/Navigation";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../../firebaseConfig";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import Link from "next/link";
 
+// Interface definitions
 interface Exercise {
   name: string;
   Sets: string;
   Reps: string;
-  Weight: string; // Add Weight field
+  Weight: string;
   Link: string;
 }
 
-// Change the template interface to use arrays instead of objects to maintain order
 interface OrderedExercise {
   name: string;
   Sets: string;
   Reps: string;
-  Weight: string; // Add Weight field
+  Weight: string;
   Link: string;
 }
 
@@ -28,7 +28,7 @@ interface Session {
   [exerciseName: string]: {
     Sets: string;
     Reps: string;
-    Weight: string; // Add Weight field
+    Weight: string;
     Link: string;
   };
 }
@@ -47,6 +47,21 @@ interface OrderedTemplate {
   "Session A": OrderedSession;
   "Session B": OrderedSession;
   "Session C": OrderedSession;
+}
+
+interface WarmUpExercise {
+  name: string;
+  sets: string;
+  reps: string;
+  link: string;
+}
+
+interface ExtendedWorkoutTemplate extends WorkoutTemplate {
+  warmUp?: WarmUpExercise[];
+  dailySteps?: {
+    target: string;
+    walkDuration: string;
+  };
 }
 
 // Exercise options for the dropdown
@@ -83,7 +98,7 @@ const exerciseOptions = [
   "Wide Cable Shrug",
 ].sort();
 
-// Add warm-up exercise options for the dropdown
+// Warm-up exercise options
 const warmUpExerciseOptions = [
   "Foam Roller Walkover",
   "Hooklying Low Reach",
@@ -101,42 +116,43 @@ const warmUpExerciseOptions = [
   "Push-up to Down Dog",
 ].sort();
 
+// Default template
 const defaultTemplate: WorkoutTemplate = {
   "Session A": {
     "Barbell Hip Thrust": {
       Sets: "2",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Cable Overhead Triceps Extension": {
       Sets: "2",
       Reps: "<=15-20",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Heels Elevated Zercher Squat": {
       Sets: "4",
       Reps: "<=8-12",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "One-leg Leg Extension": {
       Sets: "3",
       Reps: "<=15-20",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Scrape Rack L-Seated Shoulder Press": {
       Sets: "4",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Seated DB Lateral Raise": {
       Sets: "2",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
   },
@@ -144,31 +160,31 @@ const defaultTemplate: WorkoutTemplate = {
     "Face Pull (Half-kneeling)": {
       Sets: "4",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Leg Curl Seated Calf Raise": {
       Sets: "3",
       Reps: "<=20-30",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "One-leg Lying Leg Curl": {
       Sets: "3",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Snatch-grip Romanian Deadlift": {
       Sets: "4",
       Reps: "<=8-12",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Wide Cable Shrug": {
       Sets: "3",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
   },
@@ -176,72 +192,46 @@ const defaultTemplate: WorkoutTemplate = {
     "Cable Fly (High-to-Low)": {
       Sets: "3",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Deficit Push-up": {
       Sets: "4",
       Reps: "<=8-12",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Facing Cable Bicep Curl (Fwd Lean)": {
       Sets: "3",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "Neutral Grip Chin-up": {
       Sets: "4",
       Reps: "<=5-8",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
     "One-Arm DB Row": {
       Sets: "3",
       Reps: "<=12-15",
-      Weight: "", // Add Weight field
+      Weight: "",
       Link: "",
     },
   },
 };
 
-// Warm-up exercises and daily steps interfaces
-interface WarmUpExercise {
-  name: string;
-  sets: string;
-  reps: string;
-  link: string; // Add link field for YouTube videos
-}
-
-interface ExtendedWorkoutTemplate extends WorkoutTemplate {
-  warmUp?: WarmUpExercise[];
-  dailySteps?: {
-    target: string;
-    walkDuration: string;
-  };
-}
-
-// Default warm-up exercises as a fallback, now including link fields
+// Default warm-up exercises
 const defaultWarmUpExercises: WarmUpExercise[] = [
-  { name: "Foam Roller Walkover", sets: "1", reps: "8 Reps ", link: "" },
-  { name: "Hooklying Low Reach", sets: "1", reps: "8 Reps ", link: "" },
-  {
-    name: "Side-Lying Split Squat",
-    sets: "1",
-    reps: "8 Reps ",
-    link: "",
-  },
-  {
-    name: "1/4 Wall Squat w/Reach",
-    sets: "1",
-    reps: "8 Reps ",
-    link: "",
-  },
+  { name: "Foam Roller Walkover", sets: "1", reps: "8 Reps", link: "" },
+  { name: "Hooklying Low Reach", sets: "1", reps: "8 Reps", link: "" },
+  { name: "Side-Lying Split Squat", sets: "1", reps: "8 Reps", link: "" },
+  { name: "1/4 Wall Squat w/Reach", sets: "1", reps: "8 Reps", link: "" },
   {
     name: "Toe Touch to Bench (Heels Elevated)",
     sets: "1",
-    reps: "8 Reps ",
+    reps: "8 Reps",
     link: "",
   },
 ];
@@ -272,6 +262,16 @@ export default function EditTemplate() {
   const [saving, setSaving] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [clientName, setClientName] = useState<string>("");
+
+  // State for exercise options and links
+  const [warmUpOptions, setWarmUpOptions] = useState<string[]>(
+    warmUpExerciseOptions
+  );
+  const [workoutOptions, setWorkoutOptions] =
+    useState<string[]>(exerciseOptions);
+  const [exerciseLinks, setExerciseLinks] = useState<{ [key: string]: string }>(
+    {}
+  );
 
   // Convert template object to ordered array structure
   const convertToOrderedTemplate = (
@@ -320,6 +320,89 @@ export default function EditTemplate() {
     return template;
   };
 
+  // Function to fetch exercise links from Firestore
+  const fetchExerciseLinks = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch warm-up exercise links
+      try {
+        const warmUpSnapshot = await getDocs(
+          collection(db, "exerciseLinks", "warmUp", "exercises")
+        );
+        const warmUpLinks: { [key: string]: string } = {};
+        const warmUpNames: string[] = [];
+
+        warmUpSnapshot.forEach((doc) => {
+          warmUpLinks[doc.id] = doc.data().link || "";
+          warmUpNames.push(doc.id);
+        });
+
+        // Sort exercise names alphabetically
+        warmUpNames.sort((a, b) => a.localeCompare(b));
+        setWarmUpOptions(
+          warmUpNames.length > 0 ? warmUpNames : warmUpExerciseOptions
+        );
+
+        // Update warm-up exercises with links from database
+        setWarmUpExercises((prev) =>
+          prev.map((exercise) => ({
+            ...exercise,
+            link: warmUpLinks[exercise.name] || exercise.link,
+          }))
+        );
+
+        // Add warm up links to the exercise links map
+        setExerciseLinks((prevLinks) => ({
+          ...prevLinks,
+          ...warmUpLinks,
+        }));
+      } catch (e) {
+        console.log("No warm-up exercises found in database, using defaults");
+        setWarmUpOptions(warmUpExerciseOptions);
+      }
+
+      // Fetch workout exercise links
+      try {
+        const workoutSnapshot = await getDocs(
+          collection(db, "exerciseLinks", "workout", "exercises")
+        );
+        const workoutLinks: { [key: string]: string } = {};
+        const workoutNames: string[] = [];
+
+        workoutSnapshot.forEach((doc) => {
+          workoutLinks[doc.id] = doc.data().link || "";
+          workoutNames.push(doc.id);
+        });
+
+        // Sort exercise names alphabetically
+        workoutNames.sort((a, b) => a.localeCompare(b));
+        setWorkoutOptions(
+          workoutNames.length > 0 ? workoutNames : exerciseOptions
+        );
+
+        // Add workout links to the exercise links map
+        setExerciseLinks((prevLinks) => ({
+          ...prevLinks,
+          ...workoutLinks,
+        }));
+      } catch (e) {
+        console.log("No workout exercises found in database, using defaults");
+        setWorkoutOptions(exerciseOptions);
+      }
+    } catch (error) {
+      console.error("Error fetching exercise links:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Call fetchExerciseLinks when component mounts
+  useEffect(() => {
+    fetchExerciseLinks();
+  }, []);
+
+  // Fetch or create template
   useEffect(() => {
     const fetchOrCreateTemplate = async () => {
       if (!params?.email) return;
@@ -331,6 +414,30 @@ export default function EditTemplate() {
 
         if (docSnap.exists()) {
           const fetchedTemplate = docSnap.data() as ExtendedWorkoutTemplate;
+
+          // Apply any matching links from our exercise links database
+          if (fetchedTemplate.warmUp) {
+            fetchedTemplate.warmUp = fetchedTemplate.warmUp.map((exercise) => ({
+              ...exercise,
+              link: exerciseLinks[exercise.name] || exercise.link,
+            }));
+          }
+
+          // Apply links to workout exercises
+          Object.keys(fetchedTemplate).forEach((sessionKey) => {
+            if (sessionKey !== "warmUp" && sessionKey !== "dailySteps") {
+              const session =
+                fetchedTemplate[sessionKey as keyof WorkoutTemplate];
+              if (session) {
+                Object.keys(session).forEach((exerciseName) => {
+                  if (exerciseLinks[exerciseName]) {
+                    session[exerciseName].Link = exerciseLinks[exerciseName];
+                  }
+                });
+              }
+            }
+          });
+
           setTemplate(fetchedTemplate);
           setOrderedTemplate(convertToOrderedTemplate(fetchedTemplate));
 
@@ -363,8 +470,9 @@ export default function EditTemplate() {
     };
 
     fetchOrCreateTemplate();
-  }, [params?.email]);
+  }, [params?.email, exerciseLinks]);
 
+  // Fetch client name
   useEffect(() => {
     const fetchClientName = async () => {
       if (!params?.email) return;
@@ -384,6 +492,7 @@ export default function EditTemplate() {
     fetchClientName();
   }, [params?.email]);
 
+  // Event handlers
   const handleExerciseChange = (
     sessionName: string,
     index: number,
@@ -400,6 +509,8 @@ export default function EditTemplate() {
       updatedExercises[index] = {
         ...updatedExercises[index],
         name: newExerciseName,
+        // Apply link from database if available
+        Link: exerciseLinks[newExerciseName] || updatedExercises[index].Link,
       };
 
       // Sort exercises after changing
@@ -415,7 +526,7 @@ export default function EditTemplate() {
   const handleValueChange = (
     sessionName: string,
     index: number,
-    field: "Sets" | "Reps" | "Weight" | "Link", // Add Weight field
+    field: "Sets" | "Reps" | "Weight" | "Link",
     value: string
   ) => {
     if (!orderedTemplate) return;
@@ -446,14 +557,15 @@ export default function EditTemplate() {
       if (!prev) return null;
 
       const sessionType = sessionName as keyof OrderedTemplate;
+      const defaultName = workoutOptions.length > 0 ? workoutOptions[0] : "";
 
       // Create a new exercise with default values
       const newExercise: OrderedExercise = {
-        name: exerciseOptions[0], // Default to first exercise in the list
+        name: defaultName,
         Sets: "",
         Reps: "",
         Weight: "",
-        Link: "",
+        Link: exerciseLinks[defaultName] || "",
       };
 
       const updatedExercises = [...prev[sessionType].exercises, newExercise];
@@ -490,9 +602,17 @@ export default function EditTemplate() {
 
   // Add/remove warm-up exercise
   const addWarmUpExercise = () => {
+    // Use the first warm-up option or an empty string as the default
+    const defaultName = warmUpOptions.length > 0 ? warmUpOptions[0] : "";
+
     setWarmUpExercises([
       ...warmUpExercises,
-      { name: "", sets: "1", reps: "8 Reps ", link: "" },
+      {
+        name: defaultName,
+        sets: "1",
+        reps: "8 Reps",
+        link: exerciseLinks[defaultName] || "",
+      },
     ]);
   };
 
@@ -508,7 +628,18 @@ export default function EditTemplate() {
     value: string
   ) => {
     const updated = [...warmUpExercises];
-    updated[index] = { ...updated[index], [field]: value };
+
+    if (field === "name") {
+      // If changing name, update the link if we have it in the database
+      updated[index] = {
+        ...updated[index],
+        name: value,
+        link: exerciseLinks[value] || "", // Apply link from our database if it exists
+      };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+
     setWarmUpExercises(updated);
   };
 
@@ -571,6 +702,12 @@ export default function EditTemplate() {
           <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
             Edit Template
           </button>
+          <Link
+            href={`/${params.email}/workout/add`}
+            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
+          >
+            Add/Delete Exercise
+          </Link>
         </div>
 
         {/* Main Content Grid */}
@@ -779,7 +916,7 @@ export default function EditTemplate() {
                               )
                             }
                           >
-                            {exerciseOptions.map((option) => (
+                            {workoutOptions.map((option) => (
                               <option key={option} value={option}>
                                 {option}
                               </option>
@@ -988,7 +1125,7 @@ export default function EditTemplate() {
                         className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="">Select Exercise</option>
-                        {warmUpExerciseOptions.map((option) => (
+                        {warmUpOptions.map((option) => (
                           <option key={option} value={option}>
                             {option}
                           </option>
@@ -1087,9 +1224,7 @@ export default function EditTemplate() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  toggleWarmUpModal();
-                }}
+                onClick={toggleWarmUpModal}
                 className="px-6 py-2 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors"
               >
                 Save Changes
