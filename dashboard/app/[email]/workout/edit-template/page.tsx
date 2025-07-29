@@ -23,6 +23,14 @@ interface Exercise {
   Link: string;
 }
 
+// Change the template interface to use arrays instead of objects to maintain order
+interface OrderedExercise {
+  name: string;
+  Sets: string;
+  Reps: string;
+  Link: string;
+}
+
 interface Session {
   [exerciseName: string]: {
     Sets: string;
@@ -31,44 +39,54 @@ interface Session {
   };
 }
 
+interface OrderedSession {
+  exercises: OrderedExercise[];
+}
+
 interface WorkoutTemplate {
   "Session A": Session;
   "Session B": Session;
   "Session C": Session;
 }
 
+interface OrderedTemplate {
+  "Session A": OrderedSession;
+  "Session B": OrderedSession;
+  "Session C": OrderedSession;
+}
+
 // Exercise options for the dropdown
 const exerciseOptions = [
-  "Barbell Hip Thrust",
-  "Cable Overhead Triceps Extension",
-  "Heels Elevated Zercher Squat",
-  "One-leg Leg Extension",
-  "Scrape Rack L-Seated Shoulder Press",
-  "Seated DB Lateral Raise",
-  "Face Pull (Half-kneeling)",
-  "Leg Curl Seated Calf Raise",
-  "One-leg Lying Leg Curl",
-  "Snatch-grip Romanian Deadlift",
-  "Wide Cable Shrug",
-  "Cable Fly (High-to-Low)",
-  "Deficit Push-up",
-  "Facing Cable Bicep Curl (Fwd Lean)",
-  "Neutral Grip Chin-up",
-  "One-Arm DB Row",
-  "Lat Pulldown",
-  "Bench Press",
-  "Deadlift",
   "Back Squat",
-  "Front Squat",
-  "Overhead Press",
+  "Barbell Hip Thrust",
+  "Bench Press",
   "Bent Over Row",
+  "Cable Fly (High-to-Low)",
+  "Cable Overhead Triceps Extension",
+  "Calf Raises",
+  "Deadlift",
+  "Deficit Push-up",
   "Dumbbell Curl",
-  "Tricep Dips",
+  "Face Pull (Half-kneeling)",
+  "Facing Cable Bicep Curl (Fwd Lean)",
+  "Front Squat",
+  "Heels Elevated Zercher Squat",
+  "Lat Pulldown",
+  "Leg Curl Seated Calf Raise",
   "Leg Press",
   "Lunges",
-  "Calf Raises",
+  "Neutral Grip Chin-up",
+  "One-Arm DB Row",
+  "One-leg Leg Extension",
+  "One-leg Lying Leg Curl",
+  "Overhead Press",
   "Plank",
   "Russian Twist",
+  "Scrape Rack L-Seated Shoulder Press",
+  "Seated DB Lateral Raise",
+  "Snatch-grip Romanian Deadlift",
+  "Tricep Dips",
+  "Wide Cable Shrug",
 ];
 
 const defaultTemplate: WorkoutTemplate = {
@@ -164,33 +182,60 @@ export default function EditTemplate() {
   const params = useParams();
   const router = useRouter();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
+  const [orderedTemplate, setOrderedTemplate] =
+    useState<OrderedTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showNav, setShowNav] = useState(false); // Add this line
+  const [showNav, setShowNav] = useState(false);
   const [clientName, setClientName] = useState<string>("");
 
-  // Add date strip generation
-  const generateDateStrip = () => {
-    const days = ["S", "M", "T", "W", "T", "F", "S"];
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sunday
+  // Convert template object to ordered array structure
+  const convertToOrderedTemplate = (
+    templateData: WorkoutTemplate
+  ): OrderedTemplate => {
+    const ordered: OrderedTemplate = {
+      "Session A": { exercises: [] },
+      "Session B": { exercises: [] },
+      "Session C": { exercises: [] },
+    };
 
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() - currentDay + i);
-      dates.push({
-        day: days[i],
-        date: date.getDate(),
-        isToday: i === currentDay,
-      });
-    }
+    Object.entries(templateData).forEach(([sessionKey, session]) => {
+      const sessionType = sessionKey as keyof WorkoutTemplate;
 
-    return dates;
+      // Sort exercises alphabetically
+      const sortedExercises = Object.entries(session)
+        .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+        .map(([name, details]) => ({
+          name,
+          ...details,
+        }));
+
+      ordered[sessionType].exercises = sortedExercises;
+    });
+
+    return ordered;
   };
 
-  const dateStrip = generateDateStrip();
+  // Convert ordered array structure back to template object
+  const convertToTemplate = (orderedData: OrderedTemplate): WorkoutTemplate => {
+    const template: WorkoutTemplate = {
+      "Session A": {},
+      "Session B": {},
+      "Session C": {},
+    };
+
+    Object.entries(orderedData).forEach(([sessionKey, session]) => {
+      const sessionType = sessionKey as keyof OrderedTemplate;
+
+      session.exercises.forEach((exercise) => {
+        const { name, ...details } = exercise;
+        template[sessionType][name] = details;
+      });
+    });
+
+    return template;
+  };
 
   useEffect(() => {
     const fetchOrCreateTemplate = async () => {
@@ -202,11 +247,14 @@ export default function EditTemplate() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setTemplate(docSnap.data() as WorkoutTemplate);
+          const fetchedTemplate = docSnap.data() as WorkoutTemplate;
+          setTemplate(fetchedTemplate);
+          setOrderedTemplate(convertToOrderedTemplate(fetchedTemplate));
         } else {
           // Initialize with default template
           await setDoc(docRef, defaultTemplate);
           setTemplate(defaultTemplate);
+          setOrderedTemplate(convertToOrderedTemplate(defaultTemplate));
         }
       } catch (err) {
         setError("Failed to fetch or create workout template");
@@ -239,65 +287,72 @@ export default function EditTemplate() {
   }, [params?.email]);
 
   const handleExerciseChange = (
-    session: string,
-    oldExerciseName: string,
+    sessionName: string,
+    index: number,
     newExerciseName: string
   ) => {
-    if (!template) return;
+    if (!orderedTemplate) return;
 
-    setTemplate((prevTemplate) => {
-      if (!prevTemplate) return null;
+    setOrderedTemplate((prev) => {
+      if (!prev) return null;
 
-      const updatedSession = {
-        ...prevTemplate[session as keyof WorkoutTemplate],
+      const sessionType = sessionName as keyof OrderedTemplate;
+      const updatedExercises = [...prev[sessionType].exercises];
+
+      updatedExercises[index] = {
+        ...updatedExercises[index],
+        name: newExerciseName,
       };
-      const exerciseData = updatedSession[oldExerciseName];
 
-      // Remove old exercise
-      delete updatedSession[oldExerciseName];
-
-      // Add with new name
-      updatedSession[newExerciseName] = exerciseData;
+      // Sort exercises after changing
+      updatedExercises.sort((a, b) => a.name.localeCompare(b.name));
 
       return {
-        ...prevTemplate,
-        [session]: updatedSession,
+        ...prev,
+        [sessionType]: { exercises: updatedExercises },
       };
     });
   };
 
   const handleValueChange = (
-    session: string,
-    exerciseName: string,
+    sessionName: string,
+    index: number,
     field: "Sets" | "Reps" | "Link",
     value: string
   ) => {
-    if (!template) return;
+    if (!orderedTemplate) return;
 
-    setTemplate((prevTemplate) => {
-      if (!prevTemplate) return null;
+    setOrderedTemplate((prev) => {
+      if (!prev) return null;
+
+      const sessionType = sessionName as keyof OrderedTemplate;
+      const updatedExercises = [...prev[sessionType].exercises];
+
+      updatedExercises[index] = {
+        ...updatedExercises[index],
+        [field]: value,
+      };
 
       return {
-        ...prevTemplate,
-        [session]: {
-          ...prevTemplate[session as keyof WorkoutTemplate],
-          [exerciseName]: {
-            ...prevTemplate[session as keyof WorkoutTemplate][exerciseName],
-            [field]: value,
-          },
-        },
+        ...prev,
+        [sessionType]: { exercises: updatedExercises },
       };
     });
   };
 
   const saveTemplate = async () => {
-    if (!params?.email || !template) return;
+    if (!params?.email || !orderedTemplate) return;
 
     try {
       setSaving(true);
       const clientEmail = decodeURIComponent(params.email as string);
+
+      // Convert ordered template back to regular template for storage
+      const templateToSave = convertToTemplate(orderedTemplate);
+
       const docRef = doc(db, "WorkoutTemplates", clientEmail);
-      await setDoc(docRef, template);
+      await setDoc(docRef, templateToSave);
+      setTemplate(templateToSave);
       alert("Workout template saved successfully!");
     } catch (err) {
       setError("Failed to save workout template");
@@ -309,7 +364,8 @@ export default function EditTemplate() {
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!template) return <div className="p-6">No template data found</div>;
+  if (!orderedTemplate)
+    return <div className="p-6">No template data found</div>;
 
   return (
     <div className="min-h-screen bg-white">
@@ -382,89 +438,87 @@ export default function EditTemplate() {
 
           {/* Right Column - Workout Sessions */}
           <div className="lg:col-span-2 space-y-2 mb-6">
-            {Object.entries(template).map(([sessionName, exercises]) => (
+            {Object.entries(orderedTemplate).map(([sessionName, session]) => (
               <div key={sessionName}>
                 <h3 className="text-[#333333] font-semibold mb-2 text-right">
                   {sessionName}
                 </h3>
                 <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-2">
                   <div className="space-y-0">
-                    {Object.entries(exercises).map(
-                      ([exerciseName, details]) => (
-                        <div
-                          key={exerciseName}
-                          className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center py-1"
-                        >
-                          <div>
-                            <select
-                              className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                              value={exerciseName}
-                              onChange={(e) =>
-                                handleExerciseChange(
-                                  sessionName,
-                                  exerciseName,
-                                  e.target.value
-                                )
-                              }
-                            >
-                              {exerciseOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <input
-                              type="text"
-                              value={details.Sets}
-                              onChange={(e) =>
-                                handleValueChange(
-                                  sessionName,
-                                  exerciseName,
-                                  "Sets",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-center text-[#333333] focus:ring-2 focus:ring-red-500"
-                              placeholder="Sets"
-                            />
-                          </div>
-                          <div>
-                            <input
-                              type="text"
-                              value={details.Reps}
-                              onChange={(e) =>
-                                handleValueChange(
-                                  sessionName,
-                                  exerciseName,
-                                  "Reps",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                              placeholder="Reps"
-                            />
-                          </div>
-                          <div>
-                            <input
-                              type="text"
-                              value={details.Link}
-                              onChange={(e) =>
-                                handleValueChange(
-                                  sessionName,
-                                  exerciseName,
-                                  "Link",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                              placeholder="https://www.youtube.com"
-                            />
-                          </div>
+                    {session.exercises.map((exercise, index) => (
+                      <div
+                        key={`${sessionName}-${exercise.name}-${index}`}
+                        className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center py-1"
+                      >
+                        <div>
+                          <select
+                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                            value={exercise.name}
+                            onChange={(e) =>
+                              handleExerciseChange(
+                                sessionName,
+                                index,
+                                e.target.value
+                              )
+                            }
+                          >
+                            {exerciseOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                      )
-                    )}
+                        <div>
+                          <input
+                            type="text"
+                            value={exercise.Sets}
+                            onChange={(e) =>
+                              handleValueChange(
+                                sessionName,
+                                index,
+                                "Sets",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-center text-[#333333] focus:ring-2 focus:ring-red-500"
+                            placeholder="Sets"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={exercise.Reps}
+                            onChange={(e) =>
+                              handleValueChange(
+                                sessionName,
+                                index,
+                                "Reps",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                            placeholder="Reps"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={exercise.Link}
+                            onChange={(e) =>
+                              handleValueChange(
+                                sessionName,
+                                index,
+                                "Link",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                            placeholder="https://www.youtube.com"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
