@@ -20,6 +20,7 @@ interface Exercise {
   name: string;
   Sets: string;
   Reps: string;
+  Weight: string; // Add Weight field
   Link: string;
 }
 
@@ -28,6 +29,7 @@ interface OrderedExercise {
   name: string;
   Sets: string;
   Reps: string;
+  Weight: string; // Add Weight field
   Link: string;
 }
 
@@ -35,6 +37,7 @@ interface Session {
   [exerciseName: string]: {
     Sets: string;
     Reps: string;
+    Weight: string; // Add Weight field
     Link: string;
   };
 }
@@ -94,31 +97,37 @@ const defaultTemplate: WorkoutTemplate = {
     "Barbell Hip Thrust": {
       Sets: "2",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Cable Overhead Triceps Extension": {
       Sets: "2",
       Reps: "<=15-20",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Heels Elevated Zercher Squat": {
       Sets: "4",
       Reps: "<=8-12",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "One-leg Leg Extension": {
       Sets: "3",
       Reps: "<=15-20",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Scrape Rack L-Seated Shoulder Press": {
       Sets: "4",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Seated DB Lateral Raise": {
       Sets: "2",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
   },
@@ -126,26 +135,31 @@ const defaultTemplate: WorkoutTemplate = {
     "Face Pull (Half-kneeling)": {
       Sets: "4",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Leg Curl Seated Calf Raise": {
       Sets: "3",
       Reps: "<=20-30",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "One-leg Lying Leg Curl": {
       Sets: "3",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Snatch-grip Romanian Deadlift": {
       Sets: "4",
       Reps: "<=8-12",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Wide Cable Shrug": {
       Sets: "3",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
   },
@@ -153,26 +167,31 @@ const defaultTemplate: WorkoutTemplate = {
     "Cable Fly (High-to-Low)": {
       Sets: "3",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Deficit Push-up": {
       Sets: "4",
       Reps: "<=8-12",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Facing Cable Bicep Curl (Fwd Lean)": {
       Sets: "3",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "Neutral Grip Chin-up": {
       Sets: "4",
       Reps: "<=5-8",
+      Weight: "", // Add Weight field
       Link: "",
     },
     "One-Arm DB Row": {
       Sets: "3",
       Reps: "<=12-15",
+      Weight: "", // Add Weight field
       Link: "",
     },
   },
@@ -317,7 +336,7 @@ export default function EditTemplate() {
   const handleValueChange = (
     sessionName: string,
     index: number,
-    field: "Sets" | "Reps" | "Link",
+    field: "Sets" | "Reps" | "Weight" | "Link", // Add Weight field
     value: string
   ) => {
     if (!orderedTemplate) return;
@@ -426,7 +445,7 @@ export default function EditTemplate() {
               <div className="space-y-4 text-[#333333] text-sm">
                 <p>
                   Today you will aim to get{" "}
-                  <span className="font-bold">8,000–10,000</span> steps.
+                  <span className="font-bold">10,000</span> steps.
                 </p>
                 <p>
                   A <span className="font-bold">30 minute</span> morning walk is
@@ -448,9 +467,9 @@ export default function EditTemplate() {
                     {session.exercises.map((exercise, index) => (
                       <div
                         key={`${sessionName}-${exercise.name}-${index}`}
-                        className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center py-1"
+                        className="grid grid-cols-14 gap-2 items-center py-1"
                       >
-                        <div>
+                        <div className="col-span-5">
                           <select
                             className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
                             value={exercise.name}
@@ -469,7 +488,7 @@ export default function EditTemplate() {
                             ))}
                           </select>
                         </div>
-                        <div>
+                        <div className="col-span-2">
                           <input
                             type="text"
                             value={exercise.Sets}
@@ -485,7 +504,7 @@ export default function EditTemplate() {
                             placeholder="Sets"
                           />
                         </div>
-                        <div>
+                        <div className="col-span-2">
                           <input
                             type="text"
                             value={exercise.Reps}
@@ -501,7 +520,23 @@ export default function EditTemplate() {
                             placeholder="Reps"
                           />
                         </div>
-                        <div>
+                        <div className="col-span-2">
+                          <input
+                            type="text"
+                            value={exercise.Weight || ""}
+                            onChange={(e) =>
+                              handleValueChange(
+                                sessionName,
+                                index,
+                                "Weight",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                            placeholder="kg"
+                          />
+                        </div>
+                        <div className="col-span-3">
                           <input
                             type="text"
                             value={exercise.Link}
