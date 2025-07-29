@@ -7,15 +7,6 @@ import { db } from "../../../../firebaseConfig";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import Link from "next/link";
 
-// Add warm-up exercises constant at the top level
-const warmUpExercises = [
-  { name: "Foam Roller Walkover" },
-  { name: "Hooklying Low Reach" },
-  { name: "Side-Lying Split Squat" },
-  { name: "1/4 Wall Squat w/Reach" },
-  { name: "Toe Touch to Bench (Heels Elevated)" },
-];
-
 interface Exercise {
   name: string;
   Sets: string;
@@ -90,7 +81,25 @@ const exerciseOptions = [
   "Snatch-grip Romanian Deadlift",
   "Tricep Dips",
   "Wide Cable Shrug",
-];
+].sort();
+
+// Add warm-up exercise options for the dropdown
+const warmUpExerciseOptions = [
+  "Foam Roller Walkover",
+  "Hooklying Low Reach",
+  "Side-Lying Split Squat",
+  "1/4 Wall Squat w/Reach",
+  "Toe Touch to Bench (Heels Elevated)",
+  "Cat-Cow Stretch",
+  "Bird Dog",
+  "Glute Bridge",
+  "Hip Flexor Stretch",
+  "Shoulder Dislocations",
+  "Band Pull-Aparts",
+  "Arm Circles",
+  "Bodyweight Squat",
+  "Push-up to Down Dog",
+].sort();
 
 const defaultTemplate: WorkoutTemplate = {
   "Session A": {
@@ -197,12 +206,67 @@ const defaultTemplate: WorkoutTemplate = {
   },
 };
 
+// Warm-up exercises and daily steps interfaces
+interface WarmUpExercise {
+  name: string;
+  sets: string;
+  reps: string;
+  link: string; // Add link field for YouTube videos
+}
+
+interface ExtendedWorkoutTemplate extends WorkoutTemplate {
+  warmUp?: WarmUpExercise[];
+  dailySteps?: {
+    target: string;
+    walkDuration: string;
+  };
+}
+
+// Default warm-up exercises as a fallback, now including link fields
+const defaultWarmUpExercises: WarmUpExercise[] = [
+  { name: "Foam Roller Walkover", sets: "1", reps: "8 Reps ", link: "" },
+  { name: "Hooklying Low Reach", sets: "1", reps: "8 Reps ", link: "" },
+  {
+    name: "Side-Lying Split Squat",
+    sets: "1",
+    reps: "8 Reps ",
+    link: "",
+  },
+  {
+    name: "1/4 Wall Squat w/Reach",
+    sets: "1",
+    reps: "8 Reps ",
+    link: "",
+  },
+  {
+    name: "Toe Touch to Bench (Heels Elevated)",
+    sets: "1",
+    reps: "8 Reps ",
+    link: "",
+  },
+];
+
+// Default steps target
+const defaultDailySteps = {
+  target: "10,000",
+  walkDuration: "30 minute",
+};
+
 export default function EditTemplate() {
   const params = useParams();
   const router = useRouter();
-  const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
+  const [template, setTemplate] = useState<ExtendedWorkoutTemplate | null>(
+    null
+  );
   const [orderedTemplate, setOrderedTemplate] =
     useState<OrderedTemplate | null>(null);
+  const [warmUpExercises, setWarmUpExercises] = useState<WarmUpExercise[]>(
+    defaultWarmUpExercises
+  );
+  const [dailySteps, setDailySteps] = useState(defaultDailySteps);
+  const [editingWarmUp, setEditingWarmUp] = useState(false);
+  const [editingSteps, setEditingSteps] = useState(false);
+  const [showWarmUpModal, setShowWarmUpModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -266,13 +330,28 @@ export default function EditTemplate() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const fetchedTemplate = docSnap.data() as WorkoutTemplate;
+          const fetchedTemplate = docSnap.data() as ExtendedWorkoutTemplate;
           setTemplate(fetchedTemplate);
           setOrderedTemplate(convertToOrderedTemplate(fetchedTemplate));
+
+          // Load warm-up exercises if they exist
+          if (fetchedTemplate.warmUp) {
+            setWarmUpExercises(fetchedTemplate.warmUp);
+          }
+
+          // Load daily steps if they exist
+          if (fetchedTemplate.dailySteps) {
+            setDailySteps(fetchedTemplate.dailySteps);
+          }
         } else {
           // Initialize with default template
-          await setDoc(docRef, defaultTemplate);
-          setTemplate(defaultTemplate);
+          const extendedDefault: ExtendedWorkoutTemplate = {
+            ...defaultTemplate,
+            warmUp: defaultWarmUpExercises,
+            dailySteps: defaultDailySteps,
+          };
+          await setDoc(docRef, extendedDefault);
+          setTemplate(extendedDefault);
           setOrderedTemplate(convertToOrderedTemplate(defaultTemplate));
         }
       } catch (err) {
@@ -409,6 +488,30 @@ export default function EditTemplate() {
     });
   };
 
+  // Add/remove warm-up exercise
+  const addWarmUpExercise = () => {
+    setWarmUpExercises([
+      ...warmUpExercises,
+      { name: "", sets: "1", reps: "8 Reps ", link: "" },
+    ]);
+  };
+
+  const deleteWarmUpExercise = (index: number) => {
+    const updated = [...warmUpExercises];
+    updated.splice(index, 1);
+    setWarmUpExercises(updated);
+  };
+
+  const handleWarmUpChange = (
+    index: number,
+    field: keyof WarmUpExercise,
+    value: string
+  ) => {
+    const updated = [...warmUpExercises];
+    updated[index] = { ...updated[index], [field]: value };
+    setWarmUpExercises(updated);
+  };
+
   const saveTemplate = async () => {
     if (!params?.email || !orderedTemplate) return;
 
@@ -419,9 +522,16 @@ export default function EditTemplate() {
       // Convert ordered template back to regular template for storage
       const templateToSave = convertToTemplate(orderedTemplate);
 
+      // Add warm-up exercises and daily steps to the saved template
+      const extendedTemplate: ExtendedWorkoutTemplate = {
+        ...templateToSave,
+        warmUp: warmUpExercises,
+        dailySteps: dailySteps,
+      };
+
       const docRef = doc(db, "WorkoutTemplates", clientEmail);
-      await setDoc(docRef, templateToSave);
-      setTemplate(templateToSave);
+      await setDoc(docRef, extendedTemplate);
+      setTemplate(extendedTemplate);
       alert("Workout template saved successfully!");
     } catch (err) {
       setError("Failed to save workout template");
@@ -429,6 +539,11 @@ export default function EditTemplate() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Function to toggle warm-up modal
+  const toggleWarmUpModal = () => {
+    setShowWarmUpModal(!showWarmUpModal);
   };
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -464,23 +579,89 @@ export default function EditTemplate() {
           <div className="lg:col-span-1 space-y-6">
             {/* Warm Up Card */}
             <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-5">
-              <h2 className="text-[#1A1A1A] text-lg font-semibold mb-4">
-                Warm Up
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[#1A1A1A] text-lg font-semibold">
+                  Warm Up
+                </h2>
+                <button
+                  onClick={toggleWarmUpModal}
+                  className="text-blue-600 text-sm flex items-center"
+                >
+                  Edit
+                  <svg
+                    className="h-4 w-4 ml-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </button>
+              </div>
+
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-gray-600 text-sm">
                     <th className="pb-3 font-medium">Exercise</th>
-                    <th className="pb-3 font-medium text-center w-16">Sets</th>
-                    <th className="pb-3 font-medium text-right w-24">Reps</th>
+                    <th className="pb-3 font-medium text-center w-12">Sets</th>
+                    <th className="pb-3 font-medium text-center w-20">Reps</th>
+                    <th className="pb-3 font-medium text-center w-16">Link</th>
                   </tr>
                 </thead>
                 <tbody className="text-[#333333] text-sm">
                   {warmUpExercises.map((exercise, index) => (
                     <tr key={index} className="h-10">
                       <td className="py-2">{exercise.name}</td>
-                      <td className="py-2 text-center">1</td>
-                      <td className="py-2 text-right">8 Reps/Breaths</td>
+                      <td className="py-2 text-center">{exercise.sets}</td>
+                      <td className="py-2 text-center">{exercise.reps}</td>
+                      <td className="py-2 text-center">
+                        {exercise.link ? (
+                          <a
+                            href={exercise.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600"
+                            title="Video Link"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 mx-auto"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </a>
+                        ) : (
+                          <span className="text-red-500">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 mx-auto"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -489,19 +670,86 @@ export default function EditTemplate() {
 
             {/* Steps Goal Card */}
             <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-5">
-              <h2 className="text-[#1A1A1A] text-lg font-semibold mb-4">
-                Daily Steps Target
-              </h2>
-              <div className="space-y-4 text-[#333333] text-sm">
-                <p>
-                  Today you will aim to get{" "}
-                  <span className="font-bold">10,000</span> steps.
-                </p>
-                <p>
-                  A <span className="font-bold">30 minute</span> morning walk is
-                  a great way to kick this off.
-                </p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[#1A1A1A] text-lg font-semibold">
+                  Daily Steps Target
+                </h2>
+                <button
+                  onClick={() => setEditingSteps(!editingSteps)}
+                  className="text-blue-600 text-sm flex items-center"
+                >
+                  {editingSteps ? "Done" : "Edit"}
+                  {!editingSteps && (
+                    <svg
+                      className="h-4 w-4 ml-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  )}
+                </button>
               </div>
+
+              {editingSteps ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg">
+                    <div className="col-span-4">
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Steps Target
+                      </label>
+                      <input
+                        type="text"
+                        value={dailySteps.target}
+                        onChange={(e) =>
+                          setDailySteps({
+                            ...dailySteps,
+                            target: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                        placeholder="10,000"
+                      />
+                    </div>
+                    <div className="col-span-8">
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Walk Duration
+                      </label>
+                      <input
+                        type="text"
+                        value={dailySteps.walkDuration}
+                        onChange={(e) =>
+                          setDailySteps({
+                            ...dailySteps,
+                            walkDuration: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
+                        placeholder="30 minute"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 text-[#333333] text-sm">
+                  <p>
+                    Today you will aim to get{" "}
+                    <span className="font-bold">{dailySteps.target}</span>{" "}
+                    steps.
+                  </p>
+                  <p>
+                    A{" "}
+                    <span className="font-bold">{dailySteps.walkDuration}</span>{" "}
+                    morning walk is a great way to kick this off.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -668,6 +916,188 @@ export default function EditTemplate() {
           </button>
         </div>
       </div>
+
+      {/* Warm Up Edit Modal */}
+      {showWarmUpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay with improved blur effect */}
+          <div
+            className="fixed inset-0 backdrop-blur-sm bg-white/30"
+            onClick={toggleWarmUpModal}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 p-6 z-10">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Edit Warm Up Exercises
+              </h2>
+              <button
+                onClick={toggleWarmUpModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-1">
+              <div className="space-y-3">
+                {/* Header Row */}
+                <div className="grid grid-cols-12 gap-2 items-center pb-2 border-b">
+                  <div className="col-span-4 text-gray-700 font-medium">
+                    Exercise Name
+                  </div>
+                  <div className="col-span-1 text-gray-700 font-medium text-center">
+                    Sets
+                  </div>
+                  <div className="col-span-2 text-gray-700 font-medium">
+                    Reps
+                  </div>
+                  <div className="col-span-4 text-gray-700 font-medium">
+                    Video Link
+                  </div>
+                  <div className="col-span-1 text-gray-700 font-medium text-center">
+                    Action
+                  </div>
+                </div>
+
+                {warmUpExercises.map((exercise, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-12 gap-2 items-center py-3 border-b border-gray-100"
+                  >
+                    <div className="col-span-4">
+                      <select
+                        value={exercise.name}
+                        onChange={(e) =>
+                          handleWarmUpChange(index, "name", e.target.value)
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select Exercise</option>
+                        {warmUpExerciseOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-1">
+                      <input
+                        type="text"
+                        value={exercise.sets}
+                        onChange={(e) =>
+                          handleWarmUpChange(index, "sets", e.target.value)
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-center text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Sets"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        value={exercise.reps}
+                        onChange={(e) =>
+                          handleWarmUpChange(index, "reps", e.target.value)
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Reps"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <input
+                        type="text"
+                        value={exercise.link || ""}
+                        onChange={(e) =>
+                          handleWarmUpChange(index, "link", e.target.value)
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="https://www.youtube.com"
+                      />
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <button
+                        onClick={() => deleteWarmUpExercise(index)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Button */}
+              <div className="mt-5">
+                <button
+                  onClick={addWarmUpExercise}
+                  className="w-full py-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Warm-up Exercise
+                </button>
+              </div>
+            </div>
+
+            {/* Footer with Save Button */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={toggleWarmUpModal}
+                className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors mr-3"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  toggleWarmUpModal();
+                }}
+                className="px-6 py-2 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
