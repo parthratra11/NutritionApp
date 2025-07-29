@@ -83,6 +83,8 @@ export default function NutritionPage() {
     date: string;
     data: any;
   } | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const clientName = params?.email
     ? decodeURIComponent(params.email as string).split("@")[0]
@@ -104,7 +106,7 @@ export default function NutritionPage() {
   const groupDataByWeeks = (data: NutritionDataStructure): WeekData => {
     const weeks: WeekData = {};
 
-    Object.entries(data).forEach(([key, value]) => {  
+    Object.entries(data).forEach(([key, value]) => {
       if (key === "firstEntryDate") return;
 
       // Extract week number for sorting
@@ -252,8 +254,10 @@ export default function NutritionPage() {
           <div className="p-6">
             <div className="space-y-4">
               {dayData.meals &&
-                Object.entries(dayData.meals).map(
-                  ([meal, data]: [string, MealData]) => (
+                Object.entries(dayData.meals).map((mealEntry) => {
+                  const meal = mealEntry[0];
+                  const data = mealEntry[1] as MealData;
+                  return (
                     <div key={meal} className="bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-medium text-lg mb-2">{meal}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -277,8 +281,8 @@ export default function NutritionPage() {
                         </div>
                       </div>
                     </div>
-                  )
-                )}
+                  );
+                })}
             </div>
             <div className="mt-6 border-t pt-6">
               <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
@@ -315,7 +319,10 @@ export default function NutritionPage() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const dayData = weeklyData && selectedWeek ? weeklyData[selectedWeek]?.dailyData[label] : null;
+      const dayData =
+        weeklyData && selectedWeek
+          ? weeklyData[selectedWeek]?.dailyData[label]
+          : null;
       if (!dayData) return null;
 
       return (
@@ -327,8 +334,10 @@ export default function NutritionPage() {
             <p className="text-sm text-gray-500">{dayData.dayType} Day</p>
           </div>
           {dayData.meals &&
-            Object.entries(dayData.meals).map(
-              ([meal, data]: [string, MealData]) => (
+            Object.entries(dayData.meals).map((mealEntry) => {
+              const meal = mealEntry[0];
+              const data = mealEntry[1] as MealData;
+              return (
                 <div key={meal} className="mb-3">
                   <p className="font-medium text-gray-700 mb-1">{meal}</p>
                   <div className="grid grid-cols-2 gap-x-4 text-sm">
@@ -342,8 +351,8 @@ export default function NutritionPage() {
                     <p className="text-gray-600">Calories: {data.Kcal}</p>
                   </div>
                 </div>
-              )
-            )}
+              );
+            })}
           <div className="border-t pt-2 mt-2">
             <p className="font-medium text-gray-700 mb-1">Daily Totals</p>
             <div className="grid grid-cols-2 gap-x-4 text-sm">
@@ -363,11 +372,91 @@ export default function NutritionPage() {
     return null;
   };
 
+  // New function to calculate daily data when date range spans less than 2 weeks
+  const calculateDailyNutrition = () => {
+    if (!weeklyData) return [];
+
+    // Gather all daily data across all weeks
+    const allDays: {
+      date: string;
+      formattedDate: string;
+      protein: number;
+      carbs: number;
+      fat: number;
+      calories: number;
+      dayType: string;
+    }[] = [];
+
+    // Extract daily data from all weeks
+    Object.values(weeklyData).forEach((week) => {
+      Object.entries(week.dailyData).forEach(([date, dayData]) => {
+        allDays.push({
+          date,
+          formattedDate: formatDate(date),
+          protein: dayData.totals["Protein (g)"],
+          carbs: dayData.totals["Carbohydrate (g)"],
+          fat: dayData.totals["Fat (g)"],
+          calories: dayData.totals.Kcal,
+          dayType: dayData.dayType,
+        });
+      });
+    });
+
+    // Filter by date range
+    if (comparisonPeriod === "custom" && startDate && endDate) {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+
+      return allDays
+        .filter((day) => {
+          const dayDate = new Date(day.date);
+          return dayDate >= startDateObj && dayDate <= endDateObj;
+        })
+        .sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+    }
+
+    return allDays.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  };
+
   const getFilteredWeeklyData = () => {
     if (!weeklyData) return {};
 
     if (comparisonPeriod === "all") {
       return weeklyData;
+    }
+
+    // Handle custom date range
+    if (comparisonPeriod === "custom") {
+      if (startDate && endDate) {
+        const startDateObj = new Date(startDate);
+        const endDateObj = new Date(endDate);
+
+        // Calculate date difference in days
+        const daysDifference =
+          (endDateObj.getTime() - startDateObj.getTime()) / (1000 * 3600 * 24);
+
+        // If less than 2 weeks, return daily data instead of weekly averages
+        if (daysDifference < 14) {
+          // This will be handled differently in the render function
+          // by checking if the result from calculateDailyNutrition() is used
+          return weeklyData;
+        }
+
+        return Object.entries(weeklyData).reduce((filtered, [week, data]) => {
+          const earliestDate = new Date(
+            Math.min(...data.dates.map((d) => new Date(d).getTime()))
+          );
+
+          if (earliestDate >= startDateObj && earliestDate <= endDateObj) {
+            filtered[week] = data;
+          }
+          return filtered;
+        }, {} as WeekData);
+      }
     }
 
     const now = new Date();
@@ -405,15 +494,18 @@ export default function NutritionPage() {
     return Object.entries(data)
       .map(([week, weekData]) => ({
         week,
-        weekNumber: weekData.weekNumber || parseInt(week.replace("Week ", ""), 10) || 0,
-        ...weekData
+        weekNumber:
+          weekData.weekNumber || parseInt(week.replace("Week ", ""), 10) || 0,
+        ...weekData,
       }))
       .sort((a, b) => a.weekNumber - b.weekNumber);
   };
 
   // Helper function to sort dates chronologically
   const sortedDates = (dates: string[]) => {
-    return [...dates].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    return [...dates].sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    );
   };
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -636,8 +728,7 @@ export default function NutritionPage() {
                           Protein (g)
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Carbs
-                          (g)
+                          Carbs (g)
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Fat (g)
@@ -677,9 +768,7 @@ export default function NutritionPage() {
                             <td className="px-6 py-4">
                               {dayData.totals["Fat (g)"]}
                             </td>
-                            <td className="px-6 py-4">
-                              {dayData.totals.Kcal}
-                            </td>
+                            <td className="px-6 py-4">{dayData.totals.Kcal}</td>
                           </tr>
                         );
                       })}
@@ -707,194 +796,413 @@ export default function NutritionPage() {
           </>
         ) : (
           <div className="space-y-6">
-            <div className="flex justify-end mb-2">
-              <div className="relative w-full sm:w-48">
-                <button
-                  onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full"
-                >
-                  <span>
-                    {comparisonPeriod === "all"
-                      ? "All Time"
-                      : comparisonPeriod === "yearly"
-                      ? "Past Year"
-                      : comparisonPeriod === "quarterly"
-                        ? "Past Quarter"
-                        : "Past Month"}
-                  </span>
-                  <svg
-                    className="h-5 w-5 transition-transform ${isPeriodDropdownOpen ? 'rotate-180' : ''}"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold">Nutrition Timeline</h2>
+                <div className="relative w-full sm:w-48">
+                  <button
+                    onClick={() =>
+                      setIsPeriodDropdownOpen(!isPeriodDropdownOpen)
+                    }
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
+                    <span>
+                      {comparisonPeriod === "all"
+                        ? "All Time"
+                        : comparisonPeriod === "yearly"
+                        ? "Past Year"
+                        : comparisonPeriod === "quarterly"
+                        ? "Past Quarter"
+                        : comparisonPeriod === "monthly"
+                        ? "Past Month"
+                        : "Custom"}
+                    </span>
+                    <svg
+                      className="h-5 w-5 transition-transform ${isPeriodDropdownOpen ? 'rotate-180' : ''}"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
 
-                {isPeriodDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden">
-                    {[
-                      { id: "all", label: "All Time" },
-                      { id: "yearly", label: "Past Year" },
-                      { id: "quarterly", label: "Past Quarter" },
-                      { id: "monthly", label: "Past Month" },
-                    ].map((period) => (
-                      <button
-                        key={period.id}
-                        onClick={() => {
-                          setComparisonPeriod(period.id);
-                          setIsPeriodDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                          comparisonPeriod === period.id ? "bg-blue-100" : ""
-                        }`}
-                      >
-                        {period.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                <h2 className="text-lg md:text-xl font-semibold mb-4">
-                  Macronutrients Progress
-                </h2>
-                <div className="h-[400px] overflow-x-auto">
-                  <div className="min-w-[500px] h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={sortedWeekEntries(filteredData).map(
-                          (weekData) => ({
-                            week: weekData.week,
-                            protein: weekData.avgProtein,
-                            carbs: weekData.avgCarbs,
-                            fat: weekData.avgFat,
-                          })
-                        )}
-                        margin={{ right: 30, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="week" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="protein"
-                          stroke="#4ade80"
-                          name="Avg Protein (g)"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="carbs"
-                          stroke="#f59e0b"
-                          name="Avg Carbs (g)"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="fat"
-                          stroke="#ef4444"
-                          name="Avg Fat (g)"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                <h2 className="text-lg md:text-xl font-semibold mb-4">
-                  Calories Progress
-                </h2>
-                <div className="h-[400px] overflow-x-auto">
-                  <div className="min-w-[500px] h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      >
-                      <LineChart
-                        data={sortedWeekEntries(filteredData).map(
-                          (weekData) => ({
-                            week: weekData.week,
-                            calories: weekData.avgCalories,
-                          })
-                        )}
-                        margin={{ right: 30, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="week" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="calories"
-                          stroke="#8b5cf6"
-                          name="Avg Calories"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-auto">
-              <div className="min-w-[800px]">
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Week
-                            </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Date Range
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Avg Protein (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Avg Carbs (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Avg Fat (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Avg Calories
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {sortedWeekEntries(filteredData).map((weekData) => (
-                        <tr key={weekData.week}>
-                          <td className="px-6 py-4">{weekData.week}</td>
-                          <td className="px-6 py-4">
-                            {getWeekRange(weekData.dates)}
-                          </td>
-                          <td className="px-6 py-4">{weekData.avgProtein}</td>
-                          <td className="px-6 py-4">{weekData.avgCarbs}</td>
-                          <td className="px-6 py-4">{weekData.avgFat}</td>
-                          <td className="px-6 py-4">{weekData.avgCalories}</td>
-                        </tr>
+                  {isPeriodDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden">
+                      {[
+                        { id: "all", label: "All Time" },
+                        { id: "yearly", label: "Past Year" },
+                        { id: "quarterly", label: "Past Quarter" },
+                        { id: "monthly", label: "Past Month" },
+                        { id: "custom", label: "Custom" },
+                      ].map((period) => (
+                        <button
+                          key={period.id}
+                          onClick={() => {
+                            setComparisonPeriod(period.id);
+                            setIsPeriodDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                            comparisonPeriod === period.id ? "bg-blue-100" : ""
+                          }`}
+                        >
+                          {period.label}
+                        </button>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Custom Date Range Selector */}
+              {comparisonPeriod === "custom" && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">
+                    Custom
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => {
+                        // Re-trigger the filtering by toggling the state
+                        setComparisonPeriod("temp");
+                        setTimeout(() => setComparisonPeriod("custom"), 10);
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Apply Date Range
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Check if we should display daily or weekly data */}
+            {comparisonPeriod === "custom" &&
+            startDate &&
+            endDate &&
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+              (1000 * 3600 * 24) <
+              14 ? (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Macronutrients Progress Chart - Daily */}
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Daily Macronutrients
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={calculateDailyNutrition()}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="formattedDate"
+                              height={60}
+                              angle={-45}
+                              textAnchor="end"
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="protein"
+                              stroke="#4ade80"
+                              name="Protein (g)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="carbs"
+                              stroke="#f59e0b"
+                              name="Carbs (g)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="fat"
+                              stroke="#ef4444"
+                              name="Fat (g)"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Calories Progress Chart - Daily */}
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Daily Calories
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={calculateDailyNutrition()}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="formattedDate"
+                              height={60}
+                              angle={-45}
+                              textAnchor="end"
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="calories"
+                              stroke="#8b5cf6"
+                              name="Calories"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Nutrition Table */}
+                <div className="overflow-auto">
+                  <div className="min-w-[800px]">
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Day Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Protein (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Carbs (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Fat (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Calories
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {calculateDailyNutrition().map((day) => (
+                            <tr key={day.date}>
+                              <td
+                                className="px-6 py-4 cursor-pointer hover:text-blue-600"
+                                onClick={() => {
+                                  // Find the week that contains this date
+                                  const weekKey = Object.keys(weeklyData).find(
+                                    (week) =>
+                                      Object.keys(
+                                        weeklyData[week].dailyData
+                                      ).includes(day.date)
+                                  );
+                                  if (weekKey) {
+                                    setSelectedDateData({
+                                      date: day.date,
+                                      data: weeklyData[weekKey].dailyData[
+                                        day.date
+                                      ],
+                                    });
+                                    setIsModalOpen(true);
+                                  }
+                                }}
+                              >
+                                {day.formattedDate}
+                              </td>
+                              <td className="px-6 py-4">{day.dayType}</td>
+                              <td className="px-6 py-4">{day.protein}</td>
+                              <td className="px-6 py-4">{day.carbs}</td>
+                              <td className="px-6 py-4">{day.fat}</td>
+                              <td className="px-6 py-4">{day.calories}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Macronutrients Progress Chart - Weekly */}
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Macronutrients Progress
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={sortedWeekEntries(filteredData).map(
+                              (weekData) => ({
+                                week: weekData.week,
+                                protein: weekData.avgProtein,
+                                carbs: weekData.avgCarbs,
+                                fat: weekData.avgFat,
+                              })
+                            )}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="week" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="protein"
+                              stroke="#4ade80"
+                              name="Avg Protein (g)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="carbs"
+                              stroke="#f59e0b"
+                              name="Avg Carbs (g)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="fat"
+                              stroke="#ef4444"
+                              name="Avg Fat (g)"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Calories Progress Chart - Weekly */}
+                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4">
+                      Calories Progress
+                    </h2>
+                    <div className="h-[400px] overflow-x-auto">
+                      <div className="min-w-[500px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={sortedWeekEntries(filteredData).map(
+                              (weekData) => ({
+                                week: weekData.week,
+                                calories: weekData.avgCalories,
+                              })
+                            )}
+                            margin={{ right: 30, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="week" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="calories"
+                              stroke="#8b5cf6"
+                              name="Avg Calories"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly Nutrition Table */}
+                <div className="overflow-auto">
+                  <div className="min-w-[800px]">
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Week
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Date Range
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Avg Protein (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Avg Carbs (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Avg Fat (g)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              Avg Calories
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {sortedWeekEntries(filteredData).map((weekData) => (
+                            <tr key={weekData.week}>
+                              <td className="px-6 py-4">{weekData.week}</td>
+                              <td className="px-6 py-4">
+                                {getWeekRange(weekData.dates)}
+                              </td>
+                              <td className="px-6 py-4">
+                                {weekData.avgProtein}
+                              </td>
+                              <td className="px-6 py-4">{weekData.avgCarbs}</td>
+                              <td className="px-6 py-4">{weekData.avgFat}</td>
+                              <td className="px-6 py-4">
+                                {weekData.avgCalories}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
-      
+
       {selectedDateData && (
         <NutritionModal
           isOpen={isModalOpen}
