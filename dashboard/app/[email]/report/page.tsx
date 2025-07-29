@@ -155,7 +155,7 @@ export default function ReportPage() {
       });
     }
 
-    return entries
+    const averages = entries
       .map(([week, data]) => {
         const weights = Object.entries(data)
           .filter(
@@ -189,8 +189,12 @@ export default function ReportPage() {
           )
           .map(([_, day]) => day["Hunger Level"].value);
 
+        // Get the week number as an integer for proper sorting
+        const weekNumber = parseInt(week.replace("week", ""), 10) || 0;
+
         return {
           week,
+          weekNumber,
           weekDates: getWeekDates(data),
           avgWeight: weights.length
             ? (weights.reduce((a, b) => a + b, 0) / weights.length).toFixed(1)
@@ -222,6 +226,9 @@ export default function ReportPage() {
         const bStartDate = getWeekStartDate(weeklyData[b.week]) || new Date(0);
         return aStartDate.getTime() - bStartDate.getTime(); // Ascending order by date
       });
+
+    // Sort by week number chronologically
+    return averages.sort((a, b) => a.weekNumber - b.weekNumber);
   };
 
   // Helper function to get the earliest date in a week's data

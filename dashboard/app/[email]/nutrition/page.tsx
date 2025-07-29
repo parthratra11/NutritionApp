@@ -104,14 +104,16 @@ export default function NutritionPage() {
   const groupDataByWeeks = (data: NutritionDataStructure): WeekData => {
     const weeks: WeekData = {};
 
-    Object.entries(data).forEach(([key, value]) => {
+    Object.entries(data).forEach(([key, value]) => {  
       if (key === "firstEntryDate") return;
 
-      const weekNum = parseInt(key.replace("week", ""));
+      // Extract week number for sorting
+      const weekNum = parseInt(key.replace("week", ""), 10) || 0;
       const weekKey = `Week ${weekNum}`;
 
       if (!weeks[weekKey]) {
         weeks[weekKey] = {
+          weekNumber: weekNum,
           dates: [],
           avgProtein: 0,
           avgCarbs: 0,
@@ -122,6 +124,7 @@ export default function NutritionPage() {
         };
       }
 
+      // Process the week data
       const weekData = value as WeekData;
       Object.entries(weekData).forEach(([day, dayData]) => {
         if (dayData.date) {
@@ -139,6 +142,7 @@ export default function NutritionPage() {
         }
       });
 
+      // Calculate averages
       const daysCount = weeks[weekKey].dates.length;
       if (daysCount > 0) {
         weeks[weekKey].avgProtein = parseFloat(
@@ -394,6 +398,22 @@ export default function NutritionPage() {
 
       return filtered;
     }, {} as WeekData);
+  };
+
+  // Helper function to sort weeks chronologically
+  const sortedWeekEntries = (data: WeekData) => {
+    return Object.entries(data)
+      .map(([week, weekData]) => ({
+        week,
+        weekNumber: weekData.weekNumber || parseInt(week.replace("Week ", ""), 10) || 0,
+        ...weekData
+      }))
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+  };
+
+  // Helper function to sort dates chronologically
+  const sortedDates = (dates: string[]) => {
+    return [...dates].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
   };
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -753,12 +773,12 @@ export default function NutritionPage() {
                   <div className="min-w-[500px] h-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
-                        data={Object.entries(filteredData).map(
-                          ([week, data]) => ({
-                            week,
-                            protein: data.avgProtein,
-                            carbs: data.avgCarbs,
-                            fat: data.avgFat,
+                        data={sortedWeekEntries(filteredData).map(
+                          (weekData) => ({
+                            week: weekData.week,
+                            protein: weekData.avgProtein,
+                            carbs: weekData.avgCarbs,
+                            fat: weekData.avgFat,
                           })
                         )}
                         margin={{ right: 30, bottom: 20 }}
@@ -801,10 +821,10 @@ export default function NutritionPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       >
                       <LineChart
-                        data={Object.entries(filteredData).map(
-                          ([week, data]) => ({
-                            week,
-                            calories: data.avgCalories,
+                        data={sortedWeekEntries(filteredData).map(
+                          (weekData) => ({
+                            week: weekData.week,
+                            calories: weekData.avgCalories,
                           })
                         )}
                         margin={{ right: 30, bottom: 20 }}
@@ -854,16 +874,16 @@ export default function NutritionPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {Object.entries(filteredData).map(([week, data]) => (
-                        <tr key={week}>
-                          <td className="px-6 py-4">{week}</td>
+                      {sortedWeekEntries(filteredData).map((weekData) => (
+                        <tr key={weekData.week}>
+                          <td className="px-6 py-4">{weekData.week}</td>
                           <td className="px-6 py-4">
-                            {getWeekRange(data.dates)}
+                            {getWeekRange(weekData.dates)}
                           </td>
-                          <td className="px-6 py-4">{data.avgProtein}</td>
-                          <td className="px-6 py-4">{data.avgCarbs}</td>
-                          <td className="px-6 py-4">{data.avgFat}</td>
-                          <td className="px-6 py-4">{data.avgCalories}</td>
+                          <td className="px-6 py-4">{weekData.avgProtein}</td>
+                          <td className="px-6 py-4">{weekData.avgCarbs}</td>
+                          <td className="px-6 py-4">{weekData.avgFat}</td>
+                          <td className="px-6 py-4">{weekData.avgCalories}</td>
                         </tr>
                       ))}
                     </tbody>
