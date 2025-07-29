@@ -15,6 +15,7 @@ import {
   Modal,
   FlatList,
   Linking,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -182,6 +183,9 @@ const Exercise = () => {
   const { isDarkMode } = useTheme();
   const [exercises, setExercises] = useState([]);
   const [sessionName, setSessionName] = useState('Session A');
+  const [workoutNote, setWorkoutNote] = useState('');
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [finishModalVisible, setFinishModalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const [startTime, setStartTime] = useState(new Date());
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -367,40 +371,57 @@ const Exercise = () => {
           <View style={styles.pullDownIndicator} />
         </View>
 
-        <View style={styles.header}>
-          <View style={styles.timerIconContainer}>
-            <Ionicons name="time-outline" size={24} color="#fff" />
-          </View>
-
-          <View style={styles.timeContainer}>
-            <Text style={styles.dateText}>{currentDate}</Text>
-            <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
-          </View>
-
-          <TouchableOpacity onPress={handleFinish} style={styles.finishButton}>
-            <Text style={styles.finishText}>Finish</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.sessionHeader}>
-          <Text style={styles.sessionName}>{sessionName}</Text>
-        </View>
-
-        <View style={styles.exerciseListHeader}>
-          <Text style={styles.exerciseHeaderText}>Exercise</Text>
-          <View style={styles.exerciseHeaderRight}>
-            <Text style={styles.exerciseHeaderText}>Sets</Text>
-            <Text style={styles.exerciseHeaderText}>Rep Range</Text>
-            <View style={styles.editHeaderSpacer} />
-          </View>
-        </View>
-
+        {/* Make the whole content scrollable */}
         <ScrollView
-          style={styles.scrollView}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: screenHeight * 0.01 }}
           ref={scrollViewRef}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <View style={styles.timerIconContainer}>
+              <Ionicons name="time-outline" size={24} color="#fff" />
+            </View>
+
+            <View style={styles.timeContainer}>
+              <Text style={styles.dateText}>{currentDate}</Text>
+              <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
+            </View>
+
+            <TouchableOpacity onPress={() => setFinishModalVisible(true)} style={styles.finishButton}>
+              <Text style={styles.finishText}>Finish</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.sessionHeader}>
+            <Text style={styles.sessionName}>{sessionName}</Text>
+            <TouchableOpacity
+              style={styles.noteButton}
+              onPress={() => setNoteModalVisible(true)}
+            >
+              <Ionicons name="document-text-outline" size={20} color="#fff" />
+              <Text style={styles.noteButtonText}>
+                {workoutNote ? 'Edit Note' : 'Add Note'}
+              </Text>
+            </TouchableOpacity>
+            {workoutNote ? (
+              <Text style={styles.notePreview} numberOfLines={2}>
+                {workoutNote}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.exerciseListHeader}>
+            <Text style={styles.exerciseHeaderText}>Exercise</Text>
+            <View style={styles.exerciseHeaderRight}>
+              <Text style={styles.exerciseHeaderText}>Sets</Text>
+              <Text style={styles.exerciseHeaderText}>Rep Range</Text>
+              <View style={styles.editHeaderSpacer} />
+            </View>
+          </View>
+
           {exercises.map((exercise, index) => (
             <ExerciseItem
               key={index}
@@ -415,14 +436,15 @@ const Exercise = () => {
           ))}
 
           <View style={styles.bottomPadding} />
+          {/* Add Cancel button inside ScrollView for better scroll behavior */}
+          <TouchableOpacity style={styles.cancelButton}>
+            <Text style={styles.cancelButtonText}>Cancel Workout</Text>
+          </TouchableOpacity>
         </ScrollView>
 
-        <TouchableOpacity style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>Cancel Workout</Text>
-        </TouchableOpacity>
+        {/* Blur overlay when edit modal or note modal is open */}
+        {(editModalVisible || noteModalVisible) && <View style={styles.blurOverlay} />}
 
-        {/* Blur overlay when edit modal is open */}
-        {editModalVisible && <View style={styles.blurOverlay} />}
       </Animated.View>
 
       {/* Edit Exercise Modal */}
@@ -433,6 +455,77 @@ const Exercise = () => {
         initialSets={parseInt(editingExercise?.sets) || 4}
         onSave={handleSaveEdit}
       />
+
+      {/* Note Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={noteModalVisible}
+        onRequestClose={() => setNoteModalVisible(false)}
+      >
+        <View style={styles.editModalOverlay}>
+          <View style={styles.noteModalContent}> {/* <-- use the new style here */}
+            <View style={styles.editModalHeader}>
+              <TouchableOpacity onPress={() => setNoteModalVisible(false)} style={styles.editModalClose}>
+                <Feather name="x" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.editHeaderText}>Workout Note</Text>
+            <View style={{ flex: 1, padding: 16 }}>
+              <ScrollView>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Type your workout note here..."
+                  placeholderTextColor="#aaa"
+                  value={workoutNote}
+                  onChangeText={setWorkoutNote}
+                  multiline
+                  autoFocus
+                />
+              </ScrollView>
+            </View>
+            <View style={styles.editButtonsRow}>
+              <TouchableOpacity
+                style={[styles.editButton, styles.editAddButton]}
+                onPress={() => setNoteModalVisible(false)}
+              >
+                <Text style={styles.editButtonText}>Save Note</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Finish Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={finishModalVisible}
+        onRequestClose={() => setFinishModalVisible(false)}
+      >
+        <View style={styles.editModalOverlay}>
+          <View style={styles.finishModalContent}>
+            <Text style={styles.finishModalTitle}>Are you sure you want to finish?</Text>
+            <View style={styles.editButtonsRow}>
+              <TouchableOpacity
+                style={[styles.editButton, styles.editRemoveButton, { marginRight: 12 }]} // Add marginRight here
+                onPress={() => setFinishModalVisible(false)}
+              >
+                <Text style={styles.editButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editButton, styles.editAddButton]}
+                onPress={() => {
+                  setFinishModalVisible(false);
+                  handleFinish();
+                }}
+              >
+                <Text style={styles.editButtonText}>Finish</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -525,6 +618,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: screenWidth * 0.05,
     fontWeight: 'bold',
+  },
+  noteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: '#16486B',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  noteButtonText: {
+    color: '#fff',
+    marginLeft: 6,
+    fontWeight: '600',
+    fontSize: screenWidth * 0.035,
+  },
+  notePreview: {
+    color: '#fff',
+    opacity: 0.7,
+    marginTop: 6,
+    fontSize: screenWidth * 0.032,
+    maxWidth: '90%',
   },
   exerciseListHeader: {
     flexDirection: 'row',
@@ -655,10 +771,31 @@ const styles = StyleSheet.create({
   },
   editModalContent: {
     width: screenWidth * 0.85,
-    height: screenHeight * 0.52,
+    height: screenHeight * 0.46, // reduced from 0.52 to 0.36
     backgroundColor: '#0A1E33',
     borderRadius: 30,
     overflow: 'hidden',
+  },
+  noteModalContent: {
+    width: screenWidth * 0.85,
+    height: screenHeight * 0.32,
+    backgroundColor: '#0A1E33',
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  finishModalContent: {
+    width: screenWidth * 0.8,
+    backgroundColor: '#0A1E33',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  finishModalTitle: {
+    color: '#fff',
+    fontSize: screenWidth * 0.045,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   editModalHeader: {
     flexDirection: 'row',
@@ -737,12 +874,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(8, 26, 47, 0.9)', // Darkened blue background
+    backgroundColor: 'rgba(8, 26, 47, 0.7)', // Darkened blue background
     backdropFilter: 'blur(100px)', // This works on web, for native use BlurView
   },
   helpButton: {
     marginLeft: 8,
     padding: 4,
+  },
+  noteInput: {
+    minHeight: 70,
+    color: '#fff',
+    backgroundColor: '#1A2B44',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: screenWidth * 0.035,
+    textAlignVertical: 'top',
   },
 });
 

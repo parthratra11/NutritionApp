@@ -46,7 +46,7 @@ const TrackingOptionsModal = ({ visible, onClose, navigation }) => {
           </View>
           
           <View style={styles.contentContainer}>
-            <Text style={styles.titleText}>What would you like to track today?</Text>
+            <Text style={styles.titleText}>What would you like to input today?</Text>
             
             <View style={styles.optionsContainer}>
               <TrackingOption 
