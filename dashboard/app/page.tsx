@@ -501,7 +501,7 @@ export default function Home() {
                 <h2 className="font-semibold text-white">{form.fullName}</h2>
                 <p className="text-xs text-gray-300 truncate">{form.email}</p>
                 <p className="text-xs text-gray-300">
-                  Submitted:{" "}
+                  Joined:{" "}
                   {form.timestamp?.toDate
                     ? form.timestamp.toDate().toLocaleDateString()
                     : "No date"}
