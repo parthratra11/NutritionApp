@@ -299,6 +299,12 @@ export default function WorkoutDashboard() {
           >
             Edit Template
           </Link>
+          <Link
+            href={`/${params.email}/workout/add`}
+            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
+          >
+            Add/Delete Exercise
+          </Link>
         </div>
 
         {/* Header Section */}
