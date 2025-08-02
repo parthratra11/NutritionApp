@@ -16,6 +16,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  ReferenceLine,
 } from "recharts";
 import Navigation from "@/components/shared/Navigation";
 
@@ -85,6 +86,14 @@ export default function NutritionPage() {
   } | null>(null);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+
+  // Define target values for each nutrient
+  const targets = {
+    protein: 150, // Target protein in grams
+    carbs: 200, // Target carbs in grams
+    fat: 70, // Target fat in grams
+    calories: 2000, // Target calories
+  };
 
   const clientName = params?.email
     ? decodeURIComponent(params.email as string).split("@")[0]
@@ -317,6 +326,17 @@ export default function NutritionPage() {
     );
   };
 
+  const getProgressColor = (current: number, target: number) => {
+    const percentage = (current / target) * 100;
+    if (percentage >= 90) return "text-green-600";
+    if (percentage >= 75) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const formatProgress = (current: number, target: number) => {
+    return `${current}/${target}`;
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const dayData =
@@ -356,14 +376,46 @@ export default function NutritionPage() {
           <div className="border-t pt-2 mt-2">
             <p className="font-medium text-gray-700 mb-1">Daily Totals</p>
             <div className="grid grid-cols-2 gap-x-4 text-sm">
-              <p className="text-gray-600">
-                Protein: {dayData.totals["Protein (g)"]}g
+              <p
+                className={`${getProgressColor(
+                  dayData.totals["Protein (g)"],
+                  targets.protein
+                )}`}
+              >
+                Protein:{" "}
+                {formatProgress(dayData.totals["Protein (g)"], targets.protein)}
+                g
               </p>
-              <p className="text-gray-600">
-                Carbs: {dayData.totals["Carbohydrate (g)"]}g
+              <p
+                className={`${getProgressColor(
+                  dayData.totals["Carbohydrate (g)"],
+                  targets.carbs
+                )}`}
+              >
+                Carbs:{" "}
+                {formatProgress(
+                  dayData.totals["Carbohydrate (g)"],
+                  targets.carbs
+                )}
+                g
               </p>
-              <p className="text-gray-600">Fat: {dayData.totals["Fat (g)"]}g</p>
-              <p className="text-gray-600">Calories: {dayData.totals.Kcal}</p>
+              <p
+                className={`${getProgressColor(
+                  dayData.totals["Fat (g)"],
+                  targets.fat
+                )}`}
+              >
+                Fat: {formatProgress(dayData.totals["Fat (g)"], targets.fat)}g
+              </p>
+              <p
+                className={`${getProgressColor(
+                  dayData.totals.Kcal,
+                  targets.calories
+                )}`}
+              >
+                Calories:{" "}
+                {formatProgress(dayData.totals.Kcal, targets.calories)}
+              </p>
             </div>
           </div>
         </div>
@@ -518,22 +570,46 @@ export default function NutritionPage() {
     {
       label: "Avg Protein",
       value: `${weeklyData[selectedWeek]?.avgProtein || 0}g`,
-      color: "bg-green-100 text-green-800",
+      target: `${targets.protein}g`,
+      progress: `${weeklyData[selectedWeek]?.avgProtein || 0}/${
+        targets.protein
+      }g`,
+      color: `${getProgressColor(
+        weeklyData[selectedWeek]?.avgProtein || 0,
+        targets.protein
+      )}`,
     },
     {
       label: "Avg Carbs",
       value: `${weeklyData[selectedWeek]?.avgCarbs || 0}g`,
-      color: "bg-yellow-100 text-yellow-800",
+      target: `${targets.carbs}g`,
+      progress: `${weeklyData[selectedWeek]?.avgCarbs || 0}/${targets.carbs}g`,
+      color: `${getProgressColor(
+        weeklyData[selectedWeek]?.avgCarbs || 0,
+        targets.carbs
+      )}`,
     },
     {
       label: "Avg Fat",
       value: `${weeklyData[selectedWeek]?.avgFat || 0}g`,
-      color: "bg-red-100 text-red-800",
+      target: `${targets.fat}g`,
+      progress: `${weeklyData[selectedWeek]?.avgFat || 0}/${targets.fat}g`,
+      color: `${getProgressColor(
+        weeklyData[selectedWeek]?.avgFat || 0,
+        targets.fat
+      )}`,
     },
     {
       label: "Avg Calories",
       value: `${weeklyData[selectedWeek]?.avgCalories || 0}`,
-      color: "bg-purple-100 text-purple-800",
+      target: `${targets.calories}`,
+      progress: `${weeklyData[selectedWeek]?.avgCalories || 0}/${
+        targets.calories
+      }`,
+      color: `${getProgressColor(
+        weeklyData[selectedWeek]?.avgCalories || 0,
+        targets.calories
+      )}`,
     },
   ];
 
@@ -607,10 +683,15 @@ export default function NutritionPage() {
                         <div className="text-sm text-gray-500">
                           {metric.label}
                         </div>
-                        <div
-                          className={`text-xl font-semibold mt-1 ${metric.color} inline-block px-2 py-1 rounded-full`}
-                        >
-                          {metric.value}
+                        <div className="flex justify-between items-center mt-1">
+                          <div
+                            className={`text-lg font-semibold ${metric.color}`}
+                          >
+                            {metric.progress}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Target: {metric.target}
                         </div>
                       </div>
                     ))}
@@ -663,6 +744,36 @@ export default function NutritionPage() {
                             />
                             <Bar dataKey="carbs" fill="#f59e0b" name="Carbs" />
                             <Bar dataKey="fat" fill="#ef4444" name="Fat" />
+                            <ReferenceLine
+                              y={targets.protein}
+                              stroke="#4ade80"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Protein Target",
+                                position: "insideTopRight",
+                                fill: "#4ade80",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.carbs}
+                              stroke="#f59e0b"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Carbs Target",
+                                position: "insideTopRight",
+                                fill: "#f59e0b",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.fat}
+                              stroke="#ef4444"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Fat Target",
+                                position: "insideTopRight",
+                                fill: "#ef4444",
+                              }}
+                            />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -706,6 +817,16 @@ export default function NutritionPage() {
                               dataKey="calories"
                               fill="#8b5cf6"
                               name="Calories"
+                            />
+                            <ReferenceLine
+                              y={targets.calories}
+                              stroke="#8b5cf6"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Calorie Target",
+                                position: "insideTopRight",
+                                fill: "#8b5cf6",
+                              }}
                             />
                           </BarChart>
                         </ResponsiveContainer>
@@ -759,33 +880,99 @@ export default function NutritionPage() {
                               {formatDate(date)}
                             </td>
                             <td className="px-6 py-4">{dayData.dayType}</td>
-                            <td className="px-6 py-4">
-                              {dayData.totals["Protein (g)"]}
+                            <td
+                              className={`px-6 py-4 ${getProgressColor(
+                                dayData.totals["Protein (g)"],
+                                targets.protein
+                              )}`}
+                            >
+                              {formatProgress(
+                                dayData.totals["Protein (g)"],
+                                targets.protein
+                              )}
                             </td>
-                            <td className="px-6 py-4">
-                              {dayData.totals["Carbohydrate (g)"]}
+                            <td
+                              className={`px-6 py-4 ${getProgressColor(
+                                dayData.totals["Carbohydrate (g)"],
+                                targets.carbs
+                              )}`}
+                            >
+                              {formatProgress(
+                                dayData.totals["Carbohydrate (g)"],
+                                targets.carbs
+                              )}
                             </td>
-                            <td className="px-6 py-4">
-                              {dayData.totals["Fat (g)"]}
+                            <td
+                              className={`px-6 py-4 ${getProgressColor(
+                                dayData.totals["Fat (g)"],
+                                targets.fat
+                              )}`}
+                            >
+                              {formatProgress(
+                                dayData.totals["Fat (g)"],
+                                targets.fat
+                              )}
                             </td>
-                            <td className="px-6 py-4">{dayData.totals.Kcal}</td>
+                            <td
+                              className={`px-6 py-4 ${getProgressColor(
+                                dayData.totals.Kcal,
+                                targets.calories
+                              )}`}
+                            >
+                              {formatProgress(
+                                dayData.totals.Kcal,
+                                targets.calories
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
                       <tr className="bg-gray-50 font-medium">
                         <td className="px-6 py-4">Week Average</td>
                         <td className="px-6 py-4">-</td>
-                        <td className="px-6 py-4">
-                          {weeklyData[selectedWeek].avgProtein}
+                        <td
+                          className={`px-6 py-4 ${getProgressColor(
+                            weeklyData[selectedWeek].avgProtein,
+                            targets.protein
+                          )}`}
+                        >
+                          {formatProgress(
+                            weeklyData[selectedWeek].avgProtein,
+                            targets.protein
+                          )}
                         </td>
-                        <td className="px-6 py-4">
-                          {weeklyData[selectedWeek].avgCarbs}
+                        <td
+                          className={`px-6 py-4 ${getProgressColor(
+                            weeklyData[selectedWeek].avgCarbs,
+                            targets.carbs
+                          )}`}
+                        >
+                          {formatProgress(
+                            weeklyData[selectedWeek].avgCarbs,
+                            targets.carbs
+                          )}
                         </td>
-                        <td className="px-6 py-4">
-                          {weeklyData[selectedWeek].avgFat}
+                        <td
+                          className={`px-6 py-4 ${getProgressColor(
+                            weeklyData[selectedWeek].avgFat,
+                            targets.fat
+                          )}`}
+                        >
+                          {formatProgress(
+                            weeklyData[selectedWeek].avgFat,
+                            targets.fat
+                          )}
                         </td>
-                        <td className="px-6 py-4">
-                          {weeklyData[selectedWeek].avgCalories}
+                        <td
+                          className={`px-6 py-4 ${getProgressColor(
+                            weeklyData[selectedWeek].avgCalories,
+                            targets.calories
+                          )}`}
+                        >
+                          {formatProgress(
+                            weeklyData[selectedWeek].avgCalories,
+                            targets.calories
+                          )}
                         </td>
                       </tr>
                     </tbody>
@@ -955,6 +1142,36 @@ export default function NutritionPage() {
                               stroke="#ef4444"
                               name="Fat (g)"
                             />
+                            <ReferenceLine
+                              y={targets.protein}
+                              stroke="#4ade80"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Protein Target",
+                                position: "insideTopRight",
+                                fill: "#4ade80",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.carbs}
+                              stroke="#f59e0b"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Carbs Target",
+                                position: "insideTopRight",
+                                fill: "#f59e0b",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.fat}
+                              stroke="#ef4444"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Fat Target",
+                                position: "insideTopRight",
+                                fill: "#ef4444",
+                              }}
+                            />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -988,6 +1205,16 @@ export default function NutritionPage() {
                               dataKey="calories"
                               stroke="#8b5cf6"
                               name="Calories"
+                            />
+                            <ReferenceLine
+                              y={targets.calories}
+                              stroke="#8b5cf6"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Calorie Target",
+                                position: "insideTopRight",
+                                fill: "#8b5cf6",
+                              }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
@@ -1050,10 +1277,38 @@ export default function NutritionPage() {
                                 {day.formattedDate}
                               </td>
                               <td className="px-6 py-4">{day.dayType}</td>
-                              <td className="px-6 py-4">{day.protein}</td>
-                              <td className="px-6 py-4">{day.carbs}</td>
-                              <td className="px-6 py-4">{day.fat}</td>
-                              <td className="px-6 py-4">{day.calories}</td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  day.protein,
+                                  targets.protein
+                                )}`}
+                              >
+                                {formatProgress(day.protein, targets.protein)}
+                              </td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  day.carbs,
+                                  targets.carbs
+                                )}`}
+                              >
+                                {formatProgress(day.carbs, targets.carbs)}
+                              </td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  day.fat,
+                                  targets.fat
+                                )}`}
+                              >
+                                {formatProgress(day.fat, targets.fat)}
+                              </td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  day.calories,
+                                  targets.calories
+                                )}`}
+                              >
+                                {formatProgress(day.calories, targets.calories)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1107,6 +1362,36 @@ export default function NutritionPage() {
                               stroke="#ef4444"
                               name="Avg Fat (g)"
                             />
+                            <ReferenceLine
+                              y={targets.protein}
+                              stroke="#4ade80"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Protein Target",
+                                position: "insideTopRight",
+                                fill: "#4ade80",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.carbs}
+                              stroke="#f59e0b"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Carbs Target",
+                                position: "insideTopRight",
+                                fill: "#f59e0b",
+                              }}
+                            />
+                            <ReferenceLine
+                              y={targets.fat}
+                              stroke="#ef4444"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Fat Target",
+                                position: "insideTopRight",
+                                fill: "#ef4444",
+                              }}
+                            />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -1140,6 +1425,16 @@ export default function NutritionPage() {
                               dataKey="calories"
                               stroke="#8b5cf6"
                               name="Avg Calories"
+                            />
+                            <ReferenceLine
+                              y={targets.calories}
+                              stroke="#8b5cf6"
+                              strokeDasharray="3 3"
+                              label={{
+                                value: "Calorie Target",
+                                position: "insideTopRight",
+                                fill: "#8b5cf6",
+                              }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
@@ -1182,13 +1477,46 @@ export default function NutritionPage() {
                               <td className="px-6 py-4">
                                 {getWeekRange(weekData.dates)}
                               </td>
-                              <td className="px-6 py-4">
-                                {weekData.avgProtein}
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  weekData.avgProtein,
+                                  targets.protein
+                                )}`}
+                              >
+                                {formatProgress(
+                                  weekData.avgProtein,
+                                  targets.protein
+                                )}
                               </td>
-                              <td className="px-6 py-4">{weekData.avgCarbs}</td>
-                              <td className="px-6 py-4">{weekData.avgFat}</td>
-                              <td className="px-6 py-4">
-                                {weekData.avgCalories}
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  weekData.avgCarbs,
+                                  targets.carbs
+                                )}`}
+                              >
+                                {formatProgress(
+                                  weekData.avgCarbs,
+                                  targets.carbs
+                                )}
+                              </td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  weekData.avgFat,
+                                  targets.fat
+                                )}`}
+                              >
+                                {formatProgress(weekData.avgFat, targets.fat)}
+                              </td>
+                              <td
+                                className={`px-6 py-4 ${getProgressColor(
+                                  weekData.avgCalories,
+                                  targets.calories
+                                )}`}
+                              >
+                                {formatProgress(
+                                  weekData.avgCalories,
+                                  targets.calories
+                                )}
                               </td>
                             </tr>
                           ))}
