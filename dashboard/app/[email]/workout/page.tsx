@@ -101,6 +101,42 @@ export default function WorkoutDashboard() {
     });
   };
 
+  // Helper to determine progress between sessions
+  const compareProgress = (
+    currentSet: SetData,
+    previousSet: SetData | undefined
+  ) => {
+    if (!previousSet) return "neutral";
+
+    const currentWeight = parseFloat(currentSet.weight) || 0;
+    const previousWeight = parseFloat(previousSet.weight) || 0;
+
+    const currentReps = parseInt(currentSet.reps) || 0;
+    const previousReps = parseInt(previousSet.reps) || 0;
+
+    // Better performance if:
+    // 1. More weight with same or more reps
+    // 2. Same weight but more reps
+    if (
+      (currentWeight > previousWeight && currentReps >= previousReps) ||
+      (currentWeight === previousWeight && currentReps > previousReps)
+    ) {
+      return "improved";
+    }
+    // Worse performance if:
+    // 1. Less weight with same or fewer reps
+    // 2. Same weight but fewer reps
+    else if (
+      (currentWeight < previousWeight && currentReps <= previousReps) ||
+      (currentWeight === previousWeight && currentReps < previousReps)
+    ) {
+      return "declined";
+    }
+
+    // Mixed results (e.g., more weight but fewer reps) or same performance
+    return "neutral";
+  };
+
   // Helper to get session type from workout name
   const getSessionType = (exercises: ExerciseData[]): string | null => {
     const exerciseNames = exercises.map((e) => e.name.trim());
@@ -369,6 +405,32 @@ export default function WorkoutDashboard() {
             });
           });
 
+          // Create a map to store the most recent previous exercise data for comparison
+          const exercisePreviousDataMap = new Map<
+            string,
+            {
+              date: string;
+              firstSet: SetData;
+            }
+          >();
+
+          // First pass: collect all exercises data chronologically
+          Object.entries(exercises).forEach(([exerciseName, dates]) => {
+            const sortedDates = Object.keys(dates).sort(
+              (a, b) => new Date(a).getTime() - new Date(b).getTime()
+            );
+
+            sortedDates.forEach((date) => {
+              const data = dates[date];
+              if (Array.isArray(data?.sets) && data.sets.length > 0) {
+                exercisePreviousDataMap.set(exerciseName, {
+                  date,
+                  firstSet: data.sets[0],
+                });
+              }
+            });
+          });
+
           return (
             <div
               key={session}
@@ -435,115 +497,271 @@ export default function WorkoutDashboard() {
                       </thead>
                       <tbody className="text-[#333333] text-sm divide-y divide-gray-200">
                         {Object.entries(exercises).map(
-                          ([exercise, dates], exerciseIndex) => (
-                            <tr
-                              key={exercise}
-                              className={
-                                exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
+                          ([exercise, dates], exerciseIndex) => {
+                            // Get all dates for this exercise sorted chronologically
+                            const sortedDates = Object.keys(dates).sort(
+                              (a, b) =>
+                                new Date(a).getTime() - new Date(b).getTime()
+                            );
+
+                            // Create a map of date to performance data for quick lookup
+                            const datePerformanceMap = new Map();
+
+                            // Track the latest data for each exercise to use for comparison
+                            let lastValidData = null;
+                            let lastValidDate = null;
+
+                            // Analyze each date's performance compared to previous sessions
+                            sortedDates.forEach((date, idx) => {
+                              const currentDateData = dates[date];
+
+                              if (
+                                !Array.isArray(currentDateData?.sets) ||
+                                currentDateData.sets.length === 0
+                              ) {
+                                datePerformanceMap.set(date, {
+                                  progress: "neutral",
+                                });
+                                return;
                               }
-                            >
-                              <td
-                                className={`sticky left-0 z-10 ${
-                                  exerciseIndex % 2 === 0
-                                    ? "bg-gray-50"
-                                    : "bg-[#F5F5F5]"
-                                } py-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px] overflow-hidden text-ellipsis border-l-4 border-[#0a1c3f]`}
+
+                              // Store this valid data point for future comparisons
+                              const currentFirstSet = currentDateData.sets[0];
+
+                              if (idx === 0 || !lastValidData) {
+                                // First occurrence - no comparison possible
+                                datePerformanceMap.set(date, {
+                                  progress: "neutral",
+                                });
+                                lastValidData = currentFirstSet;
+                                lastValidDate = date;
+                                return;
+                              }
+
+                              // Compare with the most recent valid data
+                              const progress = compareProgress(
+                                currentFirstSet,
+                                lastValidData
+                              );
+
+                              datePerformanceMap.set(date, {
+                                progress,
+                                previousWeight: lastValidData.weight,
+                                previousReps: lastValidData.reps,
+                                currentWeight: currentFirstSet.weight,
+                                currentReps: currentFirstSet.reps,
+                                previousDate: lastValidDate,
+                              });
+
+                              // Update for next iteration
+                              lastValidData = currentFirstSet;
+                              lastValidDate = date;
+                            });
+
+                            return (
+                              <tr
+                                key={exercise}
+                                className={
+                                  exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
+                                }
                               >
-                                {exercise}
-                              </td>
-                              {Array.from(
-                                new Set(
-                                  Object.values(exercises)
-                                    .flatMap((exercise) =>
-                                      Object.keys(exercise)
-                                    )
-                                    .sort(
-                                      (a, b) =>
-                                        new Date(b).getTime() -
-                                        new Date(a).getTime()
-                                    )
-                                )
-                              ).map((date) => {
-                                const data = dates[date];
-                                return (
-                                  <td
-                                    key={date}
-                                    className={`py-2 px-2 min-w-[100px] max-w-[120px] ${
-                                      exerciseIndex % 2 === 0
-                                        ? "bg-gray-50"
-                                        : ""
-                                    }`}
-                                  >
-                                    {data ? (
-                                      <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
-                                        {/* Check if sets exists and is an array before mapping */}
-                                        {Array.isArray(data.sets) &&
-                                        data.sets.length > 0 ? (
-                                          data.sets.map((set, index) => (
-                                            <div
-                                              key={set.id || index}
-                                              className={`${
-                                                set.completed
-                                                  ? "text-green-600"
-                                                  : "text-gray-500"
-                                              } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
-                                            >
-                                              <span className="font-medium whitespace-nowrap">
-                                                {set.weight}
-                                                <span className="mx-0.5">
-                                                  ×
+                                <td
+                                  className={`sticky left-0 z-10 ${
+                                    exerciseIndex % 2 === 0
+                                      ? "bg-gray-50"
+                                      : "bg-[#F5F5F5]"
+                                  } py-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px] overflow-hidden text-ellipsis border-l-4 border-[#0a1c3f]`}
+                                >
+                                  {exercise}
+                                </td>
+                                {Array.from(
+                                  new Set(
+                                    Object.values(exercises)
+                                      .flatMap((exercise) =>
+                                        Object.keys(exercise)
+                                      )
+                                      .sort(
+                                        (a, b) =>
+                                          new Date(b).getTime() -
+                                          new Date(a).getTime()
+                                      )
+                                  )
+                                ).map((date) => {
+                                  const data = dates[date];
+                                  const performanceData =
+                                    datePerformanceMap.get(date);
+
+                                  // Set border color based on performance
+                                  let borderColorClass = "border-gray-200";
+                                  let progressIcon = null;
+
+                                  if (performanceData && data) {
+                                    if (
+                                      performanceData.progress === "improved"
+                                    ) {
+                                      borderColorClass =
+                                        "border-green-500 border-2";
+                                      progressIcon = (
+                                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center z-20">
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M5 10l7-7m0 0l7 7m-7-7v18"
+                                            />
+                                          </svg>
+                                        </div>
+                                      );
+                                    } else if (
+                                      performanceData.progress === "declined"
+                                    ) {
+                                      borderColorClass =
+                                        "border-red-500 border-2";
+                                      progressIcon = (
+                                        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center z-20">
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                                            />
+                                          </svg>
+                                        </div>
+                                      );
+                                    }
+                                  }
+
+                                  return (
+                                    <td
+                                      key={date}
+                                      className={`py-2 px-2 min-w-[100px] max-w-[120px] ${
+                                        exerciseIndex % 2 === 0
+                                          ? "bg-gray-50"
+                                          : ""
+                                      }`}
+                                    >
+                                      {data ? (
+                                        <div
+                                          className={`bg-white rounded-lg p-2 shadow-sm border ${borderColorClass} relative group`}
+                                        >
+                                          {progressIcon}
+                                          {/* Performance comparison tooltip */}
+                                          {performanceData &&
+                                            performanceData.progress !==
+                                              "neutral" && (
+                                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-30">
+                                                <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                                                  <div className="text-center">
+                                                    <div className="font-semibold text-yellow-300">
+                                                      {exercise}
+                                                    </div>
+                                                    <div className="mt-1">
+                                                      {performanceData.progress ===
+                                                      "improved"
+                                                        ? "↗️ Improved from "
+                                                        : "↘️ Decreased from "}
+                                                      <span className="font-medium">
+                                                        {
+                                                          performanceData.previousWeight
+                                                        }{" "}
+                                                        ×{" "}
+                                                        {
+                                                          performanceData.previousReps
+                                                        }
+                                                      </span>
+                                                    </div>
+                                                    <div className="text-gray-300 text-xs">
+                                                      vs{" "}
+                                                      {
+                                                        performanceData.previousDate
+                                                      }
+                                                    </div>
+                                                  </div>
+                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                                                </div>
+                                              </div>
+                                            )}
+                                          {/* Check if sets exists and is an array before mapping */}
+                                          {Array.isArray(data.sets) &&
+                                          data.sets.length > 0 ? (
+                                            data.sets.map((set, index) => (
+                                              <div
+                                                key={set.id || index}
+                                                className={`${
+                                                  set.completed
+                                                    ? "text-green-600"
+                                                    : "text-gray-500"
+                                                } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
+                                              >
+                                                <span className="font-medium whitespace-nowrap">
+                                                  {set.weight}
+                                                  <span className="mx-0.5">
+                                                    ×
+                                                  </span>
+                                                  {set.reps}
                                                 </span>
-                                                {set.reps}
-                                              </span>
-                                              <span className="ml-1">
-                                                {set.completed ? (
-                                                  <svg
-                                                    className="h-3 w-3 text-green-500"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                  >
-                                                    <path
-                                                      strokeLinecap="round"
-                                                      strokeLinejoin="round"
-                                                      strokeWidth={2}
-                                                      d="M5 13l4 4L19 7"
-                                                    />
-                                                  </svg>
-                                                ) : (
-                                                  <svg
-                                                    className="h-3 w-3 text-gray-400"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                  >
-                                                    <path
-                                                      strokeLinecap="round"
-                                                      strokeLinejoin="round"
-                                                      strokeWidth={2}
-                                                      d="M6 18L18 6M6 6l12 12"
-                                                    />
-                                                  </svg>
-                                                )}
-                                              </span>
+                                                <span className="ml-1">
+                                                  {set.completed ? (
+                                                    <svg
+                                                      className="h-3 w-3 text-green-500"
+                                                      fill="none"
+                                                      viewBox="0 0 24 24"
+                                                      stroke="currentColor"
+                                                    >
+                                                      <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M5 13l4 4L19 7"
+                                                      />
+                                                    </svg>
+                                                  ) : (
+                                                    <svg
+                                                      className="h-3 w-3 text-gray-400"
+                                                      fill="none"
+                                                      viewBox="0 0 24 24"
+                                                      stroke="currentColor"
+                                                    >
+                                                      <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                      />
+                                                    </svg>
+                                                  )}
+                                                </span>
+                                              </div>
+                                            ))
+                                          ) : (
+                                            <div className="text-xs text-gray-500">
+                                              No set data
                                             </div>
-                                          ))
-                                        ) : (
-                                          <div className="text-xs text-gray-500">
-                                            No set data
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="text-center text-gray-400">
-                                        —
-                                      </div>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          )
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-center text-gray-400">
+                                          —
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          }
                         )}
                       </tbody>
                     </table>
@@ -567,6 +785,22 @@ export default function WorkoutDashboard() {
                       />
                     </svg>
                     Scroll horizontally to see more dates
+                  </div>
+                </div>
+
+                {/* Legend for progress indicators */}
+                <div className="mt-4 flex justify-center gap-6 text-xs">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-green-500 rounded mr-2"></div>
+                    <span>Performance improved</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-red-500 rounded mr-2"></div>
+                    <span>Performance declined</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border border-gray-200 rounded mr-2"></div>
+                    <span>No comparison data</span>
                   </div>
                 </div>
               </div>
