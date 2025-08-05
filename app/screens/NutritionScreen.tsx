@@ -40,6 +40,13 @@ const mealGoals = {
   'Breakfast': { 'Protein (g)': 20, 'Fat (g)': 10, 'Carbohydrate (g)': 30, 'Kcal': 350 },
 };
 
+// Determine default day type based on current day (weekend = rest, weekday = training)
+const getDefaultDayType = () => {
+  const currentDay = new Date().getDay();
+  // Assuming Sunday (0) & Saturday (6) are rest days
+  return currentDay === 0 || currentDay === 6 ? 'rest' : 'training';
+};
+
 function getTodayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${(d.getMonth() + 1)
@@ -65,7 +72,7 @@ function getWeekAndDayKey(firstEntryDate) {
 
 const NutritionScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [dayType, setDayType] = useState('training');
+  const [dayType, setDayType] = useState(getDefaultDayType());
   const [mealData, setMealData] = useState({});
   const [loading, setLoading] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -276,7 +283,11 @@ const NutritionScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.containerWithWhiteSpace}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Blue header section with title and calendar */}
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Nutrition</Text>
@@ -309,11 +320,11 @@ const NutritionScreen = ({ navigation }) => {
                 <Text style={styles.mealTitle}>{meal}</Text>
                 {mealFields.map((field) => (
                   <View key={field} style={styles.inputRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 2 }}>
+                    <View style={styles.labelContainer}>
                       <Text style={styles.inputLabel}>{field}</Text>
                       {mealGoals[meal] && (
                         <Text style={styles.inputGoal}>
-                          {' '} (Goal: {mealGoals[meal][field]}{field.includes('Kcal') ? '' : 'g'})
+                          Goal: {mealGoals[meal][field]}{field.includes('Kcal') ? '' : 'g'}
                         </Text>
                       )}
                     </View>
@@ -413,7 +424,7 @@ const styles = StyleSheet.create({
   whiteContent: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 30,
+    paddingVertical: 20,
     paddingHorizontal: 20,
   },
   dayTypeSelector: {
@@ -507,7 +518,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#607D8B',
   },
   input: {
@@ -629,6 +640,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4CAF50',
     fontStyle: 'italic',
+  },
+  labelContainer: {
+    flex: 1,
   },
 });
 
