@@ -22,6 +22,7 @@ import { getCurrentWeekDates } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext'; // Import Auth context
 import { db } from '../firebaseConfig'; // Import Firebase config
 import { doc, setDoc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import ConfirmationModal from '../components/ConfirmationModal';  // Add this import near the others
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -123,6 +124,7 @@ const MoodScreen = ({ navigation }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [showConfirmMoodSubmit, setShowConfirmMoodSubmit] = useState(false);
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef(null);
@@ -476,7 +478,7 @@ const MoodScreen = ({ navigation }) => {
             {!moodSubmitted ? (
               <TouchableOpacity 
                 style={styles.enterButton}
-                onPress={handleSubmit}
+                onPress={() => setShowConfirmMoodSubmit(true)}  // Show confirmation modal
               >
                 <Text style={styles.enterButtonText}>Enter</Text>
               </TouchableOpacity>
@@ -564,6 +566,17 @@ const MoodScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Confirmation Modal for Mood Submission */}
+      <ConfirmationModal
+        visible={showConfirmMoodSubmit}
+        message="Are you sure you want to submit your mood?"
+        onCancel={() => setShowConfirmMoodSubmit(false)}
+        onConfirm={() => {
+          setShowConfirmMoodSubmit(false);
+          handleSubmit();
+        }}
+      />
 
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
     </SafeAreaView>
@@ -750,6 +763,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
+  },
+  // Additional styles for confirmation modal
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
 });
 

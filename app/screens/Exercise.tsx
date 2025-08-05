@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -497,35 +498,15 @@ const Exercise = () => {
       </Modal>
 
       {/* Finish Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <ConfirmationModal 
         visible={finishModalVisible}
-        onRequestClose={() => setFinishModalVisible(false)}
-      >
-        <View style={styles.editModalOverlay}>
-          <View style={styles.finishModalContent}>
-            <Text style={styles.finishModalTitle}>Are you sure you want to finish?</Text>
-            <View style={styles.editButtonsRow}>
-              <TouchableOpacity
-                style={[styles.editButton, styles.editRemoveButton, { marginRight: 12 }]} // Add marginRight here
-                onPress={() => setFinishModalVisible(false)}
-              >
-                <Text style={styles.editButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.editButton, styles.editAddButton]}
-                onPress={() => {
-                  setFinishModalVisible(false);
-                  handleFinish();
-                }}
-              >
-                <Text style={styles.editButtonText}>Finish</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        message="Are you sure you want to finish?"
+        onCancel={() => setFinishModalVisible(false)}
+        onConfirm={() => {
+          setFinishModalVisible(false);
+          handleFinish();
+        }}
+      />
     </View>
   );
 };

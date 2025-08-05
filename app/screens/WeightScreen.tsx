@@ -16,11 +16,12 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import Navbar from '../components/navbar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart } from 'react-native-chart-kit';
-import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
-import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
+import WeekCalendar from '../components/WeekCalendar';
+import { getCurrentWeekDates } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import ConfirmationModal from '../components/ConfirmationModal';  // Import reusable ConfirmationModal
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -34,18 +35,15 @@ const lbsToKg = (lbs) => {
 };
 
 const WeightScreen = ({ navigation }) => {
-  // Add user from auth context
   const { user } = useAuth();
-  
-  // Add state for tracking first entry date
   const [firstEntryDate, setFirstEntryDate] = useState(null);
-  
   const [weight, setWeight] = useState(53);
-  const [weightUnit, setWeightUnit] = useState('Kgs'); // 'Kgs' or 'Lbs'
+  const [weightUnit, setWeightUnit] = useState('Kgs');
   const [weightHistory, setWeightHistory] = useState([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showConfirmSave, setShowConfirmSave] = useState(false); // New state for confirmation modal
   const navbarRef = useRef(null);
   const navOpacity = useRef(new Animated.Value(1)).current;
   
@@ -273,17 +271,13 @@ const WeightScreen = ({ navigation }) => {
       <View style={styles.contentWrapper}>
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Weight</Text>
-          
-          {/* Use the reusable WeekCalendar component */}
           <WeekCalendar 
-            weekDates={weekDates}
+            weekDates={getCurrentWeekDates()}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
           />
         </View>
-
         <View style={styles.whiteContent}>
-          {/* Unit selector buttons */}
           <View style={styles.unitSelectorContainer}>
             <TouchableOpacity 
               style={[styles.unitButton, weightUnit === 'Kgs' && styles.activeUnitButton]} 
@@ -298,8 +292,6 @@ const WeightScreen = ({ navigation }) => {
               <Text style={[styles.unitButtonText, weightUnit === 'Lbs' && styles.activeUnitText]}>Lbs</Text>
             </TouchableOpacity>
           </View>
-          
-          {/* Weight selector wheel */}
           <View style={styles.weightSelectorContainer}>
             <TouchableOpacity 
               style={styles.weightControlButton} 
@@ -307,17 +299,15 @@ const WeightScreen = ({ navigation }) => {
             >
               <Feather name="minus" size={24} color="#333" />
             </TouchableOpacity>
-            
             <View style={styles.weightDisplayContainer}>
               <Text style={styles.weightValue}>{weight}</Text>
               <Text style={styles.weightUnit}>{weightUnit === 'Kgs' ? 'kg' : 'lb'}</Text>
               
-              {/* Save button inside the weight selector */}
-              <TouchableOpacity style={styles.saveButton} onPress={saveWeight}>
+              {/* Red arrow (save button) remains unchanged in style */}
+              <TouchableOpacity style={styles.saveButton} onPress={() => setShowConfirmSave(true)}>
                 <Feather name="chevron-right" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            
             <TouchableOpacity 
               style={styles.weightControlButton}
               onPress={incrementWeight}
@@ -381,7 +371,6 @@ const WeightScreen = ({ navigation }) => {
           </View>
         </View>
       </View>
-
       <Navbar ref={navbarRef} activeScreen="WeeklyForm" opacityValue={navOpacity} />
 
       {/* Success Modal */}
@@ -451,6 +440,17 @@ const WeightScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Confirmation Modal for saving weight */}
+      <ConfirmationModal
+        visible={showConfirmSave}
+        message="Are you sure you want to save your weight?"
+        onCancel={() => setShowConfirmSave(false)}
+        onConfirm={() => {
+          setShowConfirmSave(false);
+          saveWeight();
+        }}
+      />
     </SafeAreaView>
   );
 };

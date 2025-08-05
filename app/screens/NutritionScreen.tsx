@@ -19,6 +19,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
 import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
+import ConfirmationModal from '../components/ConfirmationModal';  // Import reusable ConfirmationModal
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -28,6 +29,22 @@ const defaultMeals = {
   training: ['Pre-workout', 'Lunch', 'Afternoon', 'Dinner'],
   rest: ['Breakfast', 'Lunch', 'Dinner'],
   cardio: ['Breakfast', 'Lunch', 'Dinner'],
+};
+
+// Predefined nutrition goals for each meal
+const mealGoals = {
+  'Pre-workout': { 'Protein (g)': 25, 'Fat (g)': 10, 'Carbohydrate (g)': 30, 'Kcal': 300 },
+  'Lunch': { 'Protein (g)': 30, 'Fat (g)': 15, 'Carbohydrate (g)': 50, 'Kcal': 500 },
+  'Afternoon': { 'Protein (g)': 20, 'Fat (g)': 10, 'Carbohydrate (g)': 40, 'Kcal': 400 },
+  'Dinner': { 'Protein (g)': 35, 'Fat (g)': 15, 'Carbohydrate (g)': 60, 'Kcal': 600 },
+  'Breakfast': { 'Protein (g)': 20, 'Fat (g)': 10, 'Carbohydrate (g)': 30, 'Kcal': 350 },
+};
+
+// Determine default day type based on current day (weekend = rest, weekday = training)
+const getDefaultDayType = () => {
+  const currentDay = new Date().getDay();
+  // Assuming Sunday (0) & Saturday (6) are rest days
+  return currentDay === 0 || currentDay === 6 ? 'rest' : 'training';
 };
 
 function getTodayKey() {
@@ -55,12 +72,13 @@ function getWeekAndDayKey(firstEntryDate) {
 
 const NutritionScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [dayType, setDayType] = useState('training');
+  const [dayType, setDayType] = useState(getDefaultDayType());
   const [mealData, setMealData] = useState({});
   const [loading, setLoading] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
   const [showDayTypeDropdown, setShowDayTypeDropdown] = useState(false);
+  const [showConfirmSave, setShowConfirmSave] = useState(false);
 
   // Refs for animations and scrolling
   const navbarRef = useRef(null);
@@ -206,7 +224,6 @@ const NutritionScreen = ({ navigation }) => {
     setLoading(false);
   };
 
-  // Update handleScroll to use the navbarRef methods - same as ReportScreen
   const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
     useNativeDriver: false,
     listener: (event) => {
@@ -216,12 +233,10 @@ const NutritionScreen = ({ navigation }) => {
         clearTimeout(scrollTimeout.current);
       }
 
-      // Show navbar when scrolling starts
       if (navbarRef.current) {
         navbarRef.current.show();
       }
 
-      // Hide navbar after scrolling stops
       scrollTimeout.current = setTimeout(() => {
         if (navbarRef.current) {
           navbarRef.current.hide();
@@ -268,22 +283,22 @@ const NutritionScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.containerWithWhiteSpace}>
-      <ScrollView style={styles.scrollView} onScroll={handleScroll} scrollEventThrottle={16}>
+      <ScrollView
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Blue header section with title and calendar */}
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Nutrition</Text>
-
-          {/* Replace the Calendar Week View with the WeekCalendar component */}
           <WeekCalendar
             weekDates={weekDates}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
           />
         </View>
-
         {/* White content area */}
         <View style={styles.whiteContent}>
-          {/* Cronometer Button */}
           <TouchableOpacity
             style={styles.cronoButton}
             onPress={() => navigation.navigate('Cronometer')}>
@@ -291,7 +306,6 @@ const NutritionScreen = ({ navigation }) => {
             <Text style={styles.cronoButtonText}>Import from Cronometer</Text>
             <Feather name="chevron-right" size={18} color="#fff" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
-          {/* Day type selector as dropdown */}
           <TouchableOpacity
             style={styles.dayTypeSelector}
             onPress={() => setShowDayTypeDropdown(true)}>
@@ -300,15 +314,20 @@ const NutritionScreen = ({ navigation }) => {
             </Text>
             <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
           </TouchableOpacity>
-
-          {/* Meal content */}
           <View style={styles.mealsContainer}>
-            {defaultMeals[dayType].map((meal, idx) => (
+            {defaultMeals[dayType].map((meal) => (
               <View key={meal} style={styles.mealCard}>
                 <Text style={styles.mealTitle}>{meal}</Text>
                 {mealFields.map((field) => (
                   <View key={field} style={styles.inputRow}>
-                    <Text style={styles.inputLabel}>{field}</Text>
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.inputLabel}>{field}</Text>
+                      {mealGoals[meal] && (
+                        <Text style={styles.inputGoal}>
+                          Goal: {mealGoals[meal][field]}{field.includes('Kcal') ? '' : 'g'}
+                        </Text>
+                      )}
+                    </View>
                     <TextInput
                       style={styles.input}
                       keyboardType="numeric"
@@ -321,8 +340,6 @@ const NutritionScreen = ({ navigation }) => {
                 ))}
               </View>
             ))}
-
-            {/* Totals summary */}
             <View style={styles.totalContainer}>
               <Text style={styles.totalTitle}>Daily Totals</Text>
               {mealFields.map((field) => (
@@ -332,8 +349,6 @@ const NutritionScreen = ({ navigation }) => {
                 </View>
               ))}
             </View>
-
-            {/* Daily fiber goal card */}
             <View style={styles.fiberCard}>
               <Text style={styles.fiberTitle}>Daily Fiber Goals</Text>
               <View style={styles.fiberRow}>
@@ -345,11 +360,10 @@ const NutritionScreen = ({ navigation }) => {
                 <Text style={styles.fiberValue}>8g</Text>
               </View>
             </View>
-
-            {/* Save button */}
+            {/* Update Save Nutrition button to show confirmation modal */}
             <TouchableOpacity
               style={[styles.saveButton, alreadySubmitted && styles.disabledButton]}
-              onPress={handleSave}
+              onPress={() => setShowConfirmSave(true)}
               disabled={alreadySubmitted || loading}>
               <Text style={styles.saveButtonText}>
                 {alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
@@ -358,12 +372,18 @@ const NutritionScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Day type dropdown */}
       {renderDayTypeDropdown()}
-
-      {/* Navbar with auto-hide functionality */}
       <Navbar ref={navbarRef} activeScreen="Nutrition" opacityValue={navOpacity} />
+      {/* Confirmation Modal for saving nutrition */}
+      <ConfirmationModal
+        visible={showConfirmSave}
+        message="Are you sure you want to save your nutrition?"
+        onCancel={() => setShowConfirmSave(false)}
+        onConfirm={() => {
+          setShowConfirmSave(false);
+          handleSave();
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -371,27 +391,31 @@ const NutritionScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   containerWithWhiteSpace: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#F7F9FC', // subtle light background
   },
   scrollView: {
     flex: 1,
   },
   blueHeader: {
     backgroundColor: '#081A2F',
-    paddingTop: 25,
-    paddingBottom: 30,
+    paddingTop: 40,
+    paddingBottom: 40,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 50,
-    borderBottomRightRadius: 50,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 20,
-    marginTop: 10,
   },
   calendarContainerStyle: {
     width: '100%',
@@ -399,51 +423,46 @@ const styles = StyleSheet.create({
   },
   whiteContent: {
     flex: 1,
-    backgroundColor: 'white',
-    paddingTop: 20,
-    paddingBottom: 80, // Add space for navbar
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
   },
   dayTypeSelector: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#E0E6ED',
     padding: 15,
-    borderRadius: 12,
-    marginHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 10,
     marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   dayTypeText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dropdownContainer: {
     width: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     overflow: 'hidden',
-    elevation: 5,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
     shadowRadius: 4,
   },
   dropdownItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F0F0F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -456,111 +475,122 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   dropdownItemTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   mealsContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   mealCard: {
-    marginBottom: 15,
-    padding: 15,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    marginBottom: 20,
+    padding: 20,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 3,
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
     borderLeftColor: '#C7312B',
   },
   mealTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    color: '#081A2F',
+    marginBottom: 12,
+  },
+  goalContainer: { 
+    marginBottom: 12,
+    backgroundColor: '#F0F4F8',
+    padding: 8,
+    borderRadius: 8,
+  },
+  goalText: { 
+    fontSize: 14,
+    color: '#607D8B',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   inputLabel: {
     flex: 1,
-    fontSize: 15,
-    color: '#666',
+    fontSize: 14,
+    color: '#607D8B',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#E8EEF3',
     padding: 10,
-    borderRadius: 8,
-    fontSize: 15,
-    color: '#333',
+    borderRadius: 10,
+    fontSize: 16,
+    color: '#081A2F',
     textAlign: 'center',
+    marginLeft: 10,
   },
   totalContainer: {
-    marginTop: 10,
-    marginBottom: 15,
-    padding: 15,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 20,
+    backgroundColor: '#E8EEF3',
+    borderRadius: 16,
   },
   totalTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    color: '#081A2F',
+    marginBottom: 12,
     textAlign: 'center',
   },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
+  totalRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 8, 
   },
-  totalLabel: {
-    fontSize: 15,
-    color: '#666',
+  totalLabel: { 
+    fontSize: 16, 
+    color: '#607D8B',
   },
-  totalValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  totalValue: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
     color: '#C7312B',
   },
   fiberCard: {
     marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    padding: 20,
+    backgroundColor: '#F7F9FC',
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
     borderLeftColor: '#00b894',
   },
   fiberTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    color: '#081A2F',
+    marginBottom: 12,
     textAlign: 'center',
   },
-  fiberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
+  fiberRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 8,
   },
-  fiberLabel: {
-    fontSize: 15,
-    color: '#666',
+  fiberLabel: { 
+    fontSize: 16, 
+    color: '#607D8B',
   },
-  fiberValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  fiberValue: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
     color: '#00b894',
   },
   saveButton: {
@@ -569,19 +599,19 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginBottom: 30,
-    marginTop: 10,
+    marginTop: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
-  disabledButton: {
+  disabledButton: { 
     backgroundColor: '#999',
   },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
+  saveButtonText: { 
+    color: '#FFFFFF', 
+    fontSize: 18, 
     fontWeight: 'bold',
   },
   cronoButton: {
@@ -589,22 +619,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#C7312B',
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 20,
     marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 18,
+    marginTop: 10,
+    marginBottom: 20,
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 3,
   },
-  cronoButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+  cronoButtonText: { 
+    color: '#FFFFFF', 
+    fontWeight: 'bold', 
+    fontSize: 16, 
     letterSpacing: 0.5,
+  },
+  inputGoal: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontStyle: 'italic',
+  },
+  labelContainer: {
+    flex: 1,
   },
 });
 
