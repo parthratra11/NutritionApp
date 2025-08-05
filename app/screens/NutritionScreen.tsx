@@ -19,6 +19,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import WeekCalendar from '../components/WeekCalendar'; // Import the WeekCalendar component
 import { getCurrentWeekDates } from '../utils/dateUtils'; // Import the date utility
+import ConfirmationModal from '../components/ConfirmationModal';  // Import reusable ConfirmationModal
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -61,6 +62,7 @@ const NutritionScreen = ({ navigation }) => {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
   const [showDayTypeDropdown, setShowDayTypeDropdown] = useState(false);
+  const [showConfirmSave, setShowConfirmSave] = useState(false); // New state for confirmation modal
 
   // Refs for animations and scrolling
   const navbarRef = useRef(null);
@@ -206,7 +208,6 @@ const NutritionScreen = ({ navigation }) => {
     setLoading(false);
   };
 
-  // Update handleScroll to use the navbarRef methods - same as ReportScreen
   const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
     useNativeDriver: false,
     listener: (event) => {
@@ -216,12 +217,10 @@ const NutritionScreen = ({ navigation }) => {
         clearTimeout(scrollTimeout.current);
       }
 
-      // Show navbar when scrolling starts
       if (navbarRef.current) {
         navbarRef.current.show();
       }
 
-      // Hide navbar after scrolling stops
       scrollTimeout.current = setTimeout(() => {
         if (navbarRef.current) {
           navbarRef.current.hide();
@@ -272,18 +271,14 @@ const NutritionScreen = ({ navigation }) => {
         {/* Blue header section with title and calendar */}
         <View style={styles.blueHeader}>
           <Text style={styles.headerTitle}>Nutrition</Text>
-
-          {/* Replace the Calendar Week View with the WeekCalendar component */}
           <WeekCalendar
             weekDates={weekDates}
             onDatePress={handleDateSelect}
             containerStyle={styles.calendarContainerStyle}
           />
         </View>
-
         {/* White content area */}
         <View style={styles.whiteContent}>
-          {/* Cronometer Button */}
           <TouchableOpacity
             style={styles.cronoButton}
             onPress={() => navigation.navigate('Cronometer')}>
@@ -291,7 +286,6 @@ const NutritionScreen = ({ navigation }) => {
             <Text style={styles.cronoButtonText}>Import from Cronometer</Text>
             <Feather name="chevron-right" size={18} color="#fff" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
-          {/* Day type selector as dropdown */}
           <TouchableOpacity
             style={styles.dayTypeSelector}
             onPress={() => setShowDayTypeDropdown(true)}>
@@ -300,10 +294,8 @@ const NutritionScreen = ({ navigation }) => {
             </Text>
             <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
           </TouchableOpacity>
-
-          {/* Meal content */}
           <View style={styles.mealsContainer}>
-            {defaultMeals[dayType].map((meal, idx) => (
+            {defaultMeals[dayType].map((meal) => (
               <View key={meal} style={styles.mealCard}>
                 <Text style={styles.mealTitle}>{meal}</Text>
                 {mealFields.map((field) => (
@@ -321,8 +313,6 @@ const NutritionScreen = ({ navigation }) => {
                 ))}
               </View>
             ))}
-
-            {/* Totals summary */}
             <View style={styles.totalContainer}>
               <Text style={styles.totalTitle}>Daily Totals</Text>
               {mealFields.map((field) => (
@@ -332,8 +322,6 @@ const NutritionScreen = ({ navigation }) => {
                 </View>
               ))}
             </View>
-
-            {/* Daily fiber goal card */}
             <View style={styles.fiberCard}>
               <Text style={styles.fiberTitle}>Daily Fiber Goals</Text>
               <View style={styles.fiberRow}>
@@ -345,11 +333,10 @@ const NutritionScreen = ({ navigation }) => {
                 <Text style={styles.fiberValue}>8g</Text>
               </View>
             </View>
-
-            {/* Save button */}
+            {/* Update Save Nutrition button to show confirmation modal */}
             <TouchableOpacity
               style={[styles.saveButton, alreadySubmitted && styles.disabledButton]}
-              onPress={handleSave}
+              onPress={() => setShowConfirmSave(true)}
               disabled={alreadySubmitted || loading}>
               <Text style={styles.saveButtonText}>
                 {alreadySubmitted ? 'Already Submitted' : loading ? 'Saving...' : 'Save Nutrition'}
@@ -358,12 +345,18 @@ const NutritionScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Day type dropdown */}
       {renderDayTypeDropdown()}
-
-      {/* Navbar with auto-hide functionality */}
       <Navbar ref={navbarRef} activeScreen="Nutrition" opacityValue={navOpacity} />
+      {/* Confirmation Modal for saving nutrition */}
+      <ConfirmationModal
+        visible={showConfirmSave}
+        message="Are you sure you want to save your nutrition?"
+        onCancel={() => setShowConfirmSave(false)}
+        onConfirm={() => {
+          setShowConfirmSave(false);
+          handleSave();
+        }}
+      />
     </SafeAreaView>
   );
 };
