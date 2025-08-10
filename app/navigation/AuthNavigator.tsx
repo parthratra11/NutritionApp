@@ -24,6 +24,7 @@ import DetailedFitnessScreen from 'screens/DetailedFitnessScreen';
 import WeightScreen from '../screens/WeightScreen';
 import MoodScreen from '../screens/MoodScreen';
 import SleepScreen from 'screens/SleepScreen';
+import SleepQualityScreen from 'screens/SleepQualityScreen';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -159,6 +160,8 @@ export default function AuthNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen name="Slack" component={SlackScreen} options={{ headerShown: false }} />
+         
+        <Stack.Screen name="SleepQualityScreen" component={SleepQualityScreen} options={{ headerShown: false }} />
         </>
       ) : (
         // Auth screens

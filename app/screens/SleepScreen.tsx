@@ -77,29 +77,24 @@ const SleepScreen = ({ navigation }) => {
   const minutes = generateMinutes();
 
   // Function to handle data submission
-  const handleSubmit = async () => {
-    try {
-      const sleepData = {
-        date: new Date().toISOString().split('T')[0],
-        sleepTime: `${sleepHour}:${sleepMinute} ${sleepAmPm}`,
-        wakeTime: `${wakeHour}:${wakeMinute} ${wakeAmPm}`,
-      };
+  const handleSubmit = () => {
+    // Format time values with leading zeros
+    const formattedSleepHour = sleepHour.toString().padStart(2, '0');
+    const formattedSleepMinute = sleepMinute.toString().padStart(2, '0');
+    const formattedWakeHour = wakeHour.toString().padStart(2, '0');
+    const formattedWakeMinute = wakeMinute.toString().padStart(2, '0');
 
-      // Get existing history
-      const existingData = await AsyncStorage.getItem('sleepHistory');
-      const sleepHistory = existingData ? JSON.parse(existingData) : [];
+    // Prepare sleep data
+    const sleepTimeFormatted = `${formattedSleepHour}:${formattedSleepMinute} ${sleepAmPm}`;
+    const wakeTimeFormatted = `${formattedWakeHour}:${formattedWakeMinute} ${wakeAmPm}`;
+    const today = new Date().toISOString().split('T')[0];
 
-      // Add new entry
-      sleepHistory.unshift(sleepData);
-
-      // Save to storage
-      await AsyncStorage.setItem('sleepHistory', JSON.stringify(sleepHistory));
-
-      // Show success feedback
-      // You could add some UI feedback here
-    } catch (error) {
-      console.error('Error saving sleep data:', error);
-    }
+    // Navigate to SleepQualityScreen with the selected times
+    navigation.navigate('SleepQualityScreen', {
+      sleepTime: sleepTimeFormatted,
+      wakeTime: wakeTimeFormatted,
+      date: today,
+    });
   };
 
   // getItemLayout for all pickers - required for scrollToIndex
