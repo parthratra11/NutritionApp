@@ -25,6 +25,7 @@ import WeightScreen from '../screens/WeightScreen';
 import MoodScreen from '../screens/MoodScreen';
 import SleepScreen from 'screens/SleepScreen';
 import SleepQualityScreen from 'screens/SleepQualityScreen';
+import SleepDetailScreen from 'screens/SleepDetailScreen';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -149,6 +150,8 @@ export default function AuthNavigator() {
           <Stack.Screen name="Weight" component={WeightScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Mood" component={MoodScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Sleep" component={SleepScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SleepQualityScreen" component={SleepQualityScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SleepDetailScreen" component={SleepDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
@@ -161,7 +164,6 @@ export default function AuthNavigator() {
           />
           <Stack.Screen name="Slack" component={SlackScreen} options={{ headerShown: false }} />
          
-        <Stack.Screen name="SleepQualityScreen" component={SleepQualityScreen} options={{ headerShown: false }} />
         </>
       ) : (
         // Auth screens
