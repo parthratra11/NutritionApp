@@ -16,6 +16,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import WeekCalendar from '../components/WeekCalendar';
 import { getCurrentWeekDates } from '../utils/dateUtils';
 import ConfirmationModal from '../components/ConfirmationModal';
+import SleepDetailScreen from './SleepDetailScreen'; // (optional reference, not required for navigation)
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -122,12 +123,24 @@ const SleepQualityScreen = ({ route, navigation }) => {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.enterButton} onPress={handleEnter}>
-          <Text style={styles.enterButtonText}>Enter</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity style={styles.enterButton} onPress={handleEnter}>
+            <Text style={styles.enterButtonText}>Enter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={() =>
+              navigation.navigate('SleepDetailScreen', {
+                selectedQuality,
+              })
+            }
+          >
+            <Text style={styles.detailButtonText}>Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Navbar activeScreen="Sleep" />
+      <Navbar activeScreen="WeeklyForm" />
 
       <ConfirmationModal
         visible={showConfirmation}
@@ -197,22 +210,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  enterButton: {
-    backgroundColor: '#C7312B',
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    alignSelf: 'center',
-    position: 'absolute',
-    bottom: 20,
-    width: 200,
-    alignItems: 'center',
+  buttonsRow:{
+    position:'absolute',
+    bottom:20,
+    width:'100%',
+    flexDirection:'row',
+    justifyContent:'space-evenly',
   },
-  enterButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+  enterButton:{
+    backgroundColor:'#C7312B',
+    paddingVertical:15,
+    paddingHorizontal:32,
+    borderRadius:25,
   },
+  enterButtonText:{ color:'#fff', fontSize:16, fontWeight:'bold' },
+  detailButton:{
+    backgroundColor:'rgba(255,255,255,0.15)',
+    paddingVertical:15,
+    paddingHorizontal:32,
+    borderRadius:25,
+  },
+  detailButtonText:{ color:'#fff', fontSize:16, fontWeight:'600' },
 });
 
 export default SleepQualityScreen;
