@@ -17,12 +17,13 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26,
+            "minSdkVersion": 28,
             "compileSdkVersion": 35,
             "targetSdkVersion": 34
           }
         }
-      ]
+      ],
+      "react-native-health-connect"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,9 +33,12 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.parthratra11.NutritionApp"
     },
     "android": {
       "adaptiveIcon": {
@@ -50,8 +54,42 @@
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_DISTANCE"
       ],
-      "excludedPackages": ["androidx.health.connect.client"],
-      "minSdkVersion": 26
+      "minSdkVersion": 28
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c9158be6-b09f-4170-806f-3b439d362b22"
+      }
+    }
+  },
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Resources": {
+    "Api": {
+      "Type": "AWS::Serverless::Api",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": [
+            "${ResourceName} From Stack ${AWS::StackName}",
+            {
+              "ResourceName": "Api"
+            }
+          ]
+        },
+        "StageName": "Prod",
+        "DefinitionBody": {
+          "openapi": "3.0",
+          "info": {},
+          "paths": {
+            "/": {
+              "get": {
+                "responses": {}
+              }
+            }
+          }
+        },
+        "EndpointConfiguration": "REGIONAL",
+        "TracingEnabled": true
+      }
     }
   }
 }
