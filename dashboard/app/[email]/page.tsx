@@ -669,7 +669,7 @@ export default function ClientOverview() {
           {/* Moods Bubble Chart - UPDATED */}
           <div
             className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
-            onClick={() => router.push(`/${params.email}/report`)}
+            onClick={() => router.push(`/${params.email}/moods`)}
           >
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-xl font-semibold text-gray-800">
