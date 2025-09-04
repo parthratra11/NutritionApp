@@ -15,36 +15,43 @@ interface IntakeForm {
   };
 }
 
+// Utility function to format date as DD-MM-YYYY
+const formatDMY = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 export default function Home() {
   const router = useRouter();
   const [intakeForms, setIntakeForms] = useState<IntakeForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"name" | "date">("date");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "active" | "age">(
+    "date"
+  );
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   const calendarRef = useRef<HTMLDivElement>(null);
 
   const generateDateStrip = () => {
-    const days = ["S", "M", "T", "W", "T", "F", "S"];
+    const days = ["S", "M", "T", "W", "Th", "F", "S"];
     const today = new Date();
-    const currentDay = today.getDay();
-    const selectedDay = selectedDate.getDay();
 
-    // Get the first day of the week (Sunday)
-    const startOfWeek = new Date(selectedDate);
-    startOfWeek.setDate(selectedDate.getDate() - selectedDay);
-
+    // Start from 6 days before today and end with today
     const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
       dates.push({
-        day: days[i],
+        day: days[date.getDay()],
         date: date.getDate(),
         fullDate: new Date(date),
         isSelected: date.toDateString() === selectedDate.toDateString(),
@@ -180,12 +187,11 @@ export default function Home() {
     },
   ];
 
-  // Sort intake forms based on selected option
+  // Sort and filter intake forms
   const sortedIntakeForms = [...intakeForms].sort((a, b) => {
     if (sortBy === "name") {
       return a.fullName.localeCompare(b.fullName);
-    } else {
-      // Add null checks for timestamp
+    } else if (sortBy === "date") {
       const dateA = a.timestamp?.toDate?.()
         ? a.timestamp.toDate().getTime()
         : 0;
@@ -193,15 +199,38 @@ export default function Home() {
         ? b.timestamp.toDate().getTime()
         : 0;
       return dateB - dateA;
+    } else if (sortBy === "active") {
+      // Sort by active status (assuming there's an 'active' field)
+      const activeA = (a as any)?.active ? 1 : 0;
+      const activeB = (b as any)?.active ? 1 : 0;
+      return activeB - activeA; // Active first
+    } else if (sortBy === "age") {
+      // Sort by age (assuming there's an 'age' field)
+      const ageA = (a as any)?.age || 0;
+      const ageB = (b as any)?.age || 0;
+      return ageA - ageB; // Youngest first
     }
+    return 0;
   });
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  const visibleForms = sortedIntakeForms.filter((f) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      f.fullName.toLowerCase().includes(q) || f.email.toLowerCase().includes(q)
+    );
+  });
+
+  // Stats calculations
+  const paidCount = intakeForms.filter((f: any) => f?.paid === true).length;
+  const unpaidCount = Math.max(0, intakeForms.length - paidCount);
+
+  if (loading) return <div className="p-6 text-white">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Side Navigation */}
+    <div className="min-h-screen bg-[#0B1F35]">
+      {/* Side Navigation - unchanged */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           showNav ? "translate-x-0" : "-translate-x-full"
@@ -254,7 +283,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Overlay */}
+      {/* Overlay - unchanged */}
       <div
         className={`fixed inset-0 bg-black transition-opacity duration-300 ${
           showNav ? "opacity-50 z-20" : "opacity-0 -z-10"
@@ -262,31 +291,75 @@ export default function Home() {
         onClick={() => setShowNav(false)}
       />
 
-      {/* Header Bar with greeting and date strip side by side */}
-      <div className="bg-[#0a1c3f] text-white p-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <button className="mr-3" onClick={() => setShowNav(true)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <div className="mr-3">
-              <p className="font-medium">Hi, Cymron</p>
-              <p className="text-xs opacity-80">See their progress!</p>
+      {/* Header - made responsive */}
+      <div className="bg-[#0B1F35] text-white px-4 md:px-6 pt-4 pb-3">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* Top row on mobile: hamburger + theme + greeting + avatar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button className="mr-3 lg:mr-4" onClick={() => setShowNav(true)}>
+                <svg
+                  className="h-6 w-6 lg:h-7 lg:w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+
+              {/* Theme Toggle Pill - responsive */}
+              <div className="flex items-center bg-[#0F1D3C] border border-white/10 rounded-full px-1 lg:px-1.5 mr-3 lg:mx-6">
+                <button
+                  onClick={() => setIsDarkMode(true)}
+                  className={`p-1 lg:p-1 rounded-full transition-colors ${
+                    isDarkMode ? "bg-white text-gray-800" : "text-white/60"
+                  }`}
+                >
+                  <svg
+                    className="w-3 h-3 lg:w-4 lg:h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setIsDarkMode(false)}
+                  className={`p-1 lg:p-2 rounded-full transition-colors ${
+                    !isDarkMode ? "bg-white text-gray-800" : "text-white/60"
+                  }`}
+                >
+                  <svg
+                    className="w-3 h-3 lg:w-4 lg:h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Greeting text - responsive */}
+              <div className="mr-3 lg:mr-4 lg:ml-6">
+                <p className="text-lg lg:text-xl font-semibold">Hi, Cymron</p>
+                <p className="text-xs lg:text-sm opacity-80">
+                  See their progress!
+                </p>
+              </div>
             </div>
-            <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+
+            {/* Avatar - responsive */}
+            <div className="h-12 w-12 lg:h-20 lg:w-20 rounded-full overflow-hidden flex-shrink-0 relative">
               <Image
                 src="/User.png"
                 alt="Profile"
@@ -295,172 +368,124 @@ export default function Home() {
               />
             </div>
           </div>
-          {/* New Date Picker */}
-          <div className="flex items-center bg-[#0F1D3C] px-3 h-[60px] rounded-lg relative">
-            <div className="flex space-x-1 items-center">
-              {generateDateStrip().map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedDate(item.fullDate)}
-                  className={`flex flex-col items-center justify-center w-[34px] h-[54px] rounded-full ${
-                    item.isSelected
-                      ? "bg-[#616A77]/50"
-                      : "bg-transparent border border-[#D9D9D9]/50 border-opacity-30"
-                  }`}
-                >
-                  <span className="text-sm font-medium text-white">
-                    {item.day}
-                  </span>
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 mt-1 ${
-                      item.isSelected ? "bg-[#DD3333] rounded-full" : ""
+
+          {/* Date strip - responsive positioning */}
+          <div className="flex justify-center lg:justify-start lg:mr-12">
+            <div className="flex items-center bg-[#0F1D3C] px-2 lg:px-4 h-[55px] lg:h-[65px] rounded-lg">
+              <div className="flex space-x-1 lg:space-x-2 items-center">
+                {generateDateStrip().map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDate(item.fullDate)}
+                    className={`flex flex-col items-center justify-center w-[28px] lg:w-[30px] h-[48px] lg:h-[58px] rounded-full ${
+                      item.isSelected
+                        ? "bg-[#616A77]/50"
+                        : "bg-transparent border border-white/20"
                     }`}
                   >
-                    <span
-                      className={`text-sm ${
-                        item.isSelected ? "font-bold" : ""
+                    <span className="text-[10px] lg:text-[12px] font-medium text-white/80">
+                      {item.day}
+                    </span>
+                    <div
+                      className={`flex items-center justify-center w-5 h-5 lg:w-6 lg:h-6 mt-1 lg:mt-3 ${
+                        item.isSelected ? "bg-[#DD3333] rounded-full" : ""
                       }`}
                     >
-                      {item.date}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="ml-3 relative" ref={calendarRef}>
-              <button
-                onClick={() => setShowCalendar(!showCalendar)}
-                className="text-white p-1"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {showCalendar && (
-                <div
-                  className="absolute right-0 top-10 z-50 bg-white rounded-lg shadow-lg p-3"
-                  style={{ width: "280px" }}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <button
-                      onClick={() => changeMonth(-1)}
-                      className="p-1 bg-gray-300 hover:bg-gray-500 rounded"
-                    >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <span
+                        className={`text-xs lg:text-sm ${
+                          item.isSelected ? "font-bold text-white" : ""
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
-                      </svg>
-                    </button>
-
-                    <div className="font-semibold text-gray-800">
-                      {currentMonth.toLocaleString("default", {
-                        month: "long",
-                      })}{" "}
-                      {currentMonth.getFullYear()}
+                        {item.date}
+                      </span>
                     </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-                    <button
-                      onClick={() => changeMonth(1)}
-                      className="p-1 bg-gray-300 hover:bg-grey-500 rounded"
-                    >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+          {/* Search box - responsive */}
+          <div className="flex items-center w-full md:w-[280px] lg:w-[360px] bg-white/10 rounded-full px-3 py-2">
+            <svg
+              className="w-4 h-4 text-white/60"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Students..."
+              className="bg-transparent outline-none placeholder-white/50 text-sm text-white ml-2 w-full"
+            />
+          </div>
+        </div>
 
-                  <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-                      <div
-                        key={i}
-                        className="text-xs font-medium text-gray-500"
-                      >
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 text-center">
-                    {generateCalendarDays().map((day, index) => (
-                      <div
-                        key={index}
-                        className="h-8 w-8 flex items-center justify-center"
-                      >
-                        {day ? (
-                          <button
-                            onClick={() => handleDateSelect(day.fullDate)}
-                            className={`h-7 w-7 rounded-full flex items-center justify-center text-sm
-                              ${
-                                day.isSelected
-                                  ? "bg-[#DD3333] text-white"
-                                  : day.isToday
-                                  ? "bg-gray-200"
-                                  : "hover:bg-gray-100 text-gray-800"
-                              }`}
-                          >
-                            {day.date}
-                          </button>
-                        ) : (
-                          <span></span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* Stats cards - responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-5 mt-6 lg:mt-8">
+          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+            <div className="text-[12px] lg:text-[14px] text-white/70">
+              Total Students
+            </div>
+            <div className="text-xl lg:text-2xl font-semibold">
+              {intakeForms.length}
+            </div>
+          </div>
+          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+            <div className="text-[12px] lg:text-[14px] text-white/70">
+              Paid Students
+            </div>
+            <div className="text-xl lg:text-2xl font-semibold">{paidCount}</div>
+          </div>
+          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+            <div className="text-[12px] lg:text-[14px] text-white/70">
+              Unpaid Students
+            </div>
+            <div className="text-xl lg:text-2xl font-semibold">
+              {unpaidCount}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sort Options */}
-      <div className="flex justify-end px-6 py-2 relative">
+      {/* Sort By dropdown - responsive positioning */}
+      <div className="flex justify-end px-4 md:px-6 py-4 lg:py-8 relative">
         <button
           onClick={() => setShowSortDropdown(!showSortDropdown)}
-          className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+          className="flex items-center gap-2 text-sm text-white/80 hover:text-white"
         >
-          Sort By <span className="ml-1">▼</span>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 6h18M6 12h12M10 18h4"
+            />
+          </svg>
+          Sort By
         </button>
 
         {showSortDropdown && (
-          <div className="absolute top-full right-6 mt-1 bg-white shadow-md rounded p-2 border z-10">
+          <div className="absolute top-full right-4 md:right-6 mt-2 bg-white rounded-lg shadow-xl py-2 w-40 border z-10">
             <button
               onClick={() => {
                 setSortBy("name");
                 setShowSortDropdown(false);
               }}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               Alphabetically
             </button>
@@ -469,27 +494,42 @@ export default function Home() {
                 setSortBy("date");
                 setShowSortDropdown(false);
               }}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               Join Date
             </button>
-            <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
-              Active / Inactive
+            <button
+              onClick={() => {
+                setSortBy("active");
+                setShowSortDropdown(false);
+              }}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              Active/Inactive
+            </button>
+            <button
+              onClick={() => {
+                setSortBy("age");
+                setShowSortDropdown(false);
+              }}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              Age
             </button>
           </div>
         )}
       </div>
 
-      {/* Client Cards */}
-      <div className="p-4 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {sortedIntakeForms.map((form) => (
+      {/* Student Cards - responsive grid */}
+      <div className="px-4 md:px-6 pb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-4 md:gap-5">
+          {visibleForms.map((form) => (
             <div
               key={form.email}
-              className="bg-[#0a1c3f] text-white rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer flex items-center"
+              className="bg-[#0f2036] border border-white/10 rounded-2xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
               onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
             >
-              <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
                 <Image
                   src="/User.png"
                   alt="Profile"
@@ -497,21 +537,22 @@ export default function Home() {
                   style={{ objectFit: "cover" }}
                 />
               </div>
-              <div className="overflow-hidden">
-                <h2 className="font-semibold text-white">{form.fullName}</h2>
-                <p className="text-xs text-gray-300 truncate">{form.email}</p>
-                <p className="text-xs text-gray-300">
-                  Joined:{" "}
+              <div className="min-w-0">
+                <div className="text-[14px] lg:text-[15px] font-semibold text-[#CFE0FF] truncate">
+                  {form.fullName}
+                </div>
+                <div className="text-[11px] lg:text-[12px] text-white/60 truncate">
+                  Submitted:{" "}
                   {form.timestamp?.toDate
-                    ? form.timestamp.toDate().toLocaleDateString()
+                    ? formatDMY(form.timestamp.toDate())
                     : "No date"}
-                </p>
+                </div>
               </div>
             </div>
           ))}
-          {sortedIntakeForms.length === 0 && (
-            <p className="text-gray-500 col-span-full">
-              No intake forms found.
+          {visibleForms.length === 0 && (
+            <p className="text-gray-400 col-span-full text-center text-sm">
+              No students found.
             </p>
           )}
         </div>
