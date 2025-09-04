@@ -230,16 +230,23 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0B1F35]">
-      {/* Side Navigation - unchanged */}
+      {/* Side Navigation - updated design */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           showNav ? "translate-x-0" : "-translate-x-full"
-        } bg-[#0a1c3f] text-white w-64 z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
+        } bg-[#0B1F35]/40 backdrop-blur-xl border-r border-white/10 text-white w-80 z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
       >
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-bold">Menu</h2>
-            <button onClick={() => setShowNav(false)} className="text-white">
+        <div className="p-8">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-12">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Menu</h2>
+              <p className="text-sm text-white/60 mt-1">Dashboard Navigation</p>
+            </div>
+            <button
+              onClick={() => setShowNav(false)}
+              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+            >
               <svg
                 className="h-6 w-6"
                 fill="none"
@@ -255,38 +262,70 @@ export default function Home() {
               </svg>
             </button>
           </div>
+
+          {/* Navigation */}
           <nav>
-            <ul className="space-y-4">
-              {menuItems.map((item) => (
+            <ul className="space-y-3">
+              {menuItems.map((item, index) => (
                 <li key={`${item.path}-${item.label}`}>
                   <button
                     onClick={() => {
                       router.push(item.path);
                       setShowNav(false);
                     }}
-                    className="flex items-center text-gray-300 hover:text-white w-full py-2"
+                    className="flex items-center border-b-1 rounded-xl text-white/70 hover:text-white hover:bg-white/10 w-full py-4 px-4 transition-all duration-200 group"
                   >
-                    <svg
-                      className="h-5 w-5 mr-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      {item.icon}
-                    </svg>
-                    {item.label}
+                    <div className="flex items-center justify-center w-12 h-12 bg-white/10 rounded-lg mr-4 group-hover:bg-white/20 transition-colors">
+                      <svg
+                        className="h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        {item.icon}
+                      </svg>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-base font-medium">
+                        {item.label}
+                      </span>
+                      <span className="text-xs text-white/40 mt-0">
+                        {item.label === "Slack Channel" && "Team communication"}
+                        {item.label === "Slack DMs" && "Direct messages"}
+                        {item.label === "Logout" && "Sign out safely"}
+                      </span>
+                    </div>
                   </button>
                 </li>
               ))}
             </ul>
           </nav>
+
+          {/* Bottom section */}
+          {/* <div className="mt-12 pt-8 border-t border-white/10">
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-white mb-2">
+                Quick Stats
+              </h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/60">Active Users</span>
+                  <span className="text-white">{intakeForms.length}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/60">Paid Members</span>
+                  <span className="text-green-400">{paidCount}</span>
+                </div>
+              </div>
+            </div>
+          </div> */}
         </div>
       </div>
 
-      {/* Overlay - unchanged */}
+      {/* Overlay - enhanced */}
       <div
-        className={`fixed inset-0 bg-black transition-opacity duration-300 ${
-          showNav ? "opacity-50 z-20" : "opacity-0 -z-10"
+        className={`fixed inset-0 backdrop-blur-sm transition-opacity duration-300 ${
+          showNav ? "opacity-100 z-20" : "opacity-0 -z-10"
         }`}
         onClick={() => setShowNav(false)}
       />
