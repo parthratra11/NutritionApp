@@ -75,8 +75,50 @@ export default function Navigation({
     return dates;
   };
 
-  // Sidebar menu items updated to match the image
+  // Sidebar menu items updated to include User Dashboard
   const menuItems = [
+    {
+      label: "Dashboard",
+      path: "/",
+      icon: (
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      label: "Overview",
+      path: "/",
+      icon: (
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M4 13h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM4 22h6a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM14 13h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM14 22h6a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
     {
       label: "Steps",
       path: "/steps",
@@ -558,7 +600,12 @@ export default function Navigation({
                   <li key={i} className="border-b border-[#1e3252]/60">
                     <button
                       onClick={() => {
-                        router.push(`/${email}${item.path}`);
+                        // Navigate to main dashboard if Dashboard is selected, otherwise to client-specific page
+                        const path =
+                          item.label === "Dashboard"
+                            ? "/"
+                            : `/${email}${item.path}`;
+                        router.push(path);
                         setShowNav(false);
                       }}
                       className="flex items-center w-full py-6 px-8 text-white/80 hover:text-white hover:bg-[#1e3252]/50 transition-colors"

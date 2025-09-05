@@ -229,7 +229,7 @@ export default function ClientOverview() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
-        title="Dashboard"
+        title="Overview"
         subtitle={
           client?.timestamp?.toDate
             ? formatDate(client.timestamp.toDate())
