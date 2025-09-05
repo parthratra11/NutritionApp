@@ -387,7 +387,7 @@ export default function Home() {
             {/* Avatar - responsive */}
             <div className="h-12 w-12 lg:h-20 lg:w-20 rounded-full overflow-hidden flex-shrink-0 relative">
               <Image
-                src="/User.png"
+                src="/cymron.png"
                 alt="Profile"
                 fill
                 style={{ objectFit: "cover" }}
