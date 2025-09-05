@@ -470,7 +470,7 @@ export default function Home() {
 
         {/* Stats cards - responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-5 mt-6 lg:mt-8">
-          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
               Total Students
             </div>
@@ -478,13 +478,13 @@ export default function Home() {
               {intakeForms.length}
             </div>
           </div>
-          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
               Paid Students
             </div>
             <div className="text-xl lg:text-2xl font-semibold">{paidCount}</div>
           </div>
-          <div className="bg-[#0F1D3C] border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
+          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
               Unpaid Students
             </div>
@@ -499,7 +499,7 @@ export default function Home() {
       <div className="flex justify-end px-4 md:px-6 py-4 lg:py-8 relative">
         <button
           onClick={() => setShowSortDropdown(!showSortDropdown)}
-          className="flex items-center gap-2 text-sm text-white/80 hover:text-white"
+          className="flex items-center gap-2 text-sm text-white/80 hover:text-white hover:cursor-pointer"
         >
           <svg
             className="w-4 h-4"
@@ -524,7 +524,7 @@ export default function Home() {
                 setSortBy("name");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
             >
               Alphabetically
             </button>
@@ -533,7 +533,7 @@ export default function Home() {
                 setSortBy("date");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
             >
               Join Date
             </button>
@@ -542,7 +542,7 @@ export default function Home() {
                 setSortBy("active");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
             >
               Active/Inactive
             </button>
@@ -551,7 +551,7 @@ export default function Home() {
                 setSortBy("age");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="block w-full text-center px-4 py-2 text-sm text-gray-700 hover:cursor-pointer"
             >
               Age
             </button>
@@ -565,10 +565,11 @@ export default function Home() {
           {visibleForms.map((form) => (
             <div
               key={form.email}
-              className="bg-[#0f2036] border border-white/10 rounded-2xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
+              // className="bg-[#0f2036] border border-white/10 rounded-2xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
+              className="bg-gray-700/50 border border-white/10 rounded-3xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
               onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
             >
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
+              <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
                 <Image
                   src="/User.png"
                   alt="Profile"
