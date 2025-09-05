@@ -276,29 +276,34 @@ export default function EditTemplate() {
   );
 
   // Convert template object to ordered array structure
-  const convertToOrderedTemplate = (templateData: WorkoutTemplate): OrderedTemplate => {
-  const ordered: OrderedTemplate = {
-    "Session A": { exercises: [], isOpen: false },
-    "Session B": { exercises: [], isOpen: false },
-    "Session C": { exercises: [], isOpen: false },
+  const convertToOrderedTemplate = (
+    templateData: WorkoutTemplate
+  ): OrderedTemplate => {
+    const ordered: OrderedTemplate = {
+      "Session A": { exercises: [], isOpen: false },
+      "Session B": { exercises: [], isOpen: false },
+      "Session C": { exercises: [], isOpen: false },
+    };
+
+    Object.entries(templateData).forEach(([sessionKey, session]) => {
+      const sessionType = sessionKey as keyof WorkoutTemplate;
+
+      // Check if the session exists in our ordered template structure
+      if (ordered[sessionType]) {
+        // Sort exercises alphabetically
+        const sortedExercises = Object.entries(session)
+          .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+          .map(([name, details]) => ({
+            name,
+            ...details,
+          }));
+
+        ordered[sessionType].exercises = sortedExercises;
+      }
+    });
+
+    return ordered;
   };
-
-  Object.entries(templateData).forEach(([sessionKey, session]) => {
-    const sessionType = sessionKey as keyof WorkoutTemplate;
-
-    // Sort exercises alphabetically
-    const sortedExercises = Object.entries(session)
-      .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-      .map(([name, details]) => ({
-        name,
-        ...details,
-      }));
-
-    ordered[sessionType].exercises = sortedExercises;
-  });
-
-  return ordered;
-};
 
   // Convert ordered array structure back to template object
   const convertToTemplate = (orderedData: OrderedTemplate): WorkoutTemplate => {
@@ -755,9 +760,7 @@ export default function EditTemplate() {
                 Training Sessions per week
               </p>
             </div>
-            <div>
-              {/* Icon placeholder */}
-            </div>
+            <div>{/* Icon placeholder */}</div>
           </div>
 
           {/* Steps Card */}
@@ -859,7 +862,9 @@ export default function EditTemplate() {
                             </a>
                           )}
                           <button
-                            onClick={() => handleWarmUpChange(index, "link", "")}
+                            onClick={() =>
+                              handleWarmUpChange(index, "link", "")
+                            }
                             className="text-gray-400 hover:text-white"
                           >
                             <svg
@@ -938,26 +943,53 @@ export default function EditTemplate() {
 
                   {/* Session Exercises List */}
                   <div className="space-y-2">
-                    {orderedTemplate["Session A"].exercises.map((exercise, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
-                      >
-                        <div className="col-span-6 flex items-center">
-                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
-                            {index + 1}
-                          </span>
-                          <span className="truncate">{exercise.name}</span>
-                        </div>
-                        <div className="col-span-2 text-center">{exercise.Sets}</div>
-                        <div className="col-span-2 text-center">{exercise.Reps}</div>
-                        <div className="col-span-2 flex justify-end space-x-2">
-                          {exercise.Link && (
-                            <a
-                              href={exercise.Link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400"
+                    {orderedTemplate["Session A"].exercises.map(
+                      (exercise, index) => (
+                        <div
+                          key={index}
+                          className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                        >
+                          <div className="col-span-6 flex items-center">
+                            <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                              {index + 1}
+                            </span>
+                            <span className="truncate">{exercise.name}</span>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Sets}
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Reps}
+                          </div>
+                          <div className="col-span-2 flex justify-end space-x-2">
+                            {exercise.Link && (
+                              <a
+                                href={exercise.Link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                              </a>
+                            )}
+                            <button
+                              onClick={() =>
+                                handleValueChange(
+                                  "Session A",
+                                  index,
+                                  "Link",
+                                  ""
+                                )
+                              }
+                              className="text-gray-400 hover:text-white"
                             >
                               <svg
                                 className="h-4 w-4"
@@ -966,27 +998,13 @@ export default function EditTemplate() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                               >
-                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                               </svg>
-                            </a>
-                          )}
-                          <button
-                            onClick={() => handleValueChange("Session A", index, "Link", "")}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                            </svg>
-                          </button>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
 
                   {/* Add Exercise Button */}
@@ -1047,26 +1065,53 @@ export default function EditTemplate() {
 
                   {/* Session Exercises List */}
                   <div className="space-y-2">
-                    {orderedTemplate["Session B"].exercises.map((exercise, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
-                      >
-                        <div className="col-span-6 flex items-center">
-                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
-                            {index + 1}
-                          </span>
-                          <span className="truncate">{exercise.name}</span>
-                        </div>
-                        <div className="col-span-2 text-center">{exercise.Sets}</div>
-                        <div className="col-span-2 text-center">{exercise.Reps}</div>
-                        <div className="col-span-2 flex justify-end space-x-2">
-                          {exercise.Link && (
-                            <a
-                              href={exercise.Link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400"
+                    {orderedTemplate["Session B"].exercises.map(
+                      (exercise, index) => (
+                        <div
+                          key={index}
+                          className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                        >
+                          <div className="col-span-6 flex items-center">
+                            <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                              {index + 1}
+                            </span>
+                            <span className="truncate">{exercise.name}</span>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Sets}
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Reps}
+                          </div>
+                          <div className="col-span-2 flex justify-end space-x-2">
+                            {exercise.Link && (
+                              <a
+                                href={exercise.Link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                              </a>
+                            )}
+                            <button
+                              onClick={() =>
+                                handleValueChange(
+                                  "Session B",
+                                  index,
+                                  "Link",
+                                  ""
+                                )
+                              }
+                              className="text-gray-400 hover:text-white"
                             >
                               <svg
                                 className="h-4 w-4"
@@ -1075,27 +1120,13 @@ export default function EditTemplate() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                               >
-                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                               </svg>
-                            </a>
-                          )}
-                          <button
-                            onClick={() => handleValueChange("Session B", index, "Link", "")}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                            </svg>
-                          </button>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
 
                   {/* Add Exercise Button */}
@@ -1156,26 +1187,53 @@ export default function EditTemplate() {
 
                   {/* Session Exercises List */}
                   <div className="space-y-2">
-                    {orderedTemplate["Session C"].exercises.map((exercise, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
-                      >
-                        <div className="col-span-6 flex items-center">
-                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
-                            {index + 1}
-                          </span>
-                          <span className="truncate">{exercise.name}</span>
-                        </div>
-                        <div className="col-span-2 text-center">{exercise.Sets}</div>
-                        <div className="col-span-2 text-center">{exercise.Reps}</div>
-                        <div className="col-span-2 flex justify-end space-x-2">
-                          {exercise.Link && (
-                            <a
-                              href={exercise.Link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400"
+                    {orderedTemplate["Session C"].exercises.map(
+                      (exercise, index) => (
+                        <div
+                          key={index}
+                          className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                        >
+                          <div className="col-span-6 flex items-center">
+                            <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                              {index + 1}
+                            </span>
+                            <span className="truncate">{exercise.name}</span>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Sets}
+                          </div>
+                          <div className="col-span-2 text-center">
+                            {exercise.Reps}
+                          </div>
+                          <div className="col-span-2 flex justify-end space-x-2">
+                            {exercise.Link && (
+                              <a
+                                href={exercise.Link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                              </a>
+                            )}
+                            <button
+                              onClick={() =>
+                                handleValueChange(
+                                  "Session C",
+                                  index,
+                                  "Link",
+                                  ""
+                                )
+                              }
+                              className="text-gray-400 hover:text-white"
                             >
                               <svg
                                 className="h-4 w-4"
@@ -1184,27 +1242,13 @@ export default function EditTemplate() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                               >
-                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                               </svg>
-                            </a>
-                          )}
-                          <button
-                            onClick={() => handleValueChange("Session C", index, "Link", "")}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                            </svg>
-                          </button>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
 
                   {/* Add Exercise Button */}

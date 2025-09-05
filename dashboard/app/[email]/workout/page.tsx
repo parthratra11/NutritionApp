@@ -52,6 +52,10 @@ export default function WorkoutDashboard() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All Sessions");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [selectedSingleDate, setSelectedSingleDate] = useState<string>("");
 
   // New state variables for graph and workout details
   const [selectedWorkout, setSelectedWorkout] = useState<{
@@ -205,6 +209,61 @@ export default function WorkoutDashboard() {
       completed: true,
     },
   ];
+
+  // Filter workout history based on search, filter, and date range
+  const filteredWorkoutHistory = workoutHistory.filter((workout) => {
+    const matchesSearch =
+      workout.date.toLowerCase().includes(search.toLowerCase()) ||
+      workout.session.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter =
+      filter === "All Sessions" || workout.session === filter;
+
+    // Enhanced date filtering
+    let matchesDateFilter = true;
+    if (dateFilter !== "all") {
+      const workoutDate = new Date(workout.date);
+      const now = new Date();
+
+      if (dateFilter === "custom") {
+        if (customStartDate && customEndDate) {
+          // Custom date range
+          const startDate = new Date(customStartDate);
+          const endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999); // Include the entire end date
+          matchesDateFilter =
+            workoutDate >= startDate && workoutDate <= endDate;
+        } else if (selectedSingleDate) {
+          // Single date selection
+          const selectedDate = new Date(selectedSingleDate);
+          const nextDay = new Date(selectedDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          matchesDateFilter =
+            workoutDate >= selectedDate && workoutDate < nextDay;
+        } else {
+          matchesDateFilter = true; // No custom filter applied
+        }
+      } else {
+        const cutoffDate = new Date();
+        switch (dateFilter) {
+          case "weekly":
+            cutoffDate.setDate(now.getDate() - 7);
+            break;
+          case "monthly":
+            cutoffDate.setMonth(now.getMonth() - 1);
+            break;
+          case "quarterly":
+            cutoffDate.setMonth(now.getMonth() - 3);
+            break;
+          case "yearly":
+            cutoffDate.setFullYear(now.getFullYear() - 1);
+            break;
+        }
+        matchesDateFilter = workoutDate >= cutoffDate;
+      }
+    }
+
+    return matchesSearch && matchesFilter && matchesDateFilter;
+  });
 
   // Helper function to get status class
   const getSessionStatusClass = (session: string, completed: boolean) => {
@@ -361,6 +420,32 @@ export default function WorkoutDashboard() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showCalendar]);
+
+  // Helper function to format date for input
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split("T")[0];
+  };
+
+  // Helper function to handle single date selection from calendar
+  const handleCalendarDateClick = (day: string) => {
+    if (!day) return;
+
+    const selectedDate = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      parseInt(day)
+    );
+
+    const dateString = formatDateForInput(selectedDate);
+    setSelectedSingleDate(dateString);
+    setDateFilter("custom");
+
+    // Clear custom range when selecting single date
+    setCustomStartDate("");
+    setCustomEndDate("");
+
+    setShowCalendar(false);
+  };
 
   if (loading)
     return (
@@ -537,10 +622,148 @@ export default function WorkoutDashboard() {
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
 
-                {/* Simple Calendar Popup */}
+                {/* Enhanced Calendar Popup with Date Filtering */}
                 {showCalendar && (
-                  <div className="absolute top-full left-0 mt-2 z-10 bg-[#142437] border border-[#22364F] rounded-lg shadow-lg p-4 w-72">
-                    <div className="flex justify-between items-center mb-4">
+                  <div
+                    className="absolute top-full left-0 mt-2 z-10 bg-[#142437] border border-[#22364F] rounded-lg shadow-lg p-4 w-80"
+                    data-calendar
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Quick Date Filters
+                    <div className="mb-4 p-3 bg-[#0E1F34] rounded border border-[#22364F]">
+                      <h5 className="text-sm font-medium text-gray-300 mb-3">
+                        Quick Filters
+                      </h5>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateFilter("weekly");
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                            setSelectedSingleDate("");
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${
+                            dateFilter === "weekly"
+                              ? "bg-[#DD3333] text-white"
+                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
+                          }`}
+                        >
+                          Last Week
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateFilter("monthly");
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                            setSelectedSingleDate("");
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${
+                            dateFilter === "monthly"
+                              ? "bg-[#DD3333] text-white"
+                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
+                          }`}
+                        >
+                          Last Month
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateFilter("quarterly");
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                            setSelectedSingleDate("");
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${
+                            dateFilter === "quarterly"
+                              ? "bg-[#DD3333] text-white"
+                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
+                          }`}
+                        >
+                          Last 3 Months
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateFilter("yearly");
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                            setSelectedSingleDate("");
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${
+                            dateFilter === "yearly"
+                              ? "bg-[#DD3333] text-white"
+                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
+                          }`}
+                        >
+                          Last Year
+                        </button>
+                      </div>
+                    </div> */}
+                    {/* Single Date Selection */}
+                    <div className="mb-4 p-3 bg-[#0E1F34] rounded border border-[#22364F]">
+                      <h5 className="text-sm font-medium text-gray-300 mb-3">
+                        Single Date Selection
+                      </h5>
+                      <input
+                        type="date"
+                        value={selectedSingleDate}
+                        onChange={(e) => {
+                          setSelectedSingleDate(e.target.value);
+                          setDateFilter("custom");
+                          setCustomStartDate("");
+                          setCustomEndDate("");
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.stopPropagation()}
+                        className="w-full px-2 py-1 bg-[#142437] border border-[#22364F] text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#DD3333]"
+                      />
+                    </div>
+                    {/* Custom Date Range Inputs */}
+                    <div className="mb-4 p-3 bg-[#0E1F34] rounded border border-[#22364F]">
+                      <h5 className="text-sm font-medium text-gray-300 mb-3">
+                        Custom Date Range
+                      </h5>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={(e) => {
+                              setCustomStartDate(e.target.value);
+                              setDateFilter("custom");
+                              setSelectedSingleDate("");
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => e.stopPropagation()}
+                            className="w-full px-2 py-1 bg-[#142437] border border-[#22364F] text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#DD3333]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={customEndDate}
+                            onChange={(e) => {
+                              setCustomEndDate(e.target.value);
+                              setDateFilter("custom");
+                              setSelectedSingleDate("");
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => e.stopPropagation()}
+                            className="w-full px-2 py-1 bg-[#142437] border border-[#22364F] text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#DD3333]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Calendar Navigation */}
+                    {/* <div className="flex justify-between items-center mb-4">
                       <h4 className="font-medium text-sm">
                         {formatMonthYear(currentMonth)}
                       </h4>
@@ -581,7 +804,6 @@ export default function WorkoutDashboard() {
                         </button>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-7 gap-1 text-center">
                       {daysOfWeek.map((day) => (
                         <div
@@ -592,32 +814,112 @@ export default function WorkoutDashboard() {
                         </div>
                       ))}
 
-                      {getDaysArray(currentMonth).map((day, index) => (
-                        <div
-                          key={index}
-                          className={`p-1 text-center ${
-                            day.empty
-                              ? "invisible"
-                              : "cursor-pointer hover:bg-[#1D325A]"
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!day.empty) {
-                              // Handle date selection here
-                              console.log(
-                                `Selected: ${day.day} ${formatMonthYear(
-                                  currentMonth
-                                )}`
-                              );
-                              setShowCalendar(false);
-                            }
-                          }}
-                        >
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs">
-                            {day.day}
-                          </span>
+                      {getDaysArray(currentMonth).map((day, index) => {
+                        const dayWorkout = workoutHistory.find((w) => {
+                          if (day.empty) return false;
+                          const workoutDate = new Date(w.date);
+                          const calendarDate = new Date(
+                            currentMonth.getFullYear(),
+                            currentMonth.getMonth(),
+                            parseInt(day.day)
+                          );
+                          return (
+                            workoutDate.toDateString() ===
+                            calendarDate.toDateString()
+                          );
+                        });
+
+                        const isSelectedDate =
+                          !day.empty &&
+                          selectedSingleDate &&
+                          new Date(selectedSingleDate).toDateString() ===
+                            new Date(
+                              currentMonth.getFullYear(),
+                              currentMonth.getMonth(),
+                              parseInt(day.day)
+                            ).toDateString();
+
+                        return (
+                          <div
+                            key={index}
+                            className={`p-1 text-center ${
+                              day.empty
+                                ? "invisible"
+                                : "cursor-pointer hover:bg-[#1D325A] rounded"
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!day.empty) {
+                                handleCalendarDateClick(day.day);
+                              }
+                            }}
+                          >
+                            <span
+                              className={`flex items-center justify-center w-6 h-6 rounded-full text-xs ${
+                                isSelectedDate
+                                  ? "bg-[#DD3333] text-white border-2 border-white"
+                                  : dayWorkout
+                                  ? dayWorkout.completed
+                                    ? "bg-[#4CAF50] text-white"
+                                    : "bg-[#D94343] text-white"
+                                  : ""
+                              }`}
+                            >
+                              {day.day}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div> */}
+                    {/* Legend */}
+                    <div className="mt-4 pt-3 border-t border-[#22364F]">
+                      <div className="flex justify-center gap-4 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-[#4CAF50]"></div>
+                          <span>Completed</span>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-[#D94343]"></div>
+                          <span>Cancelled</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-[#DD3333] border border-white"></div>
+                          <span>Selected</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Apply/Close Buttons */}
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDateFilter("all");
+                          setCustomStartDate("");
+                          setCustomEndDate("");
+                          setSelectedSingleDate("");
+                          setShowCalendar(false);
+                        }}
+                        className="flex-1 px-3 py-2 bg-[#22364F] hover:bg-[#1D325A] text-white rounded text-sm transition-colors"
+                      >
+                        Clear Filter
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (customStartDate && customEndDate) {
+                            setDateFilter("custom");
+                            setSelectedSingleDate("");
+                          } else if (selectedSingleDate) {
+                            setDateFilter("custom");
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                          }
+                          setShowCalendar(false);
+                        }}
+                        className="flex-1 px-3 py-2 bg-[#DD3333] hover:bg-[#BB2828] text-white rounded text-sm transition-colors"
+                      >
+                        Apply Filter
+                      </button>
                     </div>
                   </div>
                 )}
@@ -668,7 +970,7 @@ export default function WorkoutDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {workoutHistory.map((workout, index) => (
+                    {filteredWorkoutHistory.map((workout, index) => (
                       <tr
                         key={index}
                         className="border-b border-[#22364F] last:border-b-0"
