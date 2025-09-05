@@ -35,6 +35,7 @@ interface Session {
 
 interface OrderedSession {
   exercises: OrderedExercise[];
+  isOpen?: boolean;
 }
 
 interface WorkoutTemplate {
@@ -254,7 +255,7 @@ export default function EditTemplate() {
     defaultWarmUpExercises
   );
   const [dailySteps, setDailySteps] = useState(defaultDailySteps);
-  const [editingWarmUp, setEditingWarmUp] = useState(false);
+  const [editingWarmUp, setEditingWarmUp] = useState(true);
   const [editingSteps, setEditingSteps] = useState(false);
   const [showWarmUpModal, setShowWarmUpModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -275,31 +276,29 @@ export default function EditTemplate() {
   );
 
   // Convert template object to ordered array structure
-  const convertToOrderedTemplate = (
-    templateData: WorkoutTemplate
-  ): OrderedTemplate => {
-    const ordered: OrderedTemplate = {
-      "Session A": { exercises: [] },
-      "Session B": { exercises: [] },
-      "Session C": { exercises: [] },
-    };
-
-    Object.entries(templateData).forEach(([sessionKey, session]) => {
-      const sessionType = sessionKey as keyof WorkoutTemplate;
-
-      // Sort exercises alphabetically
-      const sortedExercises = Object.entries(session)
-        .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-        .map(([name, details]) => ({
-          name,
-          ...details,
-        }));
-
-      ordered[sessionType].exercises = sortedExercises;
-    });
-
-    return ordered;
+  const convertToOrderedTemplate = (templateData: WorkoutTemplate): OrderedTemplate => {
+  const ordered: OrderedTemplate = {
+    "Session A": { exercises: [], isOpen: false },
+    "Session B": { exercises: [], isOpen: false },
+    "Session C": { exercises: [], isOpen: false },
   };
+
+  Object.entries(templateData).forEach(([sessionKey, session]) => {
+    const sessionType = sessionKey as keyof WorkoutTemplate;
+
+    // Sort exercises alphabetically
+    const sortedExercises = Object.entries(session)
+      .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+      .map(([name, details]) => ({
+        name,
+        ...details,
+      }));
+
+    ordered[sessionType].exercises = sortedExercises;
+  });
+
+  return ordered;
+};
 
   // Convert ordered array structure back to template object
   const convertToTemplate = (orderedData: OrderedTemplate): WorkoutTemplate => {
@@ -679,369 +678,545 @@ export default function EditTemplate() {
     setShowWarmUpModal(!showWarmUpModal);
   };
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+
   if (!orderedTemplate)
-    return <div className="p-6">No template data found</div>;
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+        <div>No template data found</div>
+      </div>
+    );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title={`${clientName || "Client"}'s Workout Template`}
-        subtitle="Edit Mode"
+        title="Workout"
+        subtitle="Edit your workout plan"
         email={params.email as string}
         userName={userName}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* View/Edit Toggle */}
-        <div className="flex space-x-4 my-6">
-          <Link
-            href={`/${params.email}/workout`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            View Progress
-          </Link>
-          <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
-            Edit Template
-          </button>
-          <Link
-            href={`/${params.email}/workout/add`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            Add/Delete Exercise
-          </Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Progress Overview with Edit/View Toggle */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="flex items-center">
+            <svg
+              className="w-5 h-5 mr-2"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h2 className="text-lg font-semibold">Progress Overview</h2>
+          </div>
+
+          <div className="flex space-x-2">
+            <Link
+              href={`/${params.email}/workout`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
+            >
+              View
+            </Link>
+            <button className="px-4 py-1 rounded bg-[#DD3333] text-white text-sm">
+              Edit
+            </button>
+            <Link
+              href={`/${params.email}/workout/add`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
+            >
+              Add/Del
+            </Link>
+          </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Warm Up & Steps */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Warm Up Card */}
-            <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[#1A1A1A] text-lg font-semibold">
-                  Warm Up
-                </h2>
-                <button
-                  onClick={toggleWarmUpModal}
-                  className="text-blue-600 text-sm flex items-center"
-                >
-                  Edit
-                  <svg
-                    className="h-4 w-4 ml-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-gray-600 text-sm">
-                    <th className="pb-3 font-medium">Exercise</th>
-                    <th className="pb-3 font-medium text-center w-12">Sets</th>
-                    <th className="pb-3 font-medium text-center w-20">Reps</th>
-                    <th className="pb-3 font-medium text-center w-16">Link</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[#333333] text-sm">
-                  {warmUpExercises.map((exercise, index) => (
-                    <tr key={index} className="h-10">
-                      <td className="py-2">{exercise.name}</td>
-                      <td className="py-2 text-center">{exercise.sets}</td>
-                      <td className="py-2 text-center">{exercise.reps}</td>
-                      <td className="py-2 text-center">
-                        {exercise.link ? (
-                          <a
-                            href={exercise.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600"
-                            title="Video Link"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 mx-auto"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          </a>
-                        ) : (
-                          <span className="text-red-500">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 mx-auto"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Training Sessions Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-6 flex justify-between items-center">
+            <div>
+              <h3 className="font-medium text-4xl">5</h3>
+              <p className="text-gray-400 text-sm mt-1">
+                Training Sessions per week
+              </p>
             </div>
-
-            {/* Steps Goal Card */}
-            <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[#1A1A1A] text-lg font-semibold">
-                  Daily Steps Target
-                </h2>
-                <button
-                  onClick={() => setEditingSteps(!editingSteps)}
-                  className="text-blue-600 text-sm flex items-center"
-                >
-                  {editingSteps ? "Done" : "Edit"}
-                  {!editingSteps && (
-                    <svg
-                      className="h-4 w-4 ml-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {editingSteps ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg">
-                    <div className="col-span-4">
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Steps Target
-                      </label>
-                      <input
-                        type="text"
-                        value={dailySteps.target}
-                        onChange={(e) =>
-                          setDailySteps({
-                            ...dailySteps,
-                            target: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                        placeholder="10,000"
-                      />
-                    </div>
-                    <div className="col-span-8">
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Walk Duration
-                      </label>
-                      <input
-                        type="text"
-                        value={dailySteps.walkDuration}
-                        onChange={(e) =>
-                          setDailySteps({
-                            ...dailySteps,
-                            walkDuration: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                        placeholder="30 minute"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 text-[#333333] text-sm">
-                  <p>
-                    Today you will aim to get{" "}
-                    <span className="font-bold">{dailySteps.target}</span>{" "}
-                    steps.
-                  </p>
-                  <p>
-                    A{" "}
-                    <span className="font-bold">{dailySteps.walkDuration}</span>{" "}
-                    morning walk is a great way to kick this off.
-                  </p>
-                </div>
-              )}
+            <div>
+              {/* Icon placeholder */}
             </div>
           </div>
 
-          {/* Right Column - Workout Sessions */}
-          <div className="lg:col-span-2 space-y-2 mb-6">
-            {Object.entries(orderedTemplate).map(([sessionName, session]) => (
-              <div key={sessionName}>
-                <h3 className="text-[#333333] font-semibold mb-2 text-right">
-                  {sessionName}
-                </h3>
-                <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-2">
-                  <div className="space-y-0">
-                    {session.exercises.map((exercise, index) => (
+          {/* Steps Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-6 flex justify-between items-center">
+            <div>
+              <h3 className="font-medium text-4xl">8,000-10,000</h3>
+              <p className="text-gray-400 text-sm mt-1">Steps per Day</p>
+            </div>
+            <button
+              onClick={() => setEditingSteps(true)}
+              className="text-gray-400 hover:text-white"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-10 10a2 2 0 01-2.828 0l-1-1a2 2 0 010-2.828l10-10z" />
+                <path d="M14 6h6m0 0v6m0-6L10 14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Two Column Layout for Workout Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Left Column - Warmup */}
+          <div className="space-y-4">
+            {/* Warmup Section */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg overflow-hidden">
+              <div
+                className="flex justify-between items-center p-4 cursor-pointer"
+                onClick={() => setEditingWarmUp(!editingWarmUp)}
+              >
+                <h3 className="font-medium">Warmup</h3>
+                <svg
+                  className={`w-5 h-5 transform ${
+                    editingWarmUp ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {/* Warmup Content */}
+              {editingWarmUp && (
+                <div className="px-4 pb-4">
+                  {/* Warmup Exercise Headers */}
+                  <div className="grid grid-cols-12 text-sm text-gray-400 mb-2">
+                    <div className="col-span-6">Exercises</div>
+                    <div className="col-span-2 text-center">Sets</div>
+                    <div className="col-span-2 text-center">Reps</div>
+                    <div className="col-span-2"></div>
+                  </div>
+
+                  {/* Warmup Exercises List */}
+                  <div className="space-y-2">
+                    {warmUpExercises.map((exercise, index) => (
                       <div
-                        key={`${sessionName}-${exercise.name}-${index}`}
-                        className="grid grid-cols-15 gap-2 items-center py-1"
+                        key={index}
+                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
                       >
-                        <div className="col-span-5">
-                          <select
-                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                            value={exercise.name}
-                            onChange={(e) =>
-                              handleExerciseChange(
-                                sessionName,
-                                index,
-                                e.target.value
-                              )
-                            }
-                          >
-                            {workoutOptions.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
+                        <div className="col-span-6 flex items-center">
+                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                            {index + 1}
+                          </span>
+                          <span className="truncate">{exercise.name}</span>
                         </div>
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={exercise.Sets}
-                            onChange={(e) =>
-                              handleValueChange(
-                                sessionName,
-                                index,
-                                "Sets",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-center text-[#333333] focus:ring-2 focus:ring-red-500"
-                            placeholder="Sets"
-                          />
+                        <div className="col-span-2 text-center">
+                          {exercise.sets}
                         </div>
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={exercise.Reps}
-                            onChange={(e) =>
-                              handleValueChange(
-                                sessionName,
-                                index,
-                                "Reps",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                            placeholder="Reps"
-                          />
+                        <div className="col-span-2 text-center">
+                          {exercise.reps}
                         </div>
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={exercise.Weight || ""}
-                            onChange={(e) =>
-                              handleValueChange(
-                                sessionName,
-                                index,
-                                "Weight",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                            placeholder="kg"
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <input
-                            type="text"
-                            value={exercise.Link}
-                            onChange={(e) =>
-                              handleValueChange(
-                                sessionName,
-                                index,
-                                "Link",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-1 rounded-lg bg-white border-0 text-sm text-[#333333] focus:ring-2 focus:ring-red-500"
-                            placeholder="https://www.youtube.com"
-                          />
-                        </div>
-                        <div className="col-span-1">
+                        <div className="col-span-2 flex justify-end space-x-2">
+                          {exercise.link && (
+                            <a
+                              href={exercise.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                            </a>
+                          )}
                           <button
-                            onClick={() => deleteExercise(sessionName, index)}
-                            className="w-full px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                            title="Delete exercise"
+                            onClick={() => handleWarmUpChange(index, "link", "")}
+                            className="text-gray-400 hover:text-white"
                           >
                             <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 mx-auto"
-                              fill="none"
+                              className="h-4 w-4"
                               viewBox="0 0 24 24"
+                              fill="none"
                               stroke="currentColor"
+                              strokeWidth="2"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
+                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>
                           </button>
                         </div>
                       </div>
                     ))}
-
-                    {/* Add new exercise button */}
-                    <div className="py-2 mt-2 text-center">
-                      <button
-                        onClick={() => addExercise(sessionName)}
-                        className="px-4 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm font-medium flex items-center mx-auto"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Add Exercise
-                      </button>
-                    </div>
                   </div>
+
+                  {/* Add Exercise Button */}
+                  <button
+                    onClick={addWarmUpExercise}
+                    className="w-full mt-3 py-2 text-sm text-gray-300 hover:text-white border border-dashed border-[#22364F] rounded-md flex items-center justify-center"
+                  >
+                    <span>+ Add Exercise</span>
+                  </button>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Sessions */}
+          <div className="space-y-4">
+            {/* Session A */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg overflow-hidden">
+              <div
+                className="flex justify-between items-center p-4 cursor-pointer"
+                onClick={() => {
+                  // Toggle Session A visibility
+                  setOrderedTemplate((prev) => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      "Session A": {
+                        ...prev["Session A"],
+                        isOpen: !prev["Session A"].isOpen,
+                      },
+                    };
+                  });
+                }}
+              >
+                <h3 className="font-medium">Session A</h3>
+                <svg
+                  className={`w-5 h-5 transform ${
+                    orderedTemplate?.["Session A"]?.isOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </div>
-            ))}
+
+              {/* Session A Content */}
+              {orderedTemplate?.["Session A"]?.isOpen && (
+                <div className="px-4 pb-4">
+                  {/* Session Exercise Headers */}
+                  <div className="grid grid-cols-12 text-sm text-gray-400 mb-2">
+                    <div className="col-span-6">Exercises</div>
+                    <div className="col-span-2 text-center">Sets</div>
+                    <div className="col-span-2 text-center">Reps</div>
+                    <div className="col-span-2"></div>
+                  </div>
+
+                  {/* Session Exercises List */}
+                  <div className="space-y-2">
+                    {orderedTemplate["Session A"].exercises.map((exercise, index) => (
+                      <div
+                        key={index}
+                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                      >
+                        <div className="col-span-6 flex items-center">
+                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                            {index + 1}
+                          </span>
+                          <span className="truncate">{exercise.name}</span>
+                        </div>
+                        <div className="col-span-2 text-center">{exercise.Sets}</div>
+                        <div className="col-span-2 text-center">{exercise.Reps}</div>
+                        <div className="col-span-2 flex justify-end space-x-2">
+                          {exercise.Link && (
+                            <a
+                              href={exercise.Link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleValueChange("Session A", index, "Link", "")}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Exercise Button */}
+                  <button
+                    onClick={() => addExercise("Session A")}
+                    className="w-full mt-3 py-2 text-sm text-gray-300 hover:text-white border border-dashed border-[#22364F] rounded-md flex items-center justify-center"
+                  >
+                    <span>+ Add Exercise</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Session B */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg overflow-hidden">
+              <div
+                className="flex justify-between items-center p-4 cursor-pointer"
+                onClick={() => {
+                  // Toggle Session B visibility
+                  setOrderedTemplate((prev) => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      "Session B": {
+                        ...prev["Session B"],
+                        isOpen: !prev["Session B"].isOpen,
+                      },
+                    };
+                  });
+                }}
+              >
+                <h3 className="font-medium">Session B</h3>
+                <svg
+                  className={`w-5 h-5 transform ${
+                    orderedTemplate?.["Session B"]?.isOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {/* Session B Content */}
+              {orderedTemplate?.["Session B"]?.isOpen && (
+                <div className="px-4 pb-4">
+                  {/* Session Exercise Headers */}
+                  <div className="grid grid-cols-12 text-sm text-gray-400 mb-2">
+                    <div className="col-span-6">Exercises</div>
+                    <div className="col-span-2 text-center">Sets</div>
+                    <div className="col-span-2 text-center">Reps</div>
+                    <div className="col-span-2"></div>
+                  </div>
+
+                  {/* Session Exercises List */}
+                  <div className="space-y-2">
+                    {orderedTemplate["Session B"].exercises.map((exercise, index) => (
+                      <div
+                        key={index}
+                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                      >
+                        <div className="col-span-6 flex items-center">
+                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                            {index + 1}
+                          </span>
+                          <span className="truncate">{exercise.name}</span>
+                        </div>
+                        <div className="col-span-2 text-center">{exercise.Sets}</div>
+                        <div className="col-span-2 text-center">{exercise.Reps}</div>
+                        <div className="col-span-2 flex justify-end space-x-2">
+                          {exercise.Link && (
+                            <a
+                              href={exercise.Link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleValueChange("Session B", index, "Link", "")}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Exercise Button */}
+                  <button
+                    onClick={() => addExercise("Session B")}
+                    className="w-full mt-3 py-2 text-sm text-gray-300 hover:text-white border border-dashed border-[#22364F] rounded-md flex items-center justify-center"
+                  >
+                    <span>+ Add Exercise</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Session C */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg overflow-hidden">
+              <div
+                className="flex justify-between items-center p-4 cursor-pointer"
+                onClick={() => {
+                  // Toggle Session C visibility
+                  setOrderedTemplate((prev) => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      "Session C": {
+                        ...prev["Session C"],
+                        isOpen: !prev["Session C"].isOpen,
+                      },
+                    };
+                  });
+                }}
+              >
+                <h3 className="font-medium">Session C</h3>
+                <svg
+                  className={`w-5 h-5 transform ${
+                    orderedTemplate?.["Session C"]?.isOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {/* Session C Content */}
+              {orderedTemplate?.["Session C"]?.isOpen && (
+                <div className="px-4 pb-4">
+                  {/* Session Exercise Headers */}
+                  <div className="grid grid-cols-12 text-sm text-gray-400 mb-2">
+                    <div className="col-span-6">Exercises</div>
+                    <div className="col-span-2 text-center">Sets</div>
+                    <div className="col-span-2 text-center">Reps</div>
+                    <div className="col-span-2"></div>
+                  </div>
+
+                  {/* Session Exercises List */}
+                  <div className="space-y-2">
+                    {orderedTemplate["Session C"].exercises.map((exercise, index) => (
+                      <div
+                        key={index}
+                        className="bg-[#0E1F34] rounded-md p-3 grid grid-cols-12 items-center"
+                      >
+                        <div className="col-span-6 flex items-center">
+                          <span className="bg-[#1E2E47] text-white text-xs rounded px-1.5 py-0.5 mr-2">
+                            {index + 1}
+                          </span>
+                          <span className="truncate">{exercise.name}</span>
+                        </div>
+                        <div className="col-span-2 text-center">{exercise.Sets}</div>
+                        <div className="col-span-2 text-center">{exercise.Reps}</div>
+                        <div className="col-span-2 flex justify-end space-x-2">
+                          {exercise.Link && (
+                            <a
+                              href={exercise.Link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleValueChange("Session C", index, "Link", "")}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Exercise Button */}
+                  <button
+                    onClick={() => addExercise("Session C")}
+                    className="w-full mt-3 py-2 text-sm text-gray-300 hover:text-white border border-dashed border-[#22364F] rounded-md flex items-center justify-center"
+                  >
+                    <span>+ Add Exercise</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

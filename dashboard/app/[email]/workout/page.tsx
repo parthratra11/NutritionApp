@@ -4,19 +4,10 @@ import Navigation from "@/components/shared/Navigation";
 import { useEffect, useState } from "react";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 
+// Keep your existing interfaces
 interface SetData {
   id: string;
   weight: string;
@@ -48,228 +39,109 @@ interface WorkoutData {
   [week: string]: WeekData | string;
 }
 
-const sessionTemplates = {
-  A: [
-    "Barbell Hip Thrust",
-    "Cable Overhead Triceps Extension",
-    "Heels Elevated Zercher Squat",
-    "One-leg Leg Extension",
-    "Scrape Rack L-Seated Shoulder Press",
-    "Seated DB Lateral Raise",
-  ],
-  B: [
-    "Face Pull (Half-kneeling)",
-    "Leg Curl Seated Calf Raise",
-    "One-leg Lying Leg Curl",
-    "Snatch-grip Romanian Deadlift",
-    "Wide Cable Shrug",
-  ],
-  C: [
-    "Cable Fly (High-to-Low)",
-    "Deficit Push-up",
-    "Facing Cable Bicep Curl (Fwd Lean)",
-    "Neutral Grip Chin-up",
-    "One-Arm DB Row",
-  ],
-};
-
 export default function WorkoutDashboard() {
   const params = useParams();
+  const router = useRouter();
   const [workoutData, setWorkoutData] = useState<WorkoutData | null>(null);
-  const [selectedSession, setSelectedSession] = useState<
-    "A" | "B" | "C" | "all"
-  >("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [trainingType, setTrainingType] = useState<string>("3x Per Week");
-  const [clientName, setClientName] = useState<string>("");
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
+  const [userName, setUserName] = useState<string>("User");
+  
+  const [viewMode, setViewMode] = useState<"table" | "graph">("table");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All Sessions");
 
-  // Helper function to format date
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "2-digit",
-    });
+  // New state variables for graph and workout details
+  const [selectedWorkout, setSelectedWorkout] = useState<{
+    date: string;
+    session: string;
+    duration: string;
+    exercises?: Array<{
+      name: string;
+      sets: number;
+      reps: number;
+      weight: string;
+    }>;
+  } | null>(null);
+
+  const [timeRange, setTimeRange] = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
+
+  // Mock data for the workout history - replace with your actual data when available
+  const workoutHistory = [
+    { date: "07 July 2025", session: "Session A", duration: "88 min", completed: true },
+    { date: "08 July 2025", session: "Session B", duration: "84 min", completed: true },
+    { date: "09 July 2025", session: "Session C", duration: "84 min", completed: true },
+    { date: "10 July 2025", session: "Session A", duration: "60 min", completed: true },
+    { date: "11 July 2025", session: "Session B", duration: "72 min", completed: true },
+    { date: "12 July 2025", session: "Session C", duration: "88 min", completed: true },
+    { date: "13 July 2025", session: "Session A", duration: "84 min", completed: true },
+    { date: "14 July 2025", session: "Session B", duration: "60 min", completed: true },
+    { date: "15 July 2025", session: "Session C", duration: "72 min", completed: true },
+    { date: "16 July 2025", session: "Session A", duration: "60 min", completed: true },
+    { date: "17 July 2025", session: "Session B", duration: "0 min", completed: false },
+    { date: "18 July 2025", session: "Session C", duration: "60 min", completed: true },
+    { date: "19 July 2025", session: "Session A", duration: "72 min", completed: true },
+    { date: "20 July 2025", session: "Session B", duration: "84 min", completed: true },
+    { date: "21 July 2025", session: "Session C", duration: "60 min", completed: true },
+    { date: "22 July 2025", session: "Session A", duration: "72 min", completed: true },
+    { date: "23 July 2025", session: "Session B", duration: "88 min", completed: true },
+    { date: "24 July 2025", session: "Session C", duration: "60 min", completed: true },
+    { date: "25 July 2025", session: "Session A", duration: "88 min", completed: true },
+    { date: "26 July 2025", session: "Session B", duration: "84 min", completed: true },
+    { date: "27 July 2025", session: "Session C", duration: "88 min", completed: true },
+    { date: "28 July 2025", session: "Session A", duration: "84 min", completed: true }
+  ];
+
+  // Helper function to get status class
+  const getSessionStatusClass = (session: string, completed: boolean) => {
+    if (!completed) return "bg-[#D9434326] text-[#D94343]"; // Red for cancelled
+    if (session === "Session A") return "bg-[#4CAF5033] text-[#4CAF50]"; // Green for completed Session A
+    if (session === "Session B") return "bg-[#4CAF5033] text-[#4CAF50]"; // Green for completed Session B
+    if (session === "Session C") return "bg-[#4CAF5033] text-[#4CAF50]"; // Green for completed Session C
+    return "bg-[#4CAF5033] text-[#4CAF50]"; // Default green
   };
 
-  // Helper function to format time
-  const formatTime = (timeStr: string) => {
-    return new Date(timeStr).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  // Calendar helpers
+  const daysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
-  // Helper to determine progress between sessions
-  const compareProgress = (
-    currentSet: SetData,
-    previousSet: SetData | undefined
-  ) => {
-    if (!previousSet) return "neutral";
-
-    const currentWeight = parseFloat(currentSet.weight) || 0;
-    const previousWeight = parseFloat(previousSet.weight) || 0;
-
-    const currentReps = parseInt(currentSet.reps) || 0;
-    const previousReps = parseInt(previousSet.reps) || 0;
-
-    // Better performance if:
-    // 1. More weight with same or more reps
-    // 2. Same weight but more reps
-    if (
-      (currentWeight > previousWeight && currentReps >= previousReps) ||
-      (currentWeight === previousWeight && currentReps > previousReps)
-    ) {
-      return "improved";
-    }
-    // Worse performance if:
-    // 1. Less weight with same or fewer reps
-    // 2. Same weight but fewer reps
-    else if (
-      (currentWeight < previousWeight && currentReps <= previousReps) ||
-      (currentWeight === previousWeight && currentReps < previousReps)
-    ) {
-      return "declined";
-    }
-
-    // Mixed results (e.g., more weight but fewer reps) or same performance
-    return "neutral";
+  const firstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  // Helper to get session type from workout name
-  const getSessionType = (exercises: ExerciseData[]): string | null => {
-    const exerciseNames = exercises.map((e) => e.name.trim());
-
-    for (const [session, templateExercises] of Object.entries(
-      sessionTemplates
-    )) {
-      // Check if any of the exercises in this workout match the template exercises
-      if (
-        exerciseNames.some((name) =>
-          templateExercises.some(
-            (template) => name.toLowerCase() === template.toLowerCase()
-          )
-        )
-      ) {
-        return session;
-      }
+  const getDaysArray = (date: Date) => {
+    const days = [];
+    const firstDay = firstDayOfMonth(date);
+    const totalDays = daysInMonth(date);
+    
+    // Add empty cells for days before the first of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ day: "", empty: true });
     }
+    
+    // Add the days of the month
+    for (let i = 1; i <= totalDays; i++) {
+      days.push({ day: i.toString(), empty: false });
+    }
+    
+    return days;
+  };
+
+  // Get days of the week starting with Sunday
+  const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+  // Mock get workout status for calendar
+  const getWorkoutStatusForDay = (day: string) => {
+    // In a real app, check your workout data to see if there was a workout on this day
+    if (!day) return null;
+    const dayNumber = parseInt(day);
+    if (dayNumber === 18) return "bg-[#D94343] text-white"; // Red for cancelled
+    if (dayNumber >= 7 && dayNumber <= 28) return "bg-[#4CAF50] text-white"; // Green for completed
     return null;
   };
-
-  const getSessionForDay = (dayIndex: number): string => {
-    // dayIndex: 0 = Monday, 6 = Sunday
-    switch (dayIndex) {
-      case 0: // Monday
-        return "A";
-      case 2: // Wednesday
-        return "B";
-      case 4: // Friday
-        return "C";
-      default: // Rest days
-        return "rest";
-    }
-  };
-
-  // Helper to organize data by session
-  const organizeBySession = (data: WorkoutData) => {
-    const sessions: {
-      [key: string]: {
-        [exercise: string]: {
-          [date: string]: {
-            sets: SetData[];
-            workoutNote: string;
-            duration: string;
-          };
-        };
-      };
-    } = {
-      A: {},
-      B: {},
-      C: {},
-    };
-
-    // Initialize all exercises from templates
-    Object.entries(sessionTemplates).forEach(([session, exercises]) => {
-      exercises.forEach((exercise) => {
-        sessions[session][exercise] = {};
-      });
-    });
-
-    // Then populate with actual data
-    Object.entries(data).forEach(([weekKey, weekData]) => {
-      if (weekKey === "firstEntryDate") return;
-
-      Object.entries(weekData as WeekData).forEach(([day, dayData]) => {
-        if (dayData.isRestDay || !dayData.exercises?.length) return;
-
-        const sessionType = getSessionType(dayData.exercises);
-        if (!sessionType) return;
-
-        const date = formatDate(dayData.timestamp);
-        const duration =
-          dayData.startTime && dayData.endTime
-            ? `${formatTime(dayData.startTime)} - ${formatTime(
-                dayData.endTime
-              )}`
-            : "";
-
-        dayData.exercises.forEach((exercise) => {
-          const matchingTemplateExercise = sessionTemplates[sessionType].find(
-            (template) =>
-              template.toLowerCase() === exercise.name.toLowerCase().trim()
-          );
-
-          if (matchingTemplateExercise) {
-            // Ensure exercise.sets is always an array
-            const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
-
-            sessions[sessionType][matchingTemplateExercise][date] = {
-              sets: sets,
-              workoutNote: dayData.workoutNote || "",
-              duration,
-            };
-          }
-        });
-      });
-    });
-
-    return sessions;
-  };
-
-  useEffect(() => {
-    const fetchTemplatesAndData = async () => {
-      if (!params?.email) return;
-
-      try {
-        const decodedEmail = decodeURIComponent(params.email as string);
-
-        // Determine current session based on the day
-        const todayIndex = new Date().getDay() - 1; // -1 to make Monday = 0
-        const currentSession = getSessionForDay(todayIndex);
-
-        // Fetch existing workout data
-        const docRef = doc(db, "Workout", decodedEmail.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data() as WorkoutData;
-          if (data) {
-            setWorkoutData(data);
-          }
-        }
-      } catch (err) {
-        setError("Failed to fetch workout data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTemplatesAndData();
-  }, [params?.email]);
 
   useEffect(() => {
     const fetchClientName = async () => {
@@ -282,534 +154,501 @@ export default function WorkoutDashboard() {
           const clientData = clientDocSnap.data();
           setUserName(clientData.fullName || "User");
         }
+        setLoading(false);
       } catch (err) {
         console.error("Failed to fetch client name:", err);
+        setLoading(false);
       }
     };
 
     fetchClientName();
   }, [params?.email]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!workoutData)
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation
-          title="Workout Dashboard"
-          subtitle="No Data Available"
-          email={params.email as string}
-        />
-        <div className="p-6">
-          <div className="flex gap-4">
-            <Link
-              href={`/${params.email}/workout/edit-template`}
-              className="bg-[#0a1c3f] hover:bg-[#0b2552] text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              Edit Template
-            </Link>
-          </div>
-          <p className="mt-4 text-gray-600">No workout data found</p>
-        </div>
-      </div>
-    );
+  const previousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
 
-  const sessionData = organizeBySession(workoutData);
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  // Add this function to handle opening workout details
+  const openWorkoutDetails = (workout: {date: string; session: string; duration: string}) => {
+    // Mock exercise data based on session type
+    const exercises = {
+      "Session A": [
+        { name: "Heels Elevated Zercher Squat", sets: 3, reps: 11, weight: "145lbs" },
+        { name: "Scrape Rack L-Seated Shoulder Press", sets: 3, reps: 12, weight: "122lbs" },
+        { name: "One-leg Leg Extension", sets: 2, reps: 15, weight: "145lbs" },
+        { name: "Seated DB Lateral Raise", sets: 4, reps: 13, weight: "72lbs" }
+      ],
+      "Session B": [
+        { name: "Barbell Romanian Deadlift", sets: 4, reps: 10, weight: "185lbs" },
+        { name: "Incline DB Press", sets: 3, reps: 12, weight: "65lbs" },
+        { name: "Single Arm Cable Row", sets: 3, reps: 15, weight: "55lbs" }
+      ],
+      "Session C": [
+        { name: "Hip Thrust", sets: 4, reps: 12, weight: "205lbs" },
+        { name: "Pull-ups", sets: 3, reps: 8, weight: "Bodyweight" },
+        { name: "Standing Cable Fly", sets: 3, reps: 15, weight: "25lbs" },
+        { name: "Ab Wheel Rollout", sets: 3, reps: 12, weight: "Bodyweight" }
+      ]
+    }[workout.session] || [];
+    
+    setSelectedWorkout({
+      ...workout,
+      exercises
+    });
+  };
+
+  // Add this useEffect hook to close the calendar when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element;
+      if (showCalendar && !target.closest('[data-calendar]')) {
+        setShowCalendar(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendar]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+      <div className="animate-pulse">Loading...</div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title={`${clientName || "Client"}'s Workout`}
-        subtitle="Training Progress"
+        title="Workout"
+        subtitle="View your workout progress"
         email={params.email as string}
         userName={userName}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* View/Edit Toggle */}
-        <div className="flex space-x-4 mb-6">
-          <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
-            View Progress
-          </button>
-          <Link
-            href={`/${params.email}/workout/edit-template`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            Edit Template
-          </Link>
-          <Link
-            href={`/${params.email}/workout/add`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            Add/Delete Exercise
-          </Link>
-        </div>
-
-        {/* Header Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                Workout Progress
-              </h1>
-              <p className="text-gray-600">Training Split: {trainingType}</p>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Progress Overview with View/Edit/Add Toggle */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h2 className="text-lg font-semibold">Progress Overview</h2>
           </div>
-        </div>
-
-        {/* Session Filter */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedSession("all")}
-              className={`px-6 py-2 rounded-lg transition-colors ${
-                selectedSession === "all"
-                  ? "bg-[#0a1c3f] text-white"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-              }`}
-            >
-              All Sessions
+          
+          <div className="flex space-x-2">
+            <button className="px-4 py-1 rounded bg-[#DD3333] text-white text-sm">
+              View
             </button>
-            {Object.keys(sessionData).map((session) => (
-              <button
-                key={session}
-                onClick={() => setSelectedSession(session as "A" | "B" | "C")}
-                className={`px-6 py-2 rounded-lg transition-colors ${
-                  selectedSession === session
-                    ? "bg-[#0a1c3f] text-white"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                }`}
-              >
-                Session {session}
-              </button>
-            ))}
+            <Link 
+              href={`/${params.email}/workout/edit-template`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors">
+              Edit
+            </Link>
+            <Link 
+              href={`/${params.email}/workout/add`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors">
+              Add/Del
+            </Link>
           </div>
         </div>
 
-        {/* Session Tables */}
-        {(selectedSession === "all"
-          ? Object.entries(sessionData)
-          : [[selectedSession, sessionData[selectedSession]]]
-        ).map(([session, exercises]) => {
-          // Create a map to track notes by date to show only once per day
-          const dailyNotes = new Map<string, string>();
-          const dailyDurations = new Map<string, string>();
-
-          // Collect all unique notes and durations per date
-          Object.values(exercises).forEach((dates) => {
-            Object.entries(dates).forEach(([date, data]) => {
-              if (data.workoutNote && !dailyNotes.has(date)) {
-                dailyNotes.set(date, data.workoutNote);
-              }
-              if (data.duration && !dailyDurations.has(date)) {
-                dailyDurations.set(date, data.duration);
-              }
-            });
-          });
-
-          // Create a map to store the most recent previous exercise data for comparison
-          const exercisePreviousDataMap = new Map<
-            string,
-            {
-              date: string;
-              firstSet: SetData;
-            }
-          >();
-
-          // First pass: collect all exercises data chronologically
-          Object.entries(exercises).forEach(([exerciseName, dates]) => {
-            const sortedDates = Object.keys(dates).sort(
-              (a, b) => new Date(a).getTime() - new Date(b).getTime()
-            );
-
-            sortedDates.forEach((date) => {
-              const data = dates[date];
-              if (Array.isArray(data?.sets) && data.sets.length > 0) {
-                exercisePreviousDataMap.set(exerciseName, {
-                  date,
-                  firstSet: data.sets[0],
-                });
-              }
-            });
-          });
-
-          return (
-            <div
-              key={session}
-              className="bg-white rounded-lg shadow-sm p-6 mb-6"
-            >
-              <h3 className="text-[#333333] font-semibold mb-3 text-right">
-                Session {session}
-              </h3>
-
-              <div className="bg-[#F5F5F5] rounded-xl shadow-sm p-4">
-                <div
-                  className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: "touch" }}
+        {/* Workout History Section */}
+        <div className="mt-8">
+          {/* Workout History Box */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Workout History</h3>
+              
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => setViewMode("table")}
+                  className={`px-4 py-1 rounded text-sm ${viewMode === "table" ? "bg-[#DD3333] text-white" : "bg-[#142437] border border-[#22364F] text-white"}`}
                 >
-                  <div className="min-w-full">
-                    <table className="w-full border-separate border-spacing-0">
-                      <thead className="sticky top-0">
-                        <tr className="text-left text-gray-600 text-sm">
-                          <th className="sticky left-0 z-10 bg-[#F5F5F5] pb-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px]">
-                            Exercise
-                          </th>
-                          {Array.from(
-                            new Set(
-                              Object.values(exercises)
-                                .flatMap((exercise) => Object.keys(exercise))
-                                .sort(
-                                  (a, b) =>
-                                    new Date(b).getTime() -
-                                    new Date(a).getTime()
-                                )
-                            )
-                          ).map((date) => (
-                            <th
-                              key={date}
-                              className="pb-3 px-2 font-medium whitespace-nowrap min-w-[100px] max-w-[120px]"
-                            >
-                              <div className="font-medium text-sm text-gray-600">
-                                {date}
-                              </div>
-                              {dailyDurations.get(date) && (
-                                <div className="text-xs text-gray-500 font-normal">
-                                  <span className="font-medium">Time:</span>{" "}
-                                  {dailyDurations.get(date)}
-                                </div>
-                              )}
-                              {dailyNotes.get(date) && (
-                                <div className="text-xs text-gray-500 font-normal relative group">
-                                  <span className="font-medium">Note:</span>{" "}
-                                  <span className="truncate inline-block max-w-[80px] cursor-help align-middle">
-                                    {dailyNotes.get(date)!.length > 15
-                                      ? `${dailyNotes
-                                          .get(date)!
-                                          .substring(0, 15)}...`
-                                      : dailyNotes.get(date)}
-                                  </span>
-                                  <div className="hidden group-hover:block absolute z-50 mb-0 left-0 bg-gray-800 text-white rounded p-2 text-xs min-w-[200px] max-w-[300px] shadow-lg whitespace-normal break-words">
-                                    {dailyNotes.get(date)}
-                                  </div>
-                                </div>
-                              )}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="text-[#333333] text-sm divide-y divide-gray-200">
-                        {Object.entries(exercises).map(
-                          ([exercise, dates], exerciseIndex) => {
-                            // Get all dates for this exercise sorted chronologically
-                            const sortedDates = Object.keys(dates).sort(
-                              (a, b) =>
-                                new Date(a).getTime() - new Date(b).getTime()
-                            );
+                  Table
+                </button>
+                <button 
+                  onClick={() => setViewMode("graph")}
+                  className={`px-4 py-1 rounded text-sm ${viewMode === "graph" ? "bg-[#DD3333] text-white" : "bg-[#142437] border border-[#22364F] text-white"}`}
+                >
+                  Graph
+                </button>
+              </div>
+            </div>
 
-                            // Create a map of date to performance data for quick lookup
-                            const datePerformanceMap = new Map();
+            {/* Search and Filter Controls */}
+            <div className="flex flex-wrap gap-3 mb-4 items-center">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search Workout..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 pr-3 py-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white text-sm w-[250px]"
+                />
+                <svg className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              
+              <div className="relative">
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white text-sm appearance-none"
+                >
+                  <option>All Sessions</option>
+                  <option>Session A</option>
+                  <option>Session B</option>
+                  <option>Session C</option>
+                </select>
+                <svg className="w-4 h-4 absolute right-3 top-2.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              
+              <div className="relative">
+                <select
+                  className="pl-3 pr-8 py-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white text-sm appearance-none"
+                >
+                  <option>Modifications</option>
+                  <option>All</option>
+                  <option>None</option>
+                </select>
+                <svg className="w-4 h-4 absolute right-3 top-2.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
 
-                            // Track the latest data for each exercise to use for comparison
-                            let lastValidData = null;
-                            let lastValidDate = null;
+              {/* Update the calendar button and implement a simple calendar popup */}
+              <button 
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="p-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white relative"
+                data-calendar
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
 
-                            // Analyze each date's performance compared to previous sessions
-                            sortedDates.forEach((date, idx) => {
-                              const currentDateData = dates[date];
-
-                              if (
-                                !Array.isArray(currentDateData?.sets) ||
-                                currentDateData.sets.length === 0
-                              ) {
-                                datePerformanceMap.set(date, {
-                                  progress: "neutral",
-                                });
-                                return;
-                              }
-
-                              // Store this valid data point for future comparisons
-                              const currentFirstSet = currentDateData.sets[0];
-
-                              if (idx === 0 || !lastValidData) {
-                                // First occurrence - no comparison possible
-                                datePerformanceMap.set(date, {
-                                  progress: "neutral",
-                                });
-                                lastValidData = currentFirstSet;
-                                lastValidDate = date;
-                                return;
-                              }
-
-                              // Compare with the most recent valid data
-                              const progress = compareProgress(
-                                currentFirstSet,
-                                lastValidData
-                              );
-
-                              datePerformanceMap.set(date, {
-                                progress,
-                                previousWeight: lastValidData.weight,
-                                previousReps: lastValidData.reps,
-                                currentWeight: currentFirstSet.weight,
-                                currentReps: currentFirstSet.reps,
-                                previousDate: lastValidDate,
-                              });
-
-                              // Update for next iteration
-                              lastValidData = currentFirstSet;
-                              lastValidDate = date;
-                            });
-
-                            return (
-                              <tr
-                                key={exercise}
-                                className={
-                                  exerciseIndex % 2 === 0 ? "bg-gray-50" : ""
-                                }
-                              >
-                                <td
-                                  className={`sticky left-0 z-10 ${
-                                    exerciseIndex % 2 === 0
-                                      ? "bg-gray-50"
-                                      : "bg-[#F5F5F5]"
-                                  } py-3 pl-4 pr-6 font-medium whitespace-nowrap min-w-[160px] max-w-[180px] overflow-hidden text-ellipsis border-l-4 border-[#0a1c3f]`}
-                                >
-                                  {exercise}
-                                </td>
-                                {Array.from(
-                                  new Set(
-                                    Object.values(exercises)
-                                      .flatMap((exercise) =>
-                                        Object.keys(exercise)
-                                      )
-                                      .sort(
-                                        (a, b) =>
-                                          new Date(b).getTime() -
-                                          new Date(a).getTime()
-                                      )
-                                  )
-                                ).map((date) => {
-                                  const data = dates[date];
-                                  const performanceData =
-                                    datePerformanceMap.get(date);
-
-                                  // Set border color based on performance
-                                  let borderColorClass = "border-gray-200";
-                                  let progressIcon = null;
-
-                                  if (performanceData && data) {
-                                    if (
-                                      performanceData.progress === "improved"
-                                    ) {
-                                      borderColorClass =
-                                        "border-green-500 border-2";
-                                      progressIcon = (
-                                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center z-20">
-                                          <svg
-                                            className="w-3 h-3"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M5 10l7-7m0 0l7 7m-7-7v18"
-                                            />
-                                          </svg>
-                                        </div>
-                                      );
-                                    } else if (
-                                      performanceData.progress === "declined"
-                                    ) {
-                                      borderColorClass =
-                                        "border-red-500 border-2";
-                                      progressIcon = (
-                                        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center z-20">
-                                          <svg
-                                            className="w-3 h-3"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                                            />
-                                          </svg>
-                                        </div>
-                                      );
-                                    }
-                                  }
-
-                                  return (
-                                    <td
-                                      key={date}
-                                      className={`py-2 px-2 min-w-[100px] max-w-[120px] ${
-                                        exerciseIndex % 2 === 0
-                                          ? "bg-gray-50"
-                                          : ""
-                                      }`}
-                                    >
-                                      {data ? (
-                                        <div
-                                          className={`bg-white rounded-lg p-2 shadow-sm border ${borderColorClass} relative group`}
-                                        >
-                                          {progressIcon}
-                                          {/* Performance comparison tooltip */}
-                                          {performanceData &&
-                                            performanceData.progress !==
-                                              "neutral" && (
-                                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-30">
-                                                <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
-                                                  <div className="text-center">
-                                                    <div className="font-semibold text-yellow-300">
-                                                      {exercise}
-                                                    </div>
-                                                    <div className="mt-1">
-                                                      {performanceData.progress ===
-                                                      "improved"
-                                                        ? "↗️ Improved from "
-                                                        : "↘️ Decreased from "}
-                                                      <span className="font-medium">
-                                                        {
-                                                          performanceData.previousWeight
-                                                        }{" "}
-                                                        ×{" "}
-                                                        {
-                                                          performanceData.previousReps
-                                                        }
-                                                      </span>
-                                                    </div>
-                                                    <div className="text-gray-300 text-xs">
-                                                      vs{" "}
-                                                      {
-                                                        performanceData.previousDate
-                                                      }
-                                                    </div>
-                                                  </div>
-                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                                                </div>
-                                              </div>
-                                            )}
-                                          {/* Check if sets exists and is an array before mapping */}
-                                          {Array.isArray(data.sets) &&
-                                          data.sets.length > 0 ? (
-                                            data.sets.map((set, index) => (
-                                              <div
-                                                key={set.id || index}
-                                                className={`${
-                                                  set.completed
-                                                    ? "text-green-600"
-                                                    : "text-gray-500"
-                                                } py-0.5 flex items-center border-b border-gray-100 last:border-0 text-xs`}
-                                              >
-                                                <span className="font-medium whitespace-nowrap">
-                                                  {set.weight}
-                                                  <span className="mx-0.5">
-                                                    ×
-                                                  </span>
-                                                  {set.reps}
-                                                </span>
-                                                <span className="ml-1">
-                                                  {set.completed ? (
-                                                    <svg
-                                                      className="h-3 w-3 text-green-500"
-                                                      fill="none"
-                                                      viewBox="0 0 24 24"
-                                                      stroke="currentColor"
-                                                    >
-                                                      <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M5 13l4 4L19 7"
-                                                      />
-                                                    </svg>
-                                                  ) : (
-                                                    <svg
-                                                      className="h-3 w-3 text-gray-400"
-                                                      fill="none"
-                                                      viewBox="0 0 24 24"
-                                                      stroke="currentColor"
-                                                    >
-                                                      <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M6 18L18 6M6 6l12 12"
-                                                      />
-                                                    </svg>
-                                                  )}
-                                                </span>
-                                              </div>
-                                            ))
-                                          ) : (
-                                            <div className="text-xs text-gray-500">
-                                              No set data
-                                            </div>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <div className="text-center text-gray-400">
-                                          —
-                                        </div>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          }
-                        )}
-                      </tbody>
-                    </table>
+                {/* Simple Calendar Popup */}
+                {showCalendar && (
+                  <div className="absolute top-full left-0 mt-2 z-10 bg-[#142437] border border-[#22364F] rounded-lg shadow-lg p-4 w-72">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-medium text-sm">
+                        {formatMonthYear(currentMonth)}
+                      </h4>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            previousMonth();
+                          }} 
+                          className="p-1 hover:bg-[#1D325A] rounded"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            nextMonth();
+                          }} 
+                          className="p-1 hover:bg-[#1D325A] rounded"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {daysOfWeek.map((day) => (
+                        <div key={day} className="py-1 text-xs font-medium text-gray-400">
+                          {day}
+                        </div>
+                      ))}
+                      
+                      {getDaysArray(currentMonth).map((day, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-1 text-center ${day.empty ? 'invisible' : 'cursor-pointer hover:bg-[#1D325A]'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!day.empty) {
+                              // Handle date selection here
+                              console.log(`Selected: ${day.day} ${formatMonthYear(currentMonth)}`);
+                              setShowCalendar(false);
+                            }
+                          }}
+                        >
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs">
+                            {day.day}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+              </button>
 
-                {/* Scroll indicator */}
-                <div className="flex justify-center mt-2">
-                  <div className="text-xs text-gray-500 flex items-center">
-                    <svg
-                      className="h-4 w-4 mr-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+              <button className="ml-auto flex items-center gap-1 p-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export CSV</span>
+              </button>
+            </div>
+            
+            {/* Status Legend */}
+            <div className="flex gap-4 mb-4 justify-end">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-sm bg-[#4CAF50]"></div>
+                <span>Completed</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-sm bg-[#FFC107]"></div>
+                <span>Modified</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-sm bg-[#D94343]"></div>
+                <span>Cancelled</span>
+              </div>
+            </div>
+
+            {/* Workout History Table */}
+            {viewMode === "table" && (
+              <div className="overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#22364F] text-left">
+                      <th className="py-3 px-4 font-medium">Date Of Workout</th>
+                      <th className="py-3 px-4 font-medium">Type</th>
+                      <th className="py-3 px-4 font-medium">Duration</th>
+                      <th className="py-3 px-4 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workoutHistory.map((workout, index) => (
+                      <tr key={index} className="border-b border-[#22364F] last:border-b-0">
+                        <td className="py-3 px-4">{workout.date}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-md ${getSessionStatusClass(workout.session, workout.completed)}`}>
+                            {workout.session}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{workout.duration}</td>
+                        <td className="py-3 px-4 text-right">
+                          <button 
+                            onClick={() => openWorkoutDetails(workout)} 
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Graph View Placeholder */}
+            {viewMode === "graph" && (
+              <div className="bg-[#142437] rounded-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-xl font-semibold flex items-center">
+                      Overall Exercise Progress
+                      <svg className="w-5 h-5 ml-2 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                      </svg>
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-[#4CAF5033] text-[#4CAF50] rounded">On Track</span>
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-1">Based on Progressive Overload</p>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <button 
+                      onClick={() => setTimeRange("Weekly")}
+                      className={`px-4 py-1 rounded text-sm ${timeRange === "Weekly" ? "bg-[#22364F] text-white" : "text-gray-400"}`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                    Scroll horizontally to see more dates
+                      Weekly
+                    </button>
+                    <button 
+                      onClick={() => setTimeRange("Monthly")}
+                      className={`px-4 py-1 rounded text-sm ${timeRange === "Monthly" ? "bg-[#22364F] text-white" : "text-gray-400"}`}
+                    >
+                      Monthly
+                    </button>
+                    <button 
+                      onClick={() => setTimeRange("Yearly")}
+                      className={`px-4 py-1 rounded text-sm ${timeRange === "Yearly" ? "bg-[#22364F] text-white" : "text-gray-400"}`}
+                    >
+                      Yearly
+                    </button>
                   </div>
                 </div>
-
-                {/* Legend for progress indicators */}
-                <div className="mt-4 flex justify-center gap-6 text-xs">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-green-500 rounded mr-2"></div>
-                    <span>Performance improved</span>
+                
+                {/* Graph Section */}
+                <div className="h-64 relative">
+                  {/* Y-Axis Labels */}
+                  <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-400">
+                    <div>30%</div>
+                    <div>21.25%</div>
+                    <div>12.5%</div>
+                    <div>3.75%</div>
+                    <div>-5%</div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-red-500 rounded mr-2"></div>
-                    <span>Performance declined</span>
+                  
+                  {/* Horizontal Grid Lines */}
+                  <div className="absolute left-10 right-0 top-0 h-full flex flex-col justify-between">
+                    <div className="border-t border-[#22364F] w-full h-0"></div>
+                    <div className="border-t border-[#22364F] w-full h-0"></div>
+                    <div className="border-t border-[#22364F] w-full h-0"></div>
+                    <div className="border-t border-[#22364F] w-full h-0"></div>
+                    <div className="border-t border-[#22364F] w-full h-0"></div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border border-gray-200 rounded mr-2"></div>
-                    <span>No comparison data</span>
+                  
+                  {/* Progress Line Graph */}
+                  <div className="absolute left-10 right-0 top-0 h-full">
+                    <svg className="w-full h-full" viewBox="0 0 1000 240" preserveAspectRatio="none">
+                      {/* The progress line */}
+                      <path 
+                        d="M0,220 L83,200 L166,170 L249,180 L332,160 L415,140 L498,155 L581,150 L664,148 L747,120 L830,100 L913,90 L1000,95" 
+                        stroke="#DD3333" 
+                        strokeWidth="3" 
+                        fill="none" 
+                      />
+                      
+                      {/* Data points */}
+                      <circle cx="0" cy="220" r="5" fill="#DD3333" />
+                      <circle cx="83" cy="200" r="5" fill="#DD3333" />
+                      <circle cx="166" cy="170" r="5" fill="#DD3333" />
+                      <circle cx="249" cy="180" r="5" fill="#DD3333" />
+                      <circle cx="332" cy="160" r="5" fill="#DD3333" />
+                      <circle cx="415" cy="140" r="5" fill="#DD3333" />
+                      <circle cx="498" cy="155" r="5" fill="#DD3333" />
+                      <circle cx="581" cy="150" r="5" fill="#DD3333" />
+                      <circle cx="664" cy="148" r="5" fill="#DD3333" />
+                      <circle cx="747" cy="120" r="5" fill="#DD3333" />
+                      <circle cx="830" cy="100" r="5" fill="#DD3333" />
+                      <circle cx="913" cy="90" r="5" fill="#DD3333" />
+                      <circle cx="1000" cy="95" r="5" fill="#DD3333" />
+                    </svg>
+                  </div>
+                  
+                  {/* X-Axis Labels */}
+                  <div className="absolute left-10 right-0 bottom-0 flex justify-between text-xs text-gray-400 pt-2">
+                    <div>Week 1</div>
+                    <div>Week 2</div>
+                    <div>Week 3</div>
+                    <div>Week 4</div>
+                    <div>Week 5</div>
+                    <div>Week 6</div>
+                    <div>Week 7</div>
+                    <div>Week 8</div>
+                    <div>Week 9</div>
+                    <div>Week 10</div>
+                    <div>Week 11</div>
+                    <div>Week 12</div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Add the modal component for the exercise details */}
+      {selectedWorkout && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#142437] rounded-lg w-[550px] max-h-[80vh] overflow-hidden relative">
+            {/* Modal Header with Close Button */}
+            <div className="flex justify-between items-center p-5 border-b border-[#22364F]">
+              <h3 className="text-xl font-medium">
+                {selectedWorkout.session} - {selectedWorkout.date}
+              </h3>
+              <button 
+                onClick={() => setSelectedWorkout(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto max-h-[calc(80vh-80px)]">
+              {/* Duration Section */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <h4 className="text-base font-medium">Duration</h4>
+                </div>
+                <p className="text-gray-300 ml-7">{selectedWorkout.duration.replace(' min', ' minutes')}</p>
+              </div>
+
+              {/* Last Modified Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                  </svg>
+                  <h4 className="text-base font-medium">Last Modified By</h4>
+                </div>
+                <p className="text-gray-300 ml-7">Trainer</p>
+              </div>
+
+              {/* Exercise Breakdown Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Exercise Breakdown</h3>
+                
+                {selectedWorkout.exercises?.map((exercise, index) => (
+                  <div 
+                    key={index} 
+                    className="bg-[#0E1F34] rounded-md p-4 mb-3"
+                  >
+                    <h4 className="font-medium mb-2">{exercise.name}</h4>
+                    <div className="flex gap-5 text-sm text-gray-300">
+                      <div>Sets: {exercise.sets}</div>
+                      <div>Reps: {exercise.reps}</div>
+                      <div>Weight: {exercise.weight}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Add this helper function
+function formatMonthYear(date: Date): string {
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { db } from "../../../../firebaseConfig";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 import Link from "next/link";
@@ -22,7 +22,8 @@ export default function AddExerciseLinks() {
   const [warmUpExercises, setWarmUpExercises] = useState<ExerciseLink[]>([]);
   const [workoutExercises, setWorkoutExercises] = useState<ExerciseLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
+  const [userName, setUserName] = useState<string>("User");
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
 
   // Default warm-up exercises with placeholder links
   const defaultWarmUpExercises = [
@@ -250,12 +251,7 @@ export default function AddExerciseLinks() {
     }
   };
 
-  const deleteExercise = async (
-    exerciseName: string,
-    exerciseCategory: "warmUp" | "workout"
-  ) => {
-    if (!confirm(`Are you sure you want to delete "${exerciseName}"?`)) return;
-
+  const deleteExercise = async (exerciseName: string) => {
     try {
       setIsSubmitting(true);
 
@@ -263,26 +259,27 @@ export default function AddExerciseLinks() {
       const exerciseDoc = doc(
         db,
         "exerciseLinks",
-        exerciseCategory,
+        category,
         "exercises",
         exerciseName
       );
-      await setDoc(exerciseDoc, { link: "" });
+      await deleteDoc(exerciseDoc);
 
       // Update local state
-      if (exerciseCategory === "warmUp") {
-        const updated = warmUpExercises.filter(
-          (ex) => ex.name !== exerciseName
-        );
+      if (category === "warmUp") {
+        const updated = warmUpExercises.filter((ex) => ex.name !== exerciseName);
         setWarmUpExercises(updated);
       } else {
-        const updated = workoutExercises.filter(
-          (ex) => ex.name !== exerciseName
-        );
+        const updated = workoutExercises.filter((ex) => ex.name !== exerciseName);
         setWorkoutExercises(updated);
       }
 
-      setStatus(`Deleted "${exerciseName}" from ${exerciseCategory} category`);
+      setStatus(`Deleted "${exerciseName}" from ${category} category`);
+      
+      // Clear selected exercise if it was the one deleted
+      if (selectedExercise === exerciseName) {
+        setSelectedExercise(null);
+      }
     } catch (error) {
       console.error("Error deleting exercise:", error);
       setStatus(
@@ -293,277 +290,156 @@ export default function AddExerciseLinks() {
     }
   };
 
-  const populateExerciseLinks = async () => {
-    try {
-      setIsSubmitting(true);
-      setStatus("Populating database with exercise links...");
-
-      // Create warm-up exercises
-      for (const exercise of defaultWarmUpExercises) {
-        const docRef = doc(
-          db,
-          "exerciseLinks",
-          "warmUp",
-          "exercises",
-          exercise.name
-        );
-        await setDoc(docRef, { link: exercise.link });
-      }
-
-      // Create workout exercises
-      for (const exercise of defaultWorkoutExercises) {
-        const docRef = doc(
-          db,
-          "exerciseLinks",
-          "workout",
-          "exercises",
-          exercise.name
-        );
-        await setDoc(docRef, { link: exercise.link });
-      }
-
-      // Refresh the local state with the new data
-      setWarmUpExercises(defaultWarmUpExercises);
-      setWorkoutExercises(defaultWorkoutExercises);
-
-      setStatus("Successfully populated database with exercise links!");
-
-      // Clear status after a delay
-      setTimeout(() => setStatus(null), 3000);
-    } catch (error) {
-      console.error("Error populating exercise links:", error);
-      setStatus(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const exercises = category === "warmUp" ? warmUpExercises : workoutExercises;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title="Exercise Library"
-        subtitle="Add Exercise Links"
+        title="Workout"
+        subtitle="Add/Delete Exercises"
         email={params.email as string}
         userName={userName}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* View/Edit Toggle */}
-        <div className="flex space-x-4 my-6">
-          <Link
-            href={`/${params.email}/workout`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            View Progress
-          </Link>
-          <Link
-            href={`/${params.email}/workout/edit-template`}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
-          >
-            Edit Template
-          </Link>
-          <button className="px-6 py-2.5 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors cursor-default">
-            Add/Delete Exercise
-          </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* View/Edit/Add Toggle */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="invisible">
+            {/* Hidden placeholder to maintain layout */}
+            <span>Placeholder</span>
+          </div>
+          
+          <div className="flex space-x-2">
+            <Link
+              href={`/${params.email}/workout`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
+            >
+              View
+            </Link>
+            <Link
+              href={`/${params.email}/workout/edit-template`}
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
+            >
+              Edit
+            </Link>
+            <button className="px-4 py-1 rounded bg-[#DD3333] text-white text-sm">
+              Add/Del
+            </button>
+          </div>
         </div>
 
-        <div className="bg-gray-50 p-6 rounded-lg shadow-sm mb-8">
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setCategory("warmUp")}
-                    className={`px-4 py-2 rounded-md ${
-                      category === "warmUp"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-800"
-                    }`}
-                  >
-                    Warm-Up
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCategory("workout")}
-                    className={`px-4 py-2 rounded-md ${
-                      category === "workout"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-800"
-                    }`}
-                  >
-                    Workout
-                  </button>
-                </div>
-              </div>
+        {/* Category Toggle */}
+        <div className="mt-10 flex justify-center">
+          <div className="inline-flex rounded-md overflow-hidden">
+            <button
+              onClick={() => setCategory("warmUp")}
+              className={`px-6 py-2 ${
+                category === "warmUp" ? "bg-[#DD3333]" : "bg-[#142437]"
+              }`}
+            >
+              Warmup
+            </button>
+            <button
+              onClick={() => setCategory("workout")}
+              className={`px-6 py-2 ${
+                category === "workout" ? "bg-[#DD3333]" : "bg-[#142437]"
+              }`}
+            >
+              Exercises
+            </button>
+          </div>
+        </div>
 
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Exercise Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter exercise name"
-                  required
-                />
-              </div>
+        {/* Add Exercise Form */}
+        <div className="mt-6 max-w-2xl mx-auto"> {/* Increased from max-w-2xl */}
+          <h2 className="text-lg mb-3 text-white">Exercise Name</h2>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full py-3 px-4 bg-[#142437] border border-[#22364F] rounded-lg text-white mb-4"
+            placeholder="Enter exercise name..."
+          />
+          
+          <h2 className="text-lg mb-3 text-white">Video Link</h2>
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            className="w-full py-3 px-4 bg-[#142437] border border-[#22364F] rounded-lg text-white mb-4"
+            placeholder="Enter video link..."
+          />
+          
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full py-3 bg-[#DD3333] rounded-lg text-white font-medium hover:bg-[#c02020] transition-colors mt-2"
+          >
+            Add Exercise
+          </button>
+          
+          {status && (
+            <div className={`mt-4 p-3 rounded-lg ${
+              status.includes("Error") ? "bg-red-900/50 border border-red-700" : "bg-green-900/50 border border-green-700"
+            }`}>
+              {status}
+            </div>
+          )}
+        </div>
 
-              <div>
-                <label
-                  htmlFor="link"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Video Link
-                </label>
-                <input
-                  type="url"
-                  id="link"
-                  value={link}
-                  onChange={(e) => setLink(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://www.youtube.com/..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`w-full px-4 py-2 rounded-md ${
-                  isSubmitting
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                {isSubmitting ? "Saving..." : "Add Exercise"}
-              </button>
-
-              {status && (
+        {/* Exercise List - Updated to display all exercises without scrolling */}
+        <div className="mt-10 max-w-3xl mx-auto">
+          <h2 className="text-xl font-medium mb-4">
+            {category === "warmUp" ? "Warm-Up Exercises" : "Workout Exercises"}
+          </h2>
+          
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+              <p className="mt-2">Loading exercises...</p>
+            </div>
+          ) : exercises.length === 0 ? (
+            <div className="bg-[#D9D9D940] border border-[#22364F] rounded-lg p-6 text-center">
+              <p>No exercises found in this category.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"> {/* Changed to grid layout */}
+              {exercises.map((exercise) => (
                 <div
-                  className={`p-3 rounded-md ${
-                    status.includes("Error")
-                      ? "bg-red-100 text-red-800"
-                      : "bg-green-100 text-green-800"
+                  key={exercise.name}
+                  className={`bg-[#D9D9D940] border border-[#22364F] rounded-lg p-3 flex flex-col h-[80px] ${
+                    selectedExercise === exercise.name ? "border-[#DD3333]" : ""
                   }`}
                 >
-                  {status}
+                  <div className="flex justify-between items-start w-full">
+                    <h3 className="font-medium text-sm truncate max-w-[70%]">{exercise.name}</h3>
+                    <button
+                      onClick={() => deleteExercise(exercise.name)}
+                      className="text-[#DD3333] hover:text-[#FF6666] ml-auto"
+                      aria-label="Delete exercise"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  {exercise.link && (
+                    <div className="mt-auto text-xs text-gray-400">
+                      <a 
+                        href={exercise.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-blue-400"
+                      >
+                        View Video
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
-          </form>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Warm-Up Exercises List */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Warm-Up Exercises</h2>
-            {isLoading ? (
-              <p>Loading warm-up exercises...</p>
-            ) : warmUpExercises.length === 0 ? (
-              <p className="text-gray-500">No warm-up exercises added yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {warmUpExercises.map((exercise) => (
-                  <li
-                    key={exercise.name}
-                    className="p-3 bg-white rounded-lg border border-gray-200 flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium">{exercise.name}</p>
-                      {exercise.link && (
-                        <a
-                          href={exercise.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          View Video
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => deleteExercise(exercise.name, "warmUp")}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Workout Exercises List */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Workout Exercises</h2>
-            {isLoading ? (
-              <p>Loading workout exercises...</p>
-            ) : workoutExercises.length === 0 ? (
-              <p className="text-gray-500">No workout exercises added yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {workoutExercises.map((exercise) => (
-                  <li
-                    key={exercise.name}
-                    className="p-3 bg-white rounded-lg border border-gray-200 flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium">{exercise.name}</p>
-                      {exercise.link && (
-                        <a
-                          href={exercise.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          View Video
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => deleteExercise(exercise.name, "workout")}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
