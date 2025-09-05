@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 
-// Generate random step data in a realistic range
-const generateRandomSteps = () => {
-  return 6000 + Math.floor(Math.random() * 6000); // Between 6000-12000 steps
-};
-
-export default function StepsScreen() {
+export default function WeightScreen() {
   const params = useParams();
   const router = useRouter();
   const email = params.email as string;
@@ -19,37 +14,35 @@ export default function StepsScreen() {
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Steps data for the graph
-  const [stepsData, setStepsData] = useState([
-    { day: "S", steps: 8400 },
-    { day: "M", steps: 8100 },
-    { day: "T", steps: 8250 },
-    { day: "W", steps: 8550 },
-    { day: "Th", steps: 9000 },
-    { day: "F", steps: 9800 },
-    { day: "S", steps: 9400, highlight: true },
-  ]);
+  // Weight data for the graph
+  const weightData = [
+    { day: "Su", weight: 75.0 },
+    { day: "M", weight: 74.5 },
+    { day: "T", weight: 75.2 },
+    { day: "W", weight: 75.5 },
+    { day: "Th", weight: 75.3 },
+    { day: "F", weight: 74.3 },
+    { day: "Sa", weight: 75.4 },
+  ];
 
-  // Generate table data
-  const [stepsTableData, setStepsTableData] = useState([
-    { date: "28 July 2025", steps: 9400, change: "+600" },
-    { date: "27 July 2025", steps: 8800, change: "-200" },
-    { date: "26 July 2025", steps: 9000, change: "+450" },
-    { date: "25 July 2025", steps: 8550, change: "+300" },
-    { date: "24 July 2025", steps: 8250, change: "+150" },
-    { date: "23 July 2025", steps: 8100, change: "-300" },
-    { date: "22 July 2025", steps: 8400, change: "+200" },
-  ]);
-
-  // Simulate data loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Tabular data for weight history - now ordered from most recent to oldest
+  const weightTableData = [
+    { date: "28 July 2025", weight: "75.4 kg", change: "+1.1" },
+    { date: "27 July 2025", weight: "74.3 kg", change: "-1.0" },
+    { date: "26 July 2025", weight: "75.3 kg", change: "-0.2" },
+    { date: "25 July 2025", weight: "75.5 kg", change: "+0.3" },
+    { date: "24 July 2025", weight: "75.2 kg", change: "+0.7" },
+    { date: "23 July 2025", weight: "74.5 kg", change: "-0.5" },
+    { date: "22 July 2025", weight: "75.0 kg", change: "+0.2" },
+    { date: "21 July 2025", weight: "74.8 kg", change: "-0.3" },
+    { date: "20 July 2025", weight: "75.1 kg", change: "+0.4" },
+    { date: "19 July 2025", weight: "74.7 kg", change: "-0.2" },
+    { date: "18 July 2025", weight: "74.9 kg", change: "+0.1" },
+    { date: "17 July 2025", weight: "74.8 kg", change: "-0.4" },
+    { date: "16 July 2025", weight: "75.2 kg", change: "+0.5" },
+    { date: "15 July 2025", weight: "74.7 kg", change: "-0.6" },
+  ];
 
   // Simple calendar component
   const Calendar = ({ onSelect, onClose }: { onSelect: (date: string) => void, onClose: () => void }) => {
@@ -96,27 +89,12 @@ export default function StepsScreen() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#07172C] text-white">
-        <Navigation 
-          title="Workout" 
-          subtitle="Track your steps progress"
-          email={decodeURIComponent(email)}
-        />
-        <div className="px-4 py-6 flex justify-center items-center h-64">
-          <p>Loading steps data...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
       {/* Use the shared Navigation component */}
       <Navigation 
         title="Workout" 
-        subtitle="Track your steps progress"
+        subtitle="Track your weight progress"
         email={decodeURIComponent(email)}
       />
 
@@ -139,9 +117,9 @@ export default function StepsScreen() {
           </div>
         </div>
         
-        {/* Steps History Card */}
+        {/* Weight History Card */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
-          <h2 className="text-lg font-semibold mb-4">Steps History</h2>
+          <h2 className="text-lg font-semibold mb-4">Weight History</h2>
           
           <div className="flex space-x-3">
             <div className="relative">
@@ -194,11 +172,11 @@ export default function StepsScreen() {
           </div>
         </div>
 
-        {/* Overall Steps Progress Card */}
+        {/* Weight Graph or Table */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center">
-              <h3 className="font-semibold">Overall Steps Progress</h3>
+              <h3 className="font-semibold">Weight</h3>
               <div className="ml-2 bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
                 <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 15l-6-6-6 6"/>
@@ -230,31 +208,48 @@ export default function StepsScreen() {
           </div>
 
           {viewMode === "graphs" ? (
-            <div className="h-[300px] relative mt-6">
-              {/* Y-axis steps labels */}
-              <div className="absolute left-0 top-0 bottom-0 w-14 flex flex-col justify-between text-xs text-gray-400">
-                <div>10,000</div>
-                <div>9,500</div>
-                <div>9,000</div>
-                <div>8,500</div>
-                <div>8,000</div>
+            <div className="h-[300px] relative">
+              {/* Y-axis weight labels */}
+              <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-gray-400">
+                <div>77</div>
+                <div>76</div>
+                <div>75</div>
+                <div>74</div>
+                <div>73</div>
               </div>
 
-              {/* Steps Chart */}
-              <div className="ml-14 h-full flex items-end">
-                {stepsData.map((item, index) => (
-                  <div key={index} className="flex flex-col items-center flex-1">
-                    <div 
-                      className={`w-16 ${item.highlight ? 'bg-[#DD3333]' : 'bg-gray-500'}`}
-                      style={{ 
-                        // This calculation was causing the bars to be too small or invisible
-                        // Let's use a better calculation that ensures visible bars
-                        height: `${((item.steps - 7500) / 3000) * 250}px`,  
-                      }}
-                    ></div>
-                    <div className="mt-2 text-sm">{item.day}</div>
-                  </div>
-                ))}
+              {/* Weight Chart */}
+              <div className="ml-12 h-full relative">
+                {/* SVG for the area chart */}
+                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 700 300">
+                  <defs>
+                    <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#DD3333" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#DD3333" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Path for area under the curve */}
+                  <path 
+                    d="M0,100 C100,150 150,60 250,130 C350,200 450,80 550,120 C600,150 650,60 700,80 L700,300 L0,300 Z" 
+                    fill="url(#weightGradient)"
+                  />
+                  
+                  {/* Line on top of area */}
+                  <path 
+                    d="M0,100 C100,150 150,60 250,130 C350,200 450,80 550,120 C600,150 650,60 700,80" 
+                    fill="none"
+                    stroke="#DD3333"
+                    strokeWidth="3"
+                  />
+                </svg>
+
+                {/* X-axis day labels */}
+                <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-400">
+                  {weightData.map((item, index) => (
+                    <div key={index}>{item.day}</div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -264,15 +259,15 @@ export default function StepsScreen() {
                 <thead>
                   <tr className="text-left border-b border-[#20354A]">
                     <th className="py-3 pr-4 font-medium">Date</th>
-                    <th className="py-3 pr-4 font-medium">Steps</th>
+                    <th className="py-3 pr-4 font-medium">Weight</th>
                     <th className="py-3 pr-4 font-medium">Change</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stepsTableData.map((item, index) => (
+                  {weightTableData.map((item, index) => (
                     <tr key={index} className="border-b border-[#20354A] last:border-0">
                       <td className="py-3 pr-4">{item.date}</td>
-                      <td className="py-3 pr-4">{item.steps.toLocaleString()}</td>
+                      <td className="py-3 pr-4">{item.weight}</td>
                       <td className="py-3 pr-4">
                         <span className={item.change.startsWith("+") ? "text-green-500" : "text-red-500"}>
                           {item.change}
