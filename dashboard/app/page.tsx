@@ -552,7 +552,6 @@ export default function Home() {
           {visibleForms.map((form) => (
             <div
               key={form.email}
-              // className="bg-[#0f2036] border border-white/10 rounded-2xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
               className="bg-gray-700/50 border border-white/10 rounded-3xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
               onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
             >
@@ -565,7 +564,7 @@ export default function Home() {
                 />
               </div>
               <div className="min-w-0">
-                <div className="text-[14px] lg:text-[15px] font-semibold text-[#CFE0FF] truncate">
+                <div className="text-[16px] lg:text-[18px] font-semibold text-[#CFE0FF] truncate">
                   {form.fullName}
                 </div>
                 <div className="text-[11px] lg:text-[12px] text-white/60 truncate">
