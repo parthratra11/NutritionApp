@@ -318,8 +318,8 @@ export default function Home() {
       />
 
       {/* Header - made responsive */}
-      <div className="bg-[#0B1F35] text-white px-4 md:px-6 pt-4 pb-3">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="bg-[#0B1F35] text-white px-4 md:px-6 pt-4 pb-3 ">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-b-gray-500/50 pb-4">
           {/* Top row on mobile: hamburger + theme + greeting + avatar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
