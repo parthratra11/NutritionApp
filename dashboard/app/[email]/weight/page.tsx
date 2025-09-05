@@ -5,6 +5,35 @@ import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+// Backend data interfaces
+interface DayData {
+  weight: string;
+  email: string;
+  timestamp: string;
+  Mood: { value: number; color: string };
+  "Sleep Quality": { value: number; color: string };
+  "Hunger Level": { value: number; color: string };
+}
+
+interface WeekData {
+  [day: string]: DayData;
+  waist?: string;
+  hip?: string;
+}
+
+interface WeeklyForms {
+  [week: string]: WeekData;
+}
 
 export default function WeightScreen() {
   const params = useParams();
@@ -14,126 +43,269 @@ export default function WeightScreen() {
   const [rangeTab, setRangeTab] = useState<"weekly" | "monthly" | "yearly">(
     "weekly"
   );
-  const [showStartCalendar, setShowStartCalendar] = useState(false);
-  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
+  const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
+  const [userName, setUserName] = useState<string>("User");
 
-  // Weight data for the graph
-  const weightData = [
-    { day: "Su", weight: 75.0 },
-    { day: "M", weight: 74.5 },
-    { day: "T", weight: 75.2 },
-    { day: "W", weight: 75.5 },
-    { day: "Th", weight: 75.3 },
-    { day: "F", weight: 74.3 },
-    { day: "Sa", weight: 75.4 },
-  ];
+  // Backend data states
+  const [weeklyData, setWeeklyData] = useState<WeeklyForms | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Tabular data for weight history - now ordered from most recent to oldest
-  const weightTableData = [
-    { date: "28 July 2025", weight: "75.4 kg", change: "+1.1" },
-    { date: "27 July 2025", weight: "74.3 kg", change: "-1.0" },
-    { date: "26 July 2025", weight: "75.3 kg", change: "-0.2" },
-    { date: "25 July 2025", weight: "75.5 kg", change: "+0.3" },
-    { date: "24 July 2025", weight: "75.2 kg", change: "+0.7" },
-    { date: "23 July 2025", weight: "74.5 kg", change: "-0.5" },
-    { date: "22 July 2025", weight: "75.0 kg", change: "+0.2" },
-    { date: "21 July 2025", weight: "74.8 kg", change: "-0.3" },
-    { date: "20 July 2025", weight: "75.1 kg", change: "+0.4" },
-    { date: "19 July 2025", weight: "74.7 kg", change: "-0.2" },
-    { date: "18 July 2025", weight: "74.9 kg", change: "+0.1" },
-    { date: "17 July 2025", weight: "74.8 kg", change: "-0.4" },
-    { date: "16 July 2025", weight: "75.2 kg", change: "+0.5" },
-    { date: "15 July 2025", weight: "74.7 kg", change: "-0.6" },
-  ];
+  const formatDate = (timestamp: string) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    });
+  };
 
-  // Fetch client name
+  const getDayName = (timestamp: string) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-US", { weekday: "short" });
+  };
+
+  // Calculate daily weight data
+  const calculateDailyWeights = () => {
+    if (!weeklyData) return [];
+
+    const allDays: {
+      date: string;
+      formattedDate: string;
+      weight: number | null;
+      timestamp: string;
+      dayName: string;
+    }[] = [];
+
+    const days = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+
+    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
+      if (weekKey === "firstEntryDate") return;
+
+      days.forEach((day) => {
+        const dayData = weekData[day];
+        if (!dayData || !dayData.timestamp || !dayData.weight) return;
+
+        allDays.push({
+          date: dayData.timestamp,
+          formattedDate: formatDate(dayData.timestamp),
+          weight: parseFloat(dayData.weight),
+          timestamp: dayData.timestamp,
+          dayName: getDayName(dayData.timestamp),
+        });
+      });
+    });
+
+    // Apply date filtering
+    let filteredDays = allDays;
+
+    if (comparisonPeriod === "custom" && startDate && endDate) {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      endDateObj.setHours(23, 59, 59, 999);
+
+      filteredDays = allDays.filter((day) => {
+        const dayDate = new Date(day.date);
+        return dayDate >= startDateObj && dayDate <= endDateObj;
+      });
+    } else if (comparisonPeriod !== "all") {
+      const now = new Date();
+      const cutoffDate = new Date();
+
+      switch (comparisonPeriod) {
+        case "weekly":
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case "monthly":
+          cutoffDate.setMonth(now.getMonth() - 1);
+          break;
+        case "quarterly":
+          cutoffDate.setMonth(now.getMonth() - 3);
+          break;
+        case "yearly":
+          cutoffDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+
+      filteredDays = allDays.filter((day) => new Date(day.date) >= cutoffDate);
+    }
+
+    return filteredDays.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  };
+
+  // Calculate monthly averages
+  const calculateMonthlyAverages = () => {
+    const dailyData = calculateDailyWeights();
+    const monthlyData: { [month: string]: { total: number; count: number } } =
+      {};
+
+    dailyData.forEach((day) => {
+      if (day.weight === null) return;
+
+      const date = new Date(day.date);
+      const monthKey = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { total: 0, count: 0 };
+      }
+
+      monthlyData[monthKey].total += day.weight;
+      monthlyData[monthKey].count += 1;
+    });
+
+    return Object.entries(monthlyData)
+      .map(([monthKey, data]) => ({
+        month: monthKey,
+        label: new Date(monthKey + "-01").toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
+        weight: parseFloat((data.total / data.count).toFixed(1)),
+        formattedDate: new Date(monthKey + "-01").toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(a.month + "-01").getTime() -
+          new Date(b.month + "-01").getTime()
+      );
+  };
+
+  // Get filtered data based on range tab
+  const getFilteredData = () => {
+    const dailyData = calculateDailyWeights();
+
+    if (comparisonPeriod === "custom" && startDate && endDate) {
+      const daysDifference =
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+        (1000 * 3600 * 24);
+      if (daysDifference < 14) {
+        return dailyData;
+      }
+    }
+
+    switch (rangeTab) {
+      case "weekly":
+        return dailyData.slice(-7);
+      case "monthly":
+        return dailyData.slice(-30);
+      case "yearly":
+        return calculateMonthlyAverages();
+      default:
+        return dailyData;
+    }
+  };
+
+  // Custom tooltip for weight chart
+  const WeightTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-gray-900 text-white p-3 rounded-lg shadow-lg border border-gray-700">
+          <p className="font-medium">
+            {rangeTab === "yearly"
+              ? data.label
+              : `${data.dayName} - ${data.formattedDate}`}
+          </p>
+          <p style={{ color: payload[0].color }}>
+            <strong>Weight:</strong> {payload[0].value} kg
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   useEffect(() => {
-    const fetchClientName = async () => {
+    const fetchData = async () => {
       if (!params?.email) return;
+
       try {
-        const clientEmail = decodeURIComponent(params.email as string);
-        const clientDocRef = doc(db, "intakeForms", clientEmail);
+        const decodedEmail = decodeURIComponent(params.email as string);
+
+        // Fetch user info
+        const clientDocRef = doc(db, "intakeForms", decodedEmail);
         const clientDocSnap = await getDoc(clientDocRef);
         if (clientDocSnap.exists()) {
           const clientData = clientDocSnap.data();
           setUserName(clientData.fullName || "User");
         }
+
+        // Fetch weekly data
+        const weeklyDocRef = doc(db, "weeklyForms", decodedEmail);
+        const weeklyDocSnap = await getDoc(weeklyDocRef);
+
+        if (weeklyDocSnap.exists()) {
+          const data = weeklyDocSnap.data();
+          const { firstEntryDate, ...weekData } = data;
+          setWeeklyData(weekData as WeeklyForms);
+        } else {
+          setError("No weight data found");
+        }
       } catch (err) {
-        console.error("Failed to fetch client name:", err);
+        console.error("Error fetching data:", err);
+        setError("Failed to fetch weight data");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchClientName();
+    fetchData();
   }, [params?.email]);
 
-  // Simple calendar component
-  const Calendar = ({
-    onSelect,
-    onClose,
-  }: {
-    onSelect: (date: string) => void;
-    onClose: () => void;
-  }) => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const monthName = new Date(currentYear, currentMonth).toLocaleString(
-      "default",
-      { month: "long" }
-    );
-
-    const handleSelect = (day: number) => {
-      const formattedDate = `${monthName} ${day}, ${currentYear}`;
-      onSelect(formattedDate);
-      onClose();
-    };
-
+  if (loading) {
     return (
-      <div className="absolute top-full left-0 z-10 mt-1 bg-[#0E1F34] border border-[#22364F] rounded-lg shadow-lg p-3 w-64">
-        <div className="flex justify-between items-center mb-2">
-          <div className="font-medium">
-            {monthName} {currentYear}
-          </div>
-          <button onClick={onClose} className="text-gray-400">
-            ×
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-            <div key={day} className="text-center text-xs text-gray-400">
-              {day}
-            </div>
-          ))}
-          {Array(firstDayOfMonth)
-            .fill(null)
-            .map((_, i) => (
-              <div key={`empty-${i}`} className="h-7"></div>
-            ))}
-          {days.map((day) => (
-            <button
-              key={day}
-              onClick={() => handleSelect(day)}
-              className="h-7 w-7 rounded-full hover:bg-[#DD3333] flex items-center justify-center text-sm"
-            >
-              {day}
-            </button>
-          ))}
+      <div className="min-h-screen bg-[#07172C] text-white">
+        <Navigation
+          title="Weight"
+          subtitle="Track your weight progress"
+          email={decodeURIComponent(email)}
+          userName={userName}
+        />
+        <div className="px-4 py-6 flex justify-center items-center h-64">
+          <p>Loading weight data...</p>
         </div>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white">
+        <Navigation
+          title="Weight"
+          subtitle="Track your weight progress"
+          email={decodeURIComponent(email)}
+          userName={userName}
+        />
+        <div className="px-4 py-6 flex justify-center items-center h-64">
+          <p className="text-red-400">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
-      {/* Use the shared Navigation component */}
       <Navigation
         title="Weight"
         subtitle="Track your weight progress"
@@ -142,8 +314,8 @@ export default function WeightScreen() {
       />
 
       <div className="px-4 py-6 space-y-8">
-        {/* View mode toggle */}
-        <div className="flex justify-end">
+        {/* Period Selection and View Mode Toggle */}
+        <div className="flex justify-between items-center">
           <div className="flex">
             <button
               onClick={() => setViewMode("graphs")}
@@ -162,88 +334,108 @@ export default function WeightScreen() {
               Tabular
             </button>
           </div>
-        </div>
 
-        {/* Weight History Card */}
-        <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
-          <h2 className="text-lg font-semibold mb-4">Weight History</h2>
-
-          <div className="flex space-x-3">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowStartCalendar(!showStartCalendar);
-                  setShowEndCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
+          <div className="relative w-48">
+            <button
+              onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
+              className="px-4 py-2 bg-[#142437] border border-[#22364F] text-white rounded-lg flex items-center justify-between w-full"
+            >
+              <span>
+                {comparisonPeriod === "all"
+                  ? "All Time"
+                  : comparisonPeriod === "yearly"
+                  ? "Past Year"
+                  : comparisonPeriod === "quarterly"
+                  ? "Past Quarter"
+                  : comparisonPeriod === "monthly"
+                  ? "Past Month"
+                  : comparisonPeriod === "weekly"
+                  ? "Past Week"
+                  : "Custom"}
+              </span>
+              <svg
+                className={`h-5 w-5 transition-transform ${
+                  isPeriodDropdownOpen ? "rotate-180" : ""
+                }`}
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <span>{startDate || "Select Start Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+                <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showStartCalendar && (
-                <Calendar
-                  onSelect={(date) => setStartDate(date)}
-                  onClose={() => setShowStartCalendar(false)}
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
                 />
-              )}
-            </div>
+              </svg>
+            </button>
 
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowEndCalendar(!showEndCalendar);
-                  setShowStartCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{endDate || "Select End Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showEndCalendar && (
-                <Calendar
-                  onSelect={(date) => setEndDate(date)}
-                  onClose={() => setShowEndCalendar(false)}
-                />
-              )}
-            </div>
+            {isPeriodDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full bg-[#142437] border border-[#22364F] rounded-lg shadow-lg overflow-hidden">
+                {[
+                  { id: "all", label: "All Time" },
+                  { id: "yearly", label: "Past Year" },
+                  { id: "quarterly", label: "Past Quarter" },
+                  { id: "monthly", label: "Past Month" },
+                  { id: "custom", label: "Custom" },
+                ].map((period) => (
+                  <button
+                    key={period.id}
+                    onClick={() => {
+                      setComparisonPeriod(period.id);
+                      setIsPeriodDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-[#22364F] ${
+                      comparisonPeriod === period.id ? "bg-[#22364F]" : ""
+                    }`}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Custom Date Range Selector */}
+        {comparisonPeriod === "custom" && (
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-300 mb-3">
+              Custom Date Range
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Weight Graph or Table */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center">
-              <h3 className="font-semibold">Weight</h3>
+              <h3 className="font-semibold">Weight Progress</h3>
               <div className="ml-2 bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
                 <svg
                   className="w-3 h-3 mr-1"
@@ -289,92 +481,91 @@ export default function WeightScreen() {
           </div>
 
           {viewMode === "graphs" ? (
-            <div className="h-[300px] relative">
-              {/* Y-axis weight labels */}
-              <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-gray-400">
-                <div>77</div>
-                <div>76</div>
-                <div>75</div>
-                <div>74</div>
-                <div>73</div>
-              </div>
-
-              {/* Weight Chart */}
-              <div className="ml-12 h-full relative">
-                {/* SVG for the area chart */}
-                <svg
-                  className="w-full h-full"
-                  preserveAspectRatio="none"
-                  viewBox="0 0 700 300"
-                >
-                  <defs>
-                    <linearGradient
-                      id="weightGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#DD3333" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="#DD3333" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Path for area under the curve */}
-                  <path
-                    d="M0,100 C100,150 150,60 250,130 C350,200 450,80 550,120 C600,150 650,60 700,80 L700,300 L0,300 Z"
-                    fill="url(#weightGradient)"
+            <div className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={getFilteredData()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis
+                    dataKey={rangeTab === "yearly" ? "label" : "formattedDate"}
+                    stroke="#94a3b8"
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
                   />
-
-                  {/* Line on top of area */}
-                  <path
-                    d="M0,100 C100,150 150,60 250,130 C350,200 450,80 550,120 C600,150 650,60 700,80"
-                    fill="none"
+                  <YAxis
+                    stroke="#94a3b8"
+                    tick={{ fill: "#94a3b8" }}
+                    domain={["dataMin - 2", "dataMax + 2"]}
+                  />
+                  <Tooltip content={<WeightTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="weight"
                     stroke="#DD3333"
-                    strokeWidth="3"
+                    strokeWidth={3}
+                    dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
                   />
-                </svg>
-
-                {/* X-axis day labels */}
-                <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-400">
-                  {weightData.map((item, index) => (
-                    <div key={index}>{item.day}</div>
-                  ))}
-                </div>
-              </div>
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           ) : (
-            // Tabular view
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left border-b border-[#20354A]">
-                    <th className="py-3 pr-4 font-medium">Date</th>
-                    <th className="py-3 pr-4 font-medium">Weight</th>
+                    <th className="py-3 pr-4 font-medium">
+                      {rangeTab === "yearly" ? "Month" : "Date"}
+                    </th>
+                    <th className="py-3 pr-4 font-medium">
+                      {rangeTab === "yearly" ? "Avg Weight" : "Weight"}
+                    </th>
                     <th className="py-3 pr-4 font-medium">Change</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {weightTableData.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-[#20354A] last:border-0"
-                    >
-                      <td className="py-3 pr-4">{item.date}</td>
-                      <td className="py-3 pr-4">{item.weight}</td>
-                      <td className="py-3 pr-4">
-                        <span
-                          className={
-                            item.change.startsWith("+")
-                              ? "text-green-500"
-                              : "text-red-500"
-                          }
+                  {getFilteredData()
+                    .slice()
+                    .reverse()
+                    .map((item, index, array) => {
+                      const nextItem = array[index + 1];
+                      const weightChange = nextItem
+                        ? (item.weight - nextItem.weight).toFixed(1)
+                        : null;
+
+                      return (
+                        <tr
+                          key={rangeTab === "yearly" ? item.month : item.date}
+                          className="border-b border-[#20354A] last:border-0"
                         >
-                          {item.change}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="py-3 pr-4">
+                            {rangeTab === "yearly"
+                              ? item.label
+                              : item.formattedDate}
+                          </td>
+                          <td className="py-3 pr-4">{item.weight} kg</td>
+                          <td className="py-3 pr-4">
+                            {weightChange ? (
+                              <span
+                                className={
+                                  parseFloat(weightChange) > 0
+                                    ? "text-red-500"
+                                    : parseFloat(weightChange) < 0
+                                    ? "text-green-500"
+                                    : "text-gray-400"
+                                }
+                              >
+                                {parseFloat(weightChange) > 0 ? "+" : ""}
+                                {weightChange} kg
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

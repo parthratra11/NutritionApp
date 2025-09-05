@@ -604,9 +604,9 @@ export default function WorkoutDashboard() {
               </div>
 
               {/* Update the calendar button and implement a simple calendar popup */}
-              <button
+              <div
                 onClick={() => setShowCalendar(!showCalendar)}
-                className="p-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white relative"
+                className="p-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white relative cursor-pointer hover:bg-[#1D325A] transition-colors"
                 data-calendar
               >
                 <svg
@@ -629,78 +629,6 @@ export default function WorkoutDashboard() {
                     data-calendar
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* Quick Date Filters
-                    <div className="mb-4 p-3 bg-[#0E1F34] rounded border border-[#22364F]">
-                      <h5 className="text-sm font-medium text-gray-300 mb-3">
-                        Quick Filters
-                      </h5>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDateFilter("weekly");
-                            setCustomStartDate("");
-                            setCustomEndDate("");
-                            setSelectedSingleDate("");
-                          }}
-                          className={`px-2 py-1 rounded text-xs ${
-                            dateFilter === "weekly"
-                              ? "bg-[#DD3333] text-white"
-                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
-                          }`}
-                        >
-                          Last Week
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDateFilter("monthly");
-                            setCustomStartDate("");
-                            setCustomEndDate("");
-                            setSelectedSingleDate("");
-                          }}
-                          className={`px-2 py-1 rounded text-xs ${
-                            dateFilter === "monthly"
-                              ? "bg-[#DD3333] text-white"
-                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
-                          }`}
-                        >
-                          Last Month
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDateFilter("quarterly");
-                            setCustomStartDate("");
-                            setCustomEndDate("");
-                            setSelectedSingleDate("");
-                          }}
-                          className={`px-2 py-1 rounded text-xs ${
-                            dateFilter === "quarterly"
-                              ? "bg-[#DD3333] text-white"
-                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
-                          }`}
-                        >
-                          Last 3 Months
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDateFilter("yearly");
-                            setCustomStartDate("");
-                            setCustomEndDate("");
-                            setSelectedSingleDate("");
-                          }}
-                          className={`px-2 py-1 rounded text-xs ${
-                            dateFilter === "yearly"
-                              ? "bg-[#DD3333] text-white"
-                              : "bg-[#22364F] text-gray-300 hover:bg-[#1D325A]"
-                          }`}
-                        >
-                          Last Year
-                        </button>
-                      </div>
-                    </div> */}
                     {/* Single Date Selection */}
                     <div className="mb-4 p-3 bg-[#0E1F34] rounded border border-[#22364F]">
                       <h5 className="text-sm font-medium text-gray-300 mb-3">
@@ -762,115 +690,7 @@ export default function WorkoutDashboard() {
                         </div>
                       </div>
                     </div>
-                    {/* Calendar Navigation */}
-                    {/* <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium text-sm">
-                        {formatMonthYear(currentMonth)}
-                      </h4>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            previousMonth();
-                          }}
-                          className="p-1 hover:bg-[#1D325A] rounded"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            nextMonth();
-                          }}
-                          className="p-1 hover:bg-[#1D325A] rounded"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                      {daysOfWeek.map((day) => (
-                        <div
-                          key={day}
-                          className="py-1 text-xs font-medium text-gray-400"
-                        >
-                          {day}
-                        </div>
-                      ))}
 
-                      {getDaysArray(currentMonth).map((day, index) => {
-                        const dayWorkout = workoutHistory.find((w) => {
-                          if (day.empty) return false;
-                          const workoutDate = new Date(w.date);
-                          const calendarDate = new Date(
-                            currentMonth.getFullYear(),
-                            currentMonth.getMonth(),
-                            parseInt(day.day)
-                          );
-                          return (
-                            workoutDate.toDateString() ===
-                            calendarDate.toDateString()
-                          );
-                        });
-
-                        const isSelectedDate =
-                          !day.empty &&
-                          selectedSingleDate &&
-                          new Date(selectedSingleDate).toDateString() ===
-                            new Date(
-                              currentMonth.getFullYear(),
-                              currentMonth.getMonth(),
-                              parseInt(day.day)
-                            ).toDateString();
-
-                        return (
-                          <div
-                            key={index}
-                            className={`p-1 text-center ${
-                              day.empty
-                                ? "invisible"
-                                : "cursor-pointer hover:bg-[#1D325A] rounded"
-                            }`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!day.empty) {
-                                handleCalendarDateClick(day.day);
-                              }
-                            }}
-                          >
-                            <span
-                              className={`flex items-center justify-center w-6 h-6 rounded-full text-xs ${
-                                isSelectedDate
-                                  ? "bg-[#DD3333] text-white border-2 border-white"
-                                  : dayWorkout
-                                  ? dayWorkout.completed
-                                    ? "bg-[#4CAF50] text-white"
-                                    : "bg-[#D94343] text-white"
-                                  : ""
-                              }`}
-                            >
-                              {day.day}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div> */}
                     {/* Legend */}
                     <div className="mt-4 pt-3 border-t border-[#22364F]">
                       <div className="flex justify-center gap-4 text-xs">
@@ -923,7 +743,7 @@ export default function WorkoutDashboard() {
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
 
               <button className="ml-auto flex items-center gap-1 p-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white">
                 <svg
@@ -1233,23 +1053,4 @@ export default function WorkoutDashboard() {
       )}
     </div>
   );
-}
-
-// Add this helper function
-function formatMonthYear(date: Date): string {
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  return `${months[date.getMonth()]} ${date.getFullYear()}`;
 }
