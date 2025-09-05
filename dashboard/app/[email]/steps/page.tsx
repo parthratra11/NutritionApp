@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { use } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 
 // Generate random step data in a realistic range
@@ -9,436 +9,282 @@ const generateRandomSteps = () => {
   return 6000 + Math.floor(Math.random() * 6000); // Between 6000-12000 steps
 };
 
-// Create empty data structures for initial render
-const emptyStepData = [
-  { date: "22.07.2025", day: "S", steps: 0 },
-  { date: "23.07.2025", day: "M", steps: 0 },
-  { date: "24.07.2025", day: "T", steps: 0 },
-  { date: "25.07.2025", day: "W", steps: 0 },
-  { date: "26.07.2025", day: "T", steps: 0 },
-  { date: "27.07.2025", day: "F", steps: 0 },
-  { date: "28.07.2025", day: "S", steps: 0 },
-];
-
-// Create empty extended data
-const emptyExtendedData = [
-  ...Array(15)
-    .fill(null)
-    .map((_, i) => ({
-      date: `${(7 + i).toString().padStart(2, "0")}.07.2025`,
-      steps: 0,
-    })),
-  ...emptyStepData,
-];
-
-// Dummy data generators for each view
-const generateWeeklyData = () =>
-  Array(7)
-    .fill(null)
-    .map((_, i) => ({
-      label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i],
-      steps: 7000 + Math.floor(Math.random() * 5000),
-    }));
-
-const generateMonthlyData = () =>
-  Array(4)
-    .fill(null)
-    .map((_, i) => ({
-      label: `W${i + 1}`,
-      steps: 8000 + Math.floor(Math.random() * 4000),
-    }));
-
-const generate6MData = () =>
-  Array(6)
-    .fill(null)
-    .map((_, i) => ({
-      label: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ][i],
-      steps: 8500 + Math.floor(Math.random() * 3500),
-    }));
-
-const generateYearlyData = () =>
-  Array(12)
-    .fill(null)
-    .map((_, i) => ({
-      label: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ][i],
-      steps: 9000 + Math.floor(Math.random() * 3000),
-    }));
-
-export default function StepsPage({ params }) {
-  const unwrappedParams = use(params);
-  const email = unwrappedParams.email;
-
-  const [activeTab, setActiveTab] = useState("D"); // D, W, M, 6M, Y
-  const [activeView, setActiveView] = useState("graph"); // graph, tabular
-  const [stepData, setStepData] = useState(emptyStepData);
-  const [extendedData, setExtendedData] = useState(emptyExtendedData);
+export default function StepsScreen() {
+  const params = useParams();
+  const router = useRouter();
+  const email = params.email as string;
+  const [viewMode, setViewMode] = useState<"graphs" | "tabular">("graphs");
+  const [rangeTab, setRangeTab] = useState<"weekly" | "monthly" | "yearly">("weekly");
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState("");
+  
+  // Steps data for the graph
+  const [stepsData, setStepsData] = useState([
+    { day: "S", steps: 8400 },
+    { day: "M", steps: 8100 },
+    { day: "T", steps: 8250 },
+    { day: "W", steps: 8550 },
+    { day: "Th", steps: 9000 },
+    { day: "F", steps: 9800 },
+    { day: "S", steps: 9400, highlight: true },
+  ]);
 
-  // State for each view's data
-  const [weeklyData, setWeeklyData] = useState(generateWeeklyData());
-  const [monthlyData, setMonthlyData] = useState(generateMonthlyData());
-  const [sixMData, setSixMData] = useState(generate6MData());
-  const [yearlyData, setYearlyData] = useState(generateYearlyData());
+  // Generate table data
+  const [stepsTableData, setStepsTableData] = useState([
+    { date: "28 July 2025", steps: 9400, change: "+600" },
+    { date: "27 July 2025", steps: 8800, change: "-200" },
+    { date: "26 July 2025", steps: 9000, change: "+450" },
+    { date: "25 July 2025", steps: 8550, change: "+300" },
+    { date: "24 July 2025", steps: 8250, change: "+150" },
+    { date: "23 July 2025", steps: 8100, change: "-300" },
+    { date: "22 July 2025", steps: 8400, change: "+200" },
+  ]);
 
+  // Simulate data loading
   useEffect(() => {
-    const generatedStepData = [
-      { date: "22.07.2025", day: "S", steps: generateRandomSteps() },
-      { date: "23.07.2025", day: "M", steps: generateRandomSteps() },
-      { date: "24.07.2025", day: "T", steps: generateRandomSteps() },
-      { date: "25.07.2025", day: "W", steps: generateRandomSteps() },
-      { date: "26.07.2025", day: "T", steps: generateRandomSteps() },
-      { date: "27.07.2025", day: "F", steps: generateRandomSteps() },
-      { date: "28.07.2025", day: "S", steps: generateRandomSteps() },
-    ];
-
-    const generatedExtendedData = [
-      ...Array(15)
-        .fill(null)
-        .map((_, i) => ({
-          date: `${(7 + i).toString().padStart(2, "0")}.07.2025`,
-          steps: generateRandomSteps(),
-        })),
-      ...generatedStepData,
-    ];
-
-    setStepData(generatedStepData);
-    setExtendedData(generatedExtendedData);
-    setSelectedDate(generatedStepData[generatedStepData.length - 1].date);
-    setIsLoading(false);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Helper to get current graph data and axis labels
-  const getGraphData = () => {
-    switch (activeTab) {
-      case "W":
-        return weeklyData;
-      case "M":
-        return monthlyData;
-      case "6M":
-        return sixMData;
-      case "Y":
-        return yearlyData;
-      default:
-        // "D" - daily
-        return stepData.map((item) => ({
-          label: item.day,
-          steps: item.steps,
-          date: item.date,
-        }));
-    }
-  };
-
-  // Helper to get current tabular data
-  const getTabularData = () => {
-    switch (activeTab) {
-      case "W":
-        return weeklyData.map((item) => ({
-          label: item.label,
-          value: item.steps,
-        }));
-      case "M":
-        return monthlyData.map((item) => ({
-          label: item.label,
-          value: item.steps,
-        }));
-      case "6M":
-        return sixMData.map((item) => ({
-          label: item.label,
-          value: item.steps,
-        }));
-      case "Y":
-        return yearlyData.map((item) => ({
-          label: item.label,
-          value: item.steps,
-        }));
-      default:
-        // "D" - daily
-        return stepData.map((item) => ({
-          label: item.date,
-          value: item.steps,
-          isSelected: item.date === selectedDate,
-        }));
-    }
-  };
-
-  const tabularData = getTabularData();
-
-  const graphData = getGraphData();
-  const graphMax = Math.max(...graphData.map((item) => item.steps), 1);
-  const graphMin = Math.min(...graphData.map((item) => item.steps));
-  const graphBase = Math.floor(graphMin / 1000) * 1000;
-  const graphRange = graphMax - graphBase;
-  const generateGraphYAxis = () => {
-    if (graphRange === 0) {
-      return [graphBase + 1000, graphBase];
-    }
-    const step = Math.ceil(graphRange / 4 / 500) * 500 || 500;
-    const values = [];
-    for (let i = 0; i <= 4; i++) {
-      values.push(graphBase + i * step);
-    }
-    return values.reverse();
-  };
-
-  const handleBarClick = (date) => {
-    setSelectedDate(date);
+  // Simple calendar component
+  const Calendar = ({ onSelect, onClose }: { onSelect: (date: string) => void, onClose: () => void }) => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+    
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const monthName = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' });
+    
+    const handleSelect = (day: number) => {
+      const formattedDate = `${monthName} ${day}, ${currentYear}`;
+      onSelect(formattedDate);
+      onClose();
+    };
+    
+    return (
+      <div className="absolute top-full left-0 z-10 mt-1 bg-[#0E1F34] border border-[#22364F] rounded-lg shadow-lg p-3 w-64">
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-medium">{monthName} {currentYear}</div>
+          <button onClick={onClose} className="text-gray-400">×</button>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {['Su','Mo','Tu','We','Th','Fr','Sa'].map(day => (
+            <div key={day} className="text-center text-xs text-gray-400">{day}</div>
+          ))}
+          {Array(firstDayOfMonth).fill(null).map((_, i) => (
+            <div key={`empty-${i}`} className="h-7"></div>
+          ))}
+          {days.map(day => (
+            <button 
+              key={day} 
+              onClick={() => handleSelect(day)}
+              className="h-7 w-7 rounded-full hover:bg-[#DD3333] flex items-center justify-center text-sm"
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <Navigation
-          title="Steps"
-          subtitle="Track your daily movement"
-          email={email}
+      <div className="min-h-screen bg-[#07172C] text-white">
+        <Navigation 
+          title="Workout" 
+          subtitle="Track your steps progress"
+          email={decodeURIComponent(email)}
         />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-center items-center h-64">
-            <p>Loading step data...</p>
-          </div>
+        <div className="px-4 py-6 flex justify-center items-center h-64">
+          <p>Loading steps data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navigation
-        title="Steps"
-        subtitle="Track your daily movement"
-        email={email}
+    <div className="min-h-screen bg-[#07172C] text-white">
+      {/* Use the shared Navigation component */}
+      <Navigation 
+        title="Workout" 
+        subtitle="Track your steps progress"
+        email={decodeURIComponent(email)}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            {["D", "W", "M", "6M", "Y"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab
-                    ? "bg-[#DD3333] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveView("graph")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeView === "graph"
-                  ? "bg-[#DD3333] text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+      <div className="px-4 py-6 space-y-8">
+        {/* View mode toggle */}
+        <div className="flex justify-end">
+          <div className="flex">
+            <button 
+              onClick={() => setViewMode("graphs")}
+              className={`px-6 py-2 rounded-l text-base ${viewMode === "graphs" ? "bg-[#DD3333]" : "bg-gray-700"}`}
             >
-              Graph
+              Graphs
             </button>
-            <button
-              onClick={() => setActiveView("tabular")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeView === "tabular"
-                  ? "bg-[#DD3333] text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+            <button 
+              onClick={() => setViewMode("tabular")}
+              className={`px-6 py-2 rounded-r text-base ${viewMode === "tabular" ? "bg-[#DD3333]" : "bg-gray-700"}`}
             >
               Tabular
             </button>
           </div>
         </div>
+        
+        {/* Steps History Card */}
+        <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+          <h2 className="text-lg font-semibold mb-4">Steps History</h2>
+          
+          <div className="flex space-x-3">
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowStartCalendar(!showStartCalendar);
+                  setShowEndCalendar(false);
+                }}
+                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
+              >
+                <span>{startDate || "Select Start Date"}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </button>
+              {showStartCalendar && (
+                <Calendar 
+                  onSelect={(date) => setStartDate(date)} 
+                  onClose={() => setShowStartCalendar(false)} 
+                />
+              )}
+            </div>
+            
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowEndCalendar(!showEndCalendar);
+                  setShowStartCalendar(false);
+                }}
+                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
+              >
+                <span>{endDate || "Select End Date"}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </button>
+              {showEndCalendar && (
+                <Calendar 
+                  onSelect={(date) => setEndDate(date)} 
+                  onClose={() => setShowEndCalendar(false)} 
+                />
+              )}
+            </div>
+          </div>
+        </div>
 
-        {activeView === "graph" ? (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-6">Step Count</h2>
-              <div className="flex">
-                <div className="flex flex-col justify-between pr-4 text-right text-gray-400 text-xs h-64">
-                  {generateGraphYAxis().map((value) => (
-                    <div key={value}>{value.toLocaleString()}</div>
-                  ))}
-                </div>
-                <div className="flex-grow">
-                  <div
-                    className="flex items-end justify-between h-64 border-b border-gray-300 relative"
-                    style={{ gap: "0.25rem" }}
-                  >
-                    {graphData.map((item, index) => {
-                      const isSelected =
-                        activeTab === "D" ? item.date === selectedDate : false;
-                      const heightPercentage =
-                        graphRange > 0
-                          ? ((item.steps - graphBase) / graphRange) * 100
-                          : 50;
-                      return (
-                        <div
-                          key={index}
-                          className={`w-24 ${
-                            isSelected ? "bg-[#DD3333]" : "bg-gray-400"
-                          } rounded-t-md transition-all cursor-pointer hover:opacity-80 ${
-                            isSelected
-                              ? "border-t-2 border-x-2 border-[#DD3333]"
-                              : ""
-                          }`}
-                          style={{
-                            height: `${Math.max(heightPercentage, 5)}%`,
-                            minHeight: "10px",
-                          }}
-                          onClick={
-                            activeTab === "D"
-                              ? () => handleBarClick(item.date)
-                              : undefined
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    {graphData.map((item, index) => (
-                      <div key={index} className="text-center w-6">
-                        <div>{item.label}</div>
-                        <div>{item.steps.toLocaleString()}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* Overall Steps Progress Card */}
+        <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center">
+              <h3 className="font-semibold">Overall Steps Progress</h3>
+              <div className="ml-2 bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
+                <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 15l-6-6-6 6"/>
+                </svg>
+                On Track
               </div>
             </div>
+            
+            <div className="flex bg-[#ffffff20] rounded-md overflow-hidden">
+              <button 
+                onClick={() => setRangeTab("weekly")}
+                className={`px-4 py-1 text-sm ${rangeTab === "weekly" ? "bg-white text-[#07172C]" : ""}`}
+              >
+                Weekly
+              </button>
+              <button 
+                onClick={() => setRangeTab("monthly")}
+                className={`px-4 py-1 text-sm ${rangeTab === "monthly" ? "bg-white text-[#07172C]" : ""}`}
+              >
+                Monthly
+              </button>
+              <button 
+                onClick={() => setRangeTab("yearly")}
+                className={`px-4 py-1 text-sm ${rangeTab === "yearly" ? "bg-white text-[#07172C]" : ""}`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
 
-            <div className="bg-[#F5F5F5] rounded-xl p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-base">Tabular</h3>
-                <button
-                  onClick={() => setActiveView("tabular")}
-                  className="text-blue-500 text-sm"
-                >
-                  More
-                </button>
+          {viewMode === "graphs" ? (
+            <div className="h-[300px] relative mt-6">
+              {/* Y-axis steps labels */}
+              <div className="absolute left-0 top-0 bottom-0 w-14 flex flex-col justify-between text-xs text-gray-400">
+                <div>10,000</div>
+                <div>9,500</div>
+                <div>9,000</div>
+                <div>8,500</div>
+                <div>8,000</div>
               </div>
-              <div className="space-y-2">
-                {tabularData.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex justify-between items-center py-2 px-3 ${
-                      item.isSelected
-                        ? "bg-red-50 border border-red-200"
-                        : "bg-white"
-                    } rounded-lg`}
-                  >
-                    <span className="text-sm">{item.label}</span>
-                    <span className="text-sm font-medium">
-                      {item.value.toLocaleString()}
-                    </span>
+
+              {/* Steps Chart */}
+              <div className="ml-14 h-full flex items-end">
+                {stepsData.map((item, index) => (
+                  <div key={index} className="flex flex-col items-center flex-1">
+                    <div 
+                      className={`w-16 ${item.highlight ? 'bg-[#DD3333]' : 'bg-gray-500'}`}
+                      style={{ 
+                        // This calculation was causing the bars to be too small or invisible
+                        // Let's use a better calculation that ensures visible bars
+                        height: `${((item.steps - 7500) / 3000) * 250}px`,  
+                      }}
+                    ></div>
+                    <div className="mt-2 text-sm">{item.day}</div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="bg-[#F5F5F5] rounded-xl p-6 w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-xl">Steps Data</h2>
-              <div className="flex items-center space-x-2">
-                <button className="p-1 hover:bg-gray-200 rounded">
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
-                <button className="p-1 hover:bg-gray-200 rounded">
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
+          ) : (
+            // Tabular view
             <div className="overflow-x-auto">
-              <div className="overflow-hidden rounded-xl min-w-[20rem]">
-                <div className="flex justify-between bg-[#E0E0E0] px-4 py-3 rounded-t-xl font-bold text-sm">
-                  <div>
-                    {activeTab === "D"
-                      ? "Date"
-                      : activeTab === "W"
-                      ? "Day"
-                      : activeTab === "M"
-                      ? "Week"
-                      : activeTab === "6M" || activeTab === "Y"
-                      ? "Month"
-                      : "Label"}
-                  </div>
-                  <div>Steps</div>
-                </div>
-                <div className="max-h-[500px] overflow-y-auto">
-                  {tabularData.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`flex justify-between px-4 py-3 text-sm ${
-                        item.isSelected
-                          ? "bg-red-50"
-                          : index % 2 === 0
-                          ? "bg-[#F5F5F5]"
-                          : "bg-white"
-                      }`}
-                    >
-                      <div>{item.label}</div>
-                      <div>{item.value.toLocaleString()}</div>
-                    </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b border-[#20354A]">
+                    <th className="py-3 pr-4 font-medium">Date</th>
+                    <th className="py-3 pr-4 font-medium">Steps</th>
+                    <th className="py-3 pr-4 font-medium">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stepsTableData.map((item, index) => (
+                    <tr key={index} className="border-b border-[#20354A] last:border-0">
+                      <td className="py-3 pr-4">{item.date}</td>
+                      <td className="py-3 pr-4">{item.steps.toLocaleString()}</td>
+                      <td className="py-3 pr-4">
+                        <span className={item.change.startsWith("+") ? "text-green-500" : "text-red-500"}>
+                          {item.change}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
+                </tbody>
+              </table>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
