@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Navigation from "../../../components/shared/Navigation";
+import { db } from "../../../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 type MoodPoint = {
   day: string;
@@ -27,21 +29,24 @@ export default function MoodScreen() {
   const router = useRouter();
   const email = params.email as string;
   const [viewMode, setViewMode] = useState<"graphs" | "tabular">("graphs");
-  const [rangeTab, setRangeTab] = useState<"weekly" | "monthly" | "yearly">("weekly");
+  const [rangeTab, setRangeTab] = useState<"weekly" | "monthly" | "yearly">(
+    "weekly"
+  );
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   const dataset = useMemo(() => {
     if (rangeTab === "weekly") return weeklyBase;
     if (rangeTab === "monthly") {
-      return weeklyBase.map(mp => ({
+      return weeklyBase.map((mp) => ({
         ...mp,
         score: Math.min(10, Math.round((mp.score * 3 + 5) / 2)),
       }));
     }
-    return weeklyBase.map(mp => ({
+    return weeklyBase.map((mp) => ({
       ...mp,
       score: Math.min(10, Math.round((mp.score + 6) / 2)),
     }));
@@ -52,39 +57,56 @@ export default function MoodScreen() {
   const weekDays = [22, 23, 24, 25, 26, 27, 28];
 
   // Simple calendar component
-  const Calendar = ({ onSelect, onClose }: { onSelect: (date: string) => void, onClose: () => void }) => {
+  const Calendar = ({
+    onSelect,
+    onClose,
+  }: {
+    onSelect: (date: string) => void;
+    onClose: () => void;
+  }) => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    
+
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-    
+
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const monthName = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' });
-    
+    const monthName = new Date(currentYear, currentMonth).toLocaleString(
+      "default",
+      { month: "long" }
+    );
+
     const handleSelect = (day: number) => {
       const formattedDate = `${monthName} ${day}, ${currentYear}`;
       onSelect(formattedDate);
       onClose();
     };
-    
+
     return (
       <div className="absolute top-full left-0 z-10 mt-1 bg-[#0E1F34] border border-[#22364F] rounded-lg shadow-lg p-3 w-64">
         <div className="flex justify-between items-center mb-2">
-          <div className="font-medium">{monthName} {currentYear}</div>
-          <button onClick={onClose} className="text-gray-400">×</button>
+          <div className="font-medium">
+            {monthName} {currentYear}
+          </div>
+          <button onClick={onClose} className="text-gray-400">
+            ×
+          </button>
         </div>
         <div className="grid grid-cols-7 gap-1">
-          {['Su','Mo','Tu','We','Th','Fr','Sa'].map(day => (
-            <div key={day} className="text-center text-xs text-gray-400">{day}</div>
+          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+            <div key={day} className="text-center text-xs text-gray-400">
+              {day}
+            </div>
           ))}
-          {Array(firstDayOfMonth).fill(null).map((_, i) => (
-            <div key={`empty-${i}`} className="h-7"></div>
-          ))}
-          {days.map(day => (
-            <button 
-              key={day} 
+          {Array(firstDayOfMonth)
+            .fill(null)
+            .map((_, i) => (
+              <div key={`empty-${i}`} className="h-7"></div>
+            ))}
+          {days.map((day) => (
+            <button
+              key={day}
               onClick={() => handleSelect(day)}
               className="h-7 w-7 rounded-full hover:bg-[#DD3333] flex items-center justify-center text-sm"
             >
@@ -95,6 +117,26 @@ export default function MoodScreen() {
       </div>
     );
   };
+
+  // Fetch client name
+  useEffect(() => {
+    const fetchClientName = async () => {
+      if (!params?.email) return;
+      try {
+        const clientEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", clientEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data();
+          setUserName(clientData.fullName || "User");
+        }
+      } catch (err) {
+        console.error("Failed to fetch client name:", err);
+      }
+    };
+
+    fetchClientName();
+  }, [params?.email]);
 
   // Generate dummy data for tabular view that matches the image format
   const dummyTableData = [
@@ -125,38 +167,43 @@ export default function MoodScreen() {
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
       {/* Use the shared Navigation component */}
-      <Navigation 
-        title="Mood Tracking" 
+      <Navigation
+        title="Mood Tracking"
         subtitle="Track your daily mood patterns"
         email={decodeURIComponent(email)}
+        userName={userName}
       />
 
       <div className="px-4 py-6 space-y-8">
         {/* View mode toggle above the Mood History Card */}
         <div className="flex justify-end">
           <div className="flex">
-            <button 
+            <button
               onClick={() => setViewMode("graphs")}
-              className={`px-6 py-2 rounded-l text-base ${viewMode === "graphs" ? "bg-[#DD3333]" : "bg-gray-700"}`}
+              className={`px-6 py-2 rounded-l text-base ${
+                viewMode === "graphs" ? "bg-[#DD3333]" : "bg-gray-700"
+              }`}
             >
               Graphs
             </button>
-            <button 
+            <button
               onClick={() => setViewMode("tabular")}
-              className={`px-6 py-2 rounded-r text-base ${viewMode === "tabular" ? "bg-[#DD3333]" : "bg-gray-700"}`}
+              className={`px-6 py-2 rounded-r text-base ${
+                viewMode === "tabular" ? "bg-[#DD3333]" : "bg-gray-700"
+              }`}
             >
               Tabular
             </button>
           </div>
         </div>
-        
+
         {/* Mood History Card */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
           <h2 className="text-lg font-semibold mb-4">Mood History</h2>
-          
+
           <div className="flex space-x-3">
             <div className="relative">
-              <button 
+              <button
                 onClick={() => {
                   setShowStartCalendar(!showStartCalendar);
                   setShowEndCalendar(false);
@@ -164,7 +211,17 @@ export default function MoodScreen() {
                 className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between z"
               >
                 <span>{startDate || "Select Start Date"}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -172,15 +229,15 @@ export default function MoodScreen() {
                 </svg>
               </button>
               {showStartCalendar && (
-                <Calendar 
-                  onSelect={(date) => setStartDate(date)} 
-                  onClose={() => setShowStartCalendar(false)} 
+                <Calendar
+                  onSelect={(date) => setStartDate(date)}
+                  onClose={() => setShowStartCalendar(false)}
                 />
               )}
             </div>
-            
+
             <div className="relative">
-              <button 
+              <button
                 onClick={() => {
                   setShowEndCalendar(!showEndCalendar);
                   setShowStartCalendar(false);
@@ -188,7 +245,17 @@ export default function MoodScreen() {
                 className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
               >
                 <span>{endDate || "Select End Date"}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -196,9 +263,9 @@ export default function MoodScreen() {
                 </svg>
               </button>
               {showEndCalendar && (
-                <Calendar 
-                  onSelect={(date) => setEndDate(date)} 
-                  onClose={() => setShowEndCalendar(false)} 
+                <Calendar
+                  onSelect={(date) => setEndDate(date)}
+                  onClose={() => setShowEndCalendar(false)}
                 />
               )}
             </div>
@@ -210,21 +277,27 @@ export default function MoodScreen() {
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold">Mood</h3>
             <div className="flex bg-[#ffffff20] rounded-md overflow-hidden">
-              <button 
+              <button
                 onClick={() => setRangeTab("weekly")}
-                className={`px-5 py-2 text-sm ${rangeTab === "weekly" ? "bg-white text-[#07172C]" : ""}`}
+                className={`px-5 py-2 text-sm ${
+                  rangeTab === "weekly" ? "bg-white text-[#07172C]" : ""
+                }`}
               >
                 Weekly
               </button>
-              <button 
+              <button
                 onClick={() => setRangeTab("monthly")}
-                className={`px-5 py-2 text-sm ${rangeTab === "monthly" ? "bg-white text-[#07172C]" : ""}`}
+                className={`px-5 py-2 text-sm ${
+                  rangeTab === "monthly" ? "bg-white text-[#07172C]" : ""
+                }`}
               >
                 Monthly
               </button>
-              <button 
+              <button
                 onClick={() => setRangeTab("yearly")}
-                className={`px-5 py-2 text-sm ${rangeTab === "yearly" ? "bg-white text-[#07172C]" : ""}`}
+                className={`px-5 py-2 text-sm ${
+                  rangeTab === "yearly" ? "bg-white text-[#07172C]" : ""
+                }`}
               >
                 Yearly
               </button>
@@ -238,18 +311,18 @@ export default function MoodScreen() {
                 {dataset.map((d, idx) => {
                   // Position bubbles similar to the screenshot
                   let positions = {
-                    "Sun": { left: "8%", top: "70%" },
-                    "Mon": { left: "18%", top: "85%" },
-                    "Tue": { left: "32%", top: "55%" },
-                    "Wed": { left: "45%", top: "30%" },
-                    "Thu": { left: "60%", top: "70%" },
-                    "Fri": { left: "75%", top: "45%" },
-                    "Sat": { left: "88%", top: "20%" }
+                    Sun: { left: "8%", top: "70%" },
+                    Mon: { left: "18%", top: "85%" },
+                    Tue: { left: "32%", top: "55%" },
+                    Wed: { left: "45%", top: "30%" },
+                    Thu: { left: "60%", top: "70%" },
+                    Fri: { left: "75%", top: "45%" },
+                    Sat: { left: "88%", top: "20%" },
                   };
-                  
+
                   const position = positions[d.day];
                   const size = 30 + d.score * 5;
-                  
+
                   return (
                     <div
                       key={d.day}
@@ -260,7 +333,8 @@ export default function MoodScreen() {
                         width: size,
                         height: size,
                         transform: "translate(-50%, -50%)",
-                        background: "radial-gradient(circle at 30% 30%, #E04A42, #C22F28)",
+                        background:
+                          "radial-gradient(circle at 30% 30%, #E04A42, #C22F28)",
                         boxShadow: "0 4px 8px rgba(0,0,0,0.35)",
                       }}
                     >

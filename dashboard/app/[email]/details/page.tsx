@@ -139,6 +139,7 @@ export default function UserDetails() {
         title={`${form?.fullName || "Client"}'s Details`}
         subtitle="Client Information"
         email={params.email as string}
+        userName={form?.fullName || "User"}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

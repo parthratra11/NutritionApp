@@ -22,6 +22,7 @@ export default function AddExerciseLinks() {
   const [warmUpExercises, setWarmUpExercises] = useState<ExerciseLink[]>([]);
   const [workoutExercises, setWorkoutExercises] = useState<ExerciseLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   // Default warm-up exercises with placeholder links
   const defaultWarmUpExercises = [
@@ -183,6 +184,26 @@ export default function AddExerciseLinks() {
     fetchExerciseLinks();
   }, []);
 
+  // Fetch client name
+  useEffect(() => {
+    const fetchClientName = async () => {
+      if (!params?.email) return;
+      try {
+        const clientEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", clientEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data();
+          setUserName(clientData.fullName || "User");
+        }
+      } catch (err) {
+        console.error("Failed to fetch client name:", err);
+      }
+    };
+
+    fetchClientName();
+  }, [params?.email]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -325,6 +346,7 @@ export default function AddExerciseLinks() {
         title="Exercise Library"
         subtitle="Add Exercise Links"
         email={params.email as string}
+        userName={userName}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

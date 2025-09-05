@@ -68,6 +68,7 @@ export default function ClientOverview() {
     current: 5000,
     goal: 10000,
   });
+  const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   // Sample data for visualization charts - refine the hunger data for stacked visualization
   const hungerData = [
@@ -127,7 +128,9 @@ export default function ClientOverview() {
         const clientDocSnap = await getDoc(clientDocRef);
 
         if (clientDocSnap.exists()) {
-          setClient(clientDocSnap.data() as IntakeForm);
+          const clientData = clientDocSnap.data() as IntakeForm;
+          setClient(clientData);
+          setUserName(clientData.fullName || "User"); // Set userName from client data
         } else {
           setError("Client not found");
           return;
@@ -226,13 +229,14 @@ export default function ClientOverview() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
-        title={client.fullName}
+        title="Dashboard"
         subtitle={
-          client.timestamp?.toDate
+          client?.timestamp?.toDate
             ? formatDate(client.timestamp.toDate())
             : undefined
         }
         email={params.email as string}
+        userName={userName}
       />
 
       <div className="p-4 md:p-6">

@@ -262,6 +262,7 @@ export default function EditTemplate() {
   const [saving, setSaving] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [clientName, setClientName] = useState<string>("");
+  const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   // State for exercise options and links
   const [warmUpOptions, setWarmUpOptions] = useState<string[]>(
@@ -483,6 +484,7 @@ export default function EditTemplate() {
         if (clientDocSnap.exists()) {
           const clientData = clientDocSnap.data();
           setClientName(clientData.fullName);
+          setUserName(clientData.fullName || "User");
         }
       } catch (err) {
         console.error("Failed to fetch client name:", err);
@@ -688,6 +690,7 @@ export default function EditTemplate() {
         title={`${clientName || "Client"}'s Workout Template`}
         subtitle="Edit Mode"
         email={params.email as string}
+        userName={userName}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

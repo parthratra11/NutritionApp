@@ -147,42 +147,69 @@ export default function Home() {
 
   const dateStrip = generateDateStrip();
 
-  // Menu items for side navigation
+  // Sidebar menu items updated to match the image
   const menuItems = [
     {
       label: "Slack Channel",
       path: "/slack",
       icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       ),
     },
     {
       label: "Slack DMs",
       path: "/slack/dms",
       icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       ),
     },
     {
       label: "Logout",
       path: "/",
       icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-        />
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17 16L21 12M21 12L17 8M21 12H9M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       ),
     },
   ];
@@ -230,101 +257,61 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0B1F35]">
-      {/* Side Navigation - updated design */}
+      {/* Side Navigation - updated to match Navigation.tsx */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           showNav ? "translate-x-0" : "-translate-x-full"
-        } bg-[#0B1F35]/40 backdrop-blur-xl border-r border-white/10 text-white w-80 z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
+        } bg-[#0B1F35]/90 backdrop-blur-md border-r border-white/10 text-white w-[240px] z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
       >
-        <div className="p-8">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Menu</h2>
-              <p className="text-sm text-white/60 mt-1">Dashboard Navigation</p>
-            </div>
-            <button
-              onClick={() => setShowNav(false)}
-              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+        <div className="flex justify-end p-6">
+          <button
+            onClick={() => setShowNav(false)}
+            className="text-white/60 hover:text-white hover:cursor-pointer"
+            aria-label="Close menu"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <svg
-                className="h-6 w-6"
-                fill="none"
+              <path
+                d="M18 6L6 18M6 6L18 18"
                 stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav>
-            <ul className="space-y-3">
-              {menuItems.map((item, index) => (
-                <li key={`${item.path}-${item.label}`}>
-                  <button
-                    onClick={() => {
-                      router.push(item.path);
-                      setShowNav(false);
-                    }}
-                    className="flex items-center border-b-1 rounded-xl text-white/70 hover:text-white hover:bg-white/10 w-full py-4 px-4 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center justify-center w-12 h-12 bg-white/10 rounded-lg mr-4 group-hover:bg-white/20 transition-colors">
-                      <svg
-                        className="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        {item.icon}
-                      </svg>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-base font-medium">
-                        {item.label}
-                      </span>
-                      <span className="text-xs text-white/40 mt-0">
-                        {item.label === "Slack Channel" && "Team communication"}
-                        {item.label === "Slack DMs" && "Direct messages"}
-                        {item.label === "Logout" && "Sign out safely"}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Bottom section */}
-          {/* <div className="mt-12 pt-8 border-t border-white/10">
-            <div className="bg-white/5 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-white mb-2">
-                Quick Stats
-              </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-white/60">Active Users</span>
-                  <span className="text-white">{intakeForms.length}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-white/60">Paid Members</span>
-                  <span className="text-green-400">{paidCount}</span>
-                </div>
-              </div>
-            </div>
-          </div> */}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
+
+        <nav className="mt-8">
+          <ul>
+            {menuItems.map((item, i) => (
+              <li key={i} className="border-b border-[#1e3252]/60">
+                <button
+                  onClick={() => {
+                    router.push(item.path);
+                    setShowNav(false);
+                  }}
+                  className="flex items-center w-full py-6 px-8 text-white/80 hover:text-white hover:bg-[#1e3252]/50 transition-colors"
+                >
+                  <div className="w-8 h-8 flex items-center justify-center mr-4 text-white/80">
+                    {item.icon}
+                  </div>
+                  <span className="text-lg">{item.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
 
-      {/* Overlay - enhanced */}
+      {/* Overlay - enhanced to match Navigation.tsx */}
       <div
-        className={`fixed inset-0 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${
           showNav ? "opacity-100 z-20" : "opacity-0 -z-10"
         }`}
         onClick={() => setShowNav(false)}
@@ -338,7 +325,7 @@ export default function Home() {
             <div className="flex items-center">
               <button className="mr-3 lg:mr-4" onClick={() => setShowNav(true)}>
                 <svg
-                  className="h-6 w-6 lg:h-7 lg:w-7"
+                  className="h-6 w-6 lg:h-10 lg:w-10 hover:cursor-pointer"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -346,7 +333,7 @@ export default function Home() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1}
                     d="M4 6h16M4 12h16M4 18h16"
                   />
                 </svg>

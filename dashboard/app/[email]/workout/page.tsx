@@ -83,6 +83,7 @@ export default function WorkoutDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [trainingType, setTrainingType] = useState<string>("3x Per Week");
   const [clientName, setClientName] = useState<string>("");
+  const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   // Helper function to format date
   const formatDate = (dateStr: string) => {
@@ -279,7 +280,7 @@ export default function WorkoutDashboard() {
         const clientDocSnap = await getDoc(clientDocRef);
         if (clientDocSnap.exists()) {
           const clientData = clientDocSnap.data();
-          setClientName(clientData.fullName);
+          setUserName(clientData.fullName || "User");
         }
       } catch (err) {
         console.error("Failed to fetch client name:", err);
@@ -321,6 +322,7 @@ export default function WorkoutDashboard() {
         title={`${clientName || "Client"}'s Workout`}
         subtitle="Training Progress"
         email={params.email as string}
+        userName={userName}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
