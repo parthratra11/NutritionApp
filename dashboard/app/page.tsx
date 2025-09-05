@@ -518,13 +518,13 @@ export default function Home() {
         </button>
 
         {showSortDropdown && (
-          <div className="absolute top-full right-4 md:right-6 mt-2 bg-white rounded-lg shadow-xl py-2 w-40 border z-10">
+          <div className="absolute top-4/5 right-4 md:right-6 bg-white rounded-2xl shadow-xl py-2 w-40 border z-10">
             <button
               onClick={() => {
                 setSortBy("name");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Alphabetically
             </button>
@@ -533,7 +533,7 @@ export default function Home() {
                 setSortBy("date");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Join Date
             </button>
@@ -542,7 +542,7 @@ export default function Home() {
                 setSortBy("active");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="block w-full text-left px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Active/Inactive
             </button>
