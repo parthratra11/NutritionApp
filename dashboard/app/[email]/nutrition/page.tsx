@@ -169,16 +169,78 @@ export default function NutritionPage() {
     },
   });
 
+  // Mock data for supplements
+  const [supplementData, setSupplementData] = useState<{
+    [date: string]: SupplementData[];
+  }>({
+    "22 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "23 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Multivitamin", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "24 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "25 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Zinc", dosage: "50 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "26 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "27 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Iodized Salt", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "28 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Multivitamin", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+  });
+
   // Processed chart data
   const [macroTrendData, setMacroTrendData] = useState<DailyMacroTrendData[]>(
     []
   );
   const [mealCalorieData, setMealCalorieData] = useState<MealCalorieData[]>([]);
 
-  // Mock supplement data (keeping this as mock since it's not in the backend structure)
-  const [supplementData, setSupplementData] = useState<{
-    [date: string]: SupplementData[];
-  }>({});
+  // // Mock supplement data (keeping this as mock since it's not in the backend structure)
+  // const [supplementData, setSupplementData] = useState<{
+  //   [date: string]: SupplementData[];
+  // }>({});
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-");
@@ -1320,6 +1382,69 @@ export default function NutritionPage() {
                 </div>
               </div>
             </div>
+
+            {/* Keep the Supplement Tracking section in tabular view */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5 mt-8">
+              <div className="flex items-center mb-6">
+                <svg
+                  className="w-6 h-6 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4" />
+                </svg>
+                <h3 className="text-xl font-semibold">Supplement Tracking</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <tbody>
+                    {Object.entries(supplementData)
+                      .sort((a, b) => {
+                        // Sort dates in reverse (newest first)
+                        return (
+                          new Date(b[0]).getTime() - new Date(a[0]).getTime()
+                        );
+                      })
+                      .map(([date, supplements]) => (
+                        <tr
+                          key={date}
+                          className="border-b border-[#22364F] last:border-b-0"
+                        >
+                          <td className="py-3 pl-3 pr-6 align-top whitespace-nowrap w-32">
+                            <div className="font-medium">{date}</div>
+                          </td>
+                          <td className="py-3">
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                              {supplements.map((supplement, idx) => (
+                                <div
+                                  key={`${date}-${idx}`}
+                                  className="bg-[#FFFFFF12] rounded-md p-2 text-left"
+                                  style={{
+                                    border:
+                                      "0.5px solid rgba(255, 255, 255, 0.2)",
+                                  }}
+                                >
+                                  <div className="text-white text-sm font-medium mb-1">
+                                    {supplement.name}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    Dosage: {supplement.dosage}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </>
         ) : (
           <>
@@ -1525,6 +1650,68 @@ export default function NutritionPage() {
                         );
                       }
                     })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Keep the Supplement Tracking section in tabular view */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5 mt-8">
+              <div className="flex items-center mb-6">
+                <svg
+                  className="w-6 h-6 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4" />
+                </svg>
+                <h3 className="text-xl font-semibold">Supplement Tracking</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <tbody>
+                    {Object.entries(supplementData)
+                      .sort((a, b) => {
+                        // Sort dates in reverse (newest first)
+                        return (
+                          new Date(b[0]).getTime() - new Date(a[0]).getTime()
+                        );
+                      })
+                      .map(([date, supplements]) => (
+                        <tr
+                          key={date}
+                          className="border-b border-[#22364F] last:border-b-0"
+                        >
+                          <td className="py-3 pl-3 pr-6 align-top whitespace-nowrap w-32">
+                            <div className="font-medium">{date}</div>
+                          </td>
+                          <td className="py-3">
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                              {supplements.map((supplement, idx) => (
+                                <div
+                                  key={`${date}-${idx}`}
+                                  className="bg-[#FFFFFF12] rounded-md p-2 text-left"
+                                  style={{
+                                    border:
+                                      "0.5px solid rgba(255, 255, 255, 0.2)",
+                                  }}
+                                >
+                                  <div className="text-white text-sm font-medium mb-1">
+                                    {supplement.name}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    Dosage: {supplement.dosage}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
