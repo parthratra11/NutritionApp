@@ -279,7 +279,7 @@ export default function ClientOverview() {
           {/* Weight Chart - Replace placeholder with actual chart */}
           <div
             className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/${params.email}/report`)}
+            onClick={() => router.push(`/${params.email}/weight`)}
           >
             <h2 className="text-xl font-semibold mb-3 text-gray-800">
               Weight Progress
