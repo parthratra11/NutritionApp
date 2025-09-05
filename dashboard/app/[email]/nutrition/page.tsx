@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { db } from "../../../firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Navigation from "@/components/shared/Navigation";
 import {
   LineChart,
   Line,
@@ -18,1530 +16,862 @@ import {
   Bar,
   ReferenceLine,
 } from "recharts";
-import Navigation from "@/components/shared/Navigation";
 
-interface MealData {
-  "Protein (g)": string;
-  "Fat (g)": string;
-  "Carbohydrate (g)": string;
-  Kcal: string;
+// Define types
+interface MacroData {
+  value: number;
+  target: number;
+  percentage: number;
+  status: "on-target" | "below-target" | "above-target";
 }
 
-interface DayData {
+interface SupplementData {
+  name: string;
+  dosage: string;
+}
+
+interface DailyMacroTrendData {
   date: string;
-  dayType: string;
-  meals: {
-    [meal: string]: MealData;
-  };
-  totals: {
-    "Protein (g)": number;
-    "Fat (g)": number;
-    "Carbohydrate (g)": number;
-    Kcal: number;
-  };
+  protein: number;
+  carbs: number;
+  fats: number;
+  fiber: number;
 }
 
-interface WeekData {
-  [week: string]: {
-    dates: string[];
-    avgProtein: number;
-    avgCarbs: number;
-    avgFat: number;
-    avgCalories: number;
-    dayTypes: string[];
-    dailyData: {
-      [date: string]: {
-        dayType: string;
-        meals: { [meal: string]: MealData };
-        totals: {
-          "Protein (g)": number;
-          "Fat (g)": number;
-          "Carbohydrate (g)": number;
-          Kcal: number;
-        };
-      };
-    };
-  };
-}
-
-interface NutritionDataStructure {
-  firstEntryDate: string;
-  [week: string]: WeekData | string;
+interface MealCalorieData {
+  date: string;
+  lunch: number;
+  dinner: number;
+  preWorkout: number;
+  afternoon: number;
+  total: number;
 }
 
 export default function NutritionPage() {
   const params = useParams();
-  const [weeklyData, setWeeklyData] = useState<WeekData | null>(null);
-  const [viewMode, setViewMode] = useState<"weekly" | "overview">("weekly");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const email = params.email as string;
+  const [viewMode, setViewMode] = useState<"graphs" | "tabular">("graphs");
+  const [macroRangeTab, setMacroRangeTab] = useState<"weekly" | "monthly" | "yearly">("weekly");
+  const [calorieRangeTab, setCalorieRangeTab] = useState<"weekly" | "monthly" | "yearly">("weekly");
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
-  const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDateData, setSelectedDateData] = useState<{
-    date: string;
-    data: any;
-  } | null>(null);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [showGraphOverlay, setShowGraphOverlay] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
 
-  // Define target values for each nutrient
-  const targets = {
-    protein: 150, // Target protein in grams
-    carbs: 200, // Target carbs in grams
-    fat: 70, // Target fat in grams
-    calories: 2000, // Target calories
-  };
+  // Mock data for nutrition metrics
+  const [macroData, setMacroData] = useState<{
+    protein: MacroData;
+    carbs: MacroData;
+    fats: MacroData;
+    calories: MacroData;
+  }>({
+    protein: { value: 160, target: 175, percentage: 91, status: "on-target" },
+    carbs: { value: 260, target: 300, percentage: 87, status: "below-target" },
+    fats: { value: 70, target: 85, percentage: 82, status: "below-target" },
+    calories: { value: 2220, target: 2500, percentage: 89, status: "below-target" }
+  });
 
-  const clientName = params?.email
-    ? decodeURIComponent(params.email as string).split("@")[0]
-    : "Client";
+  // Mock data for daily trends
+  const [macroTrendData, setMacroTrendData] = useState<DailyMacroTrendData[]>([
+    { date: "22-07-2025", protein: 175, carbs: 270, fats: 85, fiber: 30 },
+    { date: "23-07-2025", protein: 180, carbs: 290, fats: 90, fiber: 28 },
+    { date: "24-07-2025", protein: 155, carbs: 240, fats: 75, fiber: 35 },
+    { date: "25-07-2025", protein: 170, carbs: 280, fats: 80, fiber: 25 },
+    { date: "26-07-2025", protein: 180, carbs: 320, fats: 85, fiber: 22 },
+    { date: "27-07-2025", protein: 175, carbs: 275, fats: 80, fiber: 27 },
+    { date: "28-07-2025", protein: 180, carbs: 270, fats: 82, fiber: 32 },
+  ]);
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-");
-    return new Date(
-      parseInt(year),
-      parseInt(month) - 1,
-      parseInt(day)
-    ).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "2-digit",
-    });
-  };
+  // Mock data for meal calorie distribution
+  const [mealCalorieData, setMealCalorieData] = useState<MealCalorieData[]>([
+    { date: "22-07-2025", lunch: 650, dinner: 800, preWorkout: 300, afternoon: 500, total: 2250 },
+    { date: "23-07-2025", lunch: 700, dinner: 850, preWorkout: 350, afternoon: 600, total: 2500 },
+    { date: "24-07-2025", lunch: 550, dinner: 750, preWorkout: 250, afternoon: 300, total: 1850 },
+    { date: "25-07-2025", lunch: 600, dinner: 800, preWorkout: 300, afternoon: 550, total: 2250 },
+    { date: "26-07-2025", lunch: 650, dinner: 900, preWorkout: 350, afternoon: 600, total: 2500 },
+    { date: "27-07-2025", lunch: 600, dinner: 800, preWorkout: 350, afternoon: 500, total: 2250 },
+    { date: "28-07-2025", lunch: 550, dinner: 850, preWorkout: 300, afternoon: 400, total: 2100 },
+  ]);
 
-  const groupDataByWeeks = (data: NutritionDataStructure): WeekData => {
-    const weeks: WeekData = {};
-
-    Object.entries(data).forEach(([key, value]) => {
-      if (key === "firstEntryDate") return;
-
-      // Extract week number for sorting
-      const weekNum = parseInt(key.replace("week", ""), 10) || 0;
-      const weekKey = `Week ${weekNum}`;
-
-      if (!weeks[weekKey]) {
-        weeks[weekKey] = {
-          weekNumber: weekNum,
-          dates: [],
-          avgProtein: 0,
-          avgCarbs: 0,
-          avgFat: 0,
-          avgCalories: 0,
-          dayTypes: [],
-          dailyData: {},
-        };
-      }
-
-      // Process the week data
-      const weekData = value as WeekData;
-      Object.entries(weekData).forEach(([day, dayData]) => {
-        if (dayData.date) {
-          weeks[weekKey].dates.push(dayData.date);
-          weeks[weekKey].avgProtein += dayData.totals["Protein (g)"];
-          weeks[weekKey].avgCarbs += dayData.totals["Carbohydrate (g)"];
-          weeks[weekKey].avgFat += dayData.totals["Fat (g)"];
-          weeks[weekKey].avgCalories += dayData.totals.Kcal;
-          weeks[weekKey].dayTypes.push(dayData.dayType);
-          weeks[weekKey].dailyData[dayData.date] = {
-            dayType: dayData.dayType,
-            meals: dayData.meals,
-            totals: dayData.totals,
-          };
-        }
-      });
-
-      // Calculate averages
-      const daysCount = weeks[weekKey].dates.length;
-      if (daysCount > 0) {
-        weeks[weekKey].avgProtein = parseFloat(
-          (weeks[weekKey].avgProtein / daysCount).toFixed(1)
-        );
-        weeks[weekKey].avgCarbs = parseFloat(
-          (weeks[weekKey].avgCarbs / daysCount).toFixed(1)
-        );
-        weeks[weekKey].avgFat = parseFloat(
-          (weeks[weekKey].avgFat / daysCount).toFixed(1)
-        );
-        weeks[weekKey].avgCalories = parseFloat(
-          (weeks[weekKey].avgCalories / daysCount).toFixed(1)
-        );
-      }
-    });
-
-    return weeks;
-  };
-
-  const getDayName = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { weekday: "long" });
-  };
-
-  const getWeekRange = (dates: string[]) => {
-    const sortedDates = dates.sort();
-    return `${formatDate(sortedDates[0])} - ${formatDate(
-      sortedDates[sortedDates.length - 1]
-    )}`;
-  };
+  // Mock data for supplements
+  const [supplementData, setSupplementData] = useState<{[date: string]: SupplementData[]}>({
+    "22 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "23 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Multivitamin", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "24 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "25 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Zinc", dosage: "50 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "26 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Magnesium", dosage: "400 mg" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "27 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Iodized Salt", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+    "28 July 2025": [
+      { name: "Omega-3", dosage: "1g" },
+      { name: "Creatine Monohydrate", dosage: "5g" },
+      { name: "Vitamin D", dosage: "125 mg" },
+      { name: "Caffeine", dosage: "100 mg" },
+      { name: "Multivitamin", dosage: "1 g" },
+      { name: "Protein Powder", dosage: "25 g" },
+    ],
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!params?.email) return;
+    // Simulate data loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-      try {
-        const decodedEmail = decodeURIComponent(params.email as string);
-        const docRef = doc(db, "nutrition", decodedEmail);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data() as NutritionDataStructure;
-          const weeks = groupDataByWeeks(data);
-          setWeeklyData(weeks);
-          const weeksList = Object.keys(weeks);
-          setSelectedWeek(weeksList[weeksList.length - 1]);
-        }
-      } catch (err) {
-        setError("Failed to fetch nutrition data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [params?.email]);
-
-  const NutritionModal = ({
-    isOpen,
-    onClose,
-    date,
-    dayData,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    date: string;
-    dayData: any;
-  }) => {
-    if (!isOpen) return null;
-
+  if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
-        <div
-          className="fixed inset-0 bg-gray-500/20 backdrop-blur-sm"
-          onClick={onClose}
+      <div className="min-h-screen bg-[#07172C] text-white">
+        <Navigation 
+          title="Nutrition" 
+          subtitle="Track your nutrition progress"
+          email={decodeURIComponent(email)}
         />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto m-4">
-          <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center z-10">
-            <div>
-              <h2 className="text-xl font-semibold">
-                {getDayName(date)} - {formatDate(date)}
-              </h2>
-              <p className="text-gray-500">{dayData.dayType} Day</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Close modal"
-            >
-              <svg
-                className="w-5 h-5 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {dayData.meals &&
-                Object.entries(dayData.meals).map((mealEntry) => {
-                  const meal = mealEntry[0];
-                  const data = mealEntry[1] as MealData;
-                  return (
-                    <div key={meal} className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="font-medium text-lg mb-2">{meal}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-500">Protein</p>
-                          <p className="font-medium">{data["Protein (g)"]}g</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Carbs</p>
-                          <p className="font-medium">
-                            {data["Carbohydrate (g)"]}g
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Fat</p>
-                          <p className="font-medium">{data["Fat (g)"]}g</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Calories</p>
-                          <p className="font-medium">{data.Kcal}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-            <div className="mt-6 border-t pt-6">
-              <h3 className="font-medium text-lg mb-3">Daily Totals</h3>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Total Protein</p>
-                    <p className="font-medium">
-                      {dayData.totals["Protein (g)"]}g
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Total Carbs</p>
-                    <p className="font-medium">
-                      {dayData.totals["Carbohydrate (g)"]}g
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Total Fat</p>
-                    <p className="font-medium">{dayData.totals["Fat (g)"]}g</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Total Calories</p>
-                    <p className="font-medium">{dayData.totals.Kcal}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="px-4 py-6 flex justify-center items-center h-64">
+          <p>Loading nutrition data...</p>
         </div>
       </div>
     );
-  };
-
-  const getProgressColor = (current: number, target: number) => {
-    const percentage = (current / target) * 100;
-    if (percentage >= 90) return "text-green-600";
-    if (percentage >= 75) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const formatProgress = (current: number, target: number) => {
-    return `${current}/${target}`;
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const dayData =
-        weeklyData && selectedWeek
-          ? weeklyData[selectedWeek]?.dailyData[label]
-          : null;
-      if (!dayData) return null;
-
-      return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 min-w-[300px]">
-          <div className="border-b pb-2 mb-3">
-            <p className="font-medium">
-              {getDayName(label)} - {formatDate(label)}
-            </p>
-            <p className="text-sm text-gray-500">{dayData.dayType} Day</p>
-          </div>
-          {dayData.meals &&
-            Object.entries(dayData.meals).map((mealEntry) => {
-              const meal = mealEntry[0];
-              const data = mealEntry[1] as MealData;
-              return (
-                <div key={meal} className="mb-3">
-                  <p className="font-medium text-gray-700 mb-1">{meal}</p>
-                  <div className="grid grid-cols-2 gap-x-4 text-sm">
-                    <p className="text-gray-600">
-                      Protein: {data["Protein (g)"]}g
-                    </p>
-                    <p className="text-gray-600">
-                      Carbs: {data["Carbohydrate (g)"]}g
-                    </p>
-                    <p className="text-gray-600">Fat: {data["Fat (g)"]}g</p>
-                    <p className="text-gray-600">Calories: {data.Kcal}</p>
-                  </div>
-                </div>
-              );
-            })}
-          <div className="border-t pt-2 mt-2">
-            <p className="font-medium text-gray-700 mb-1">Daily Totals</p>
-            <div className="grid grid-cols-2 gap-x-4 text-sm">
-              <p
-                className={`${getProgressColor(
-                  dayData.totals["Protein (g)"],
-                  targets.protein
-                )}`}
-              >
-                Protein:{" "}
-                {formatProgress(dayData.totals["Protein (g)"], targets.protein)}
-                g
-              </p>
-              <p
-                className={`${getProgressColor(
-                  dayData.totals["Carbohydrate (g)"],
-                  targets.carbs
-                )}`}
-              >
-                Carbs:{" "}
-                {formatProgress(
-                  dayData.totals["Carbohydrate (g)"],
-                  targets.carbs
-                )}
-                g
-              </p>
-              <p
-                className={`${getProgressColor(
-                  dayData.totals["Fat (g)"],
-                  targets.fat
-                )}`}
-              >
-                Fat: {formatProgress(dayData.totals["Fat (g)"], targets.fat)}g
-              </p>
-              <p
-                className={`${getProgressColor(
-                  dayData.totals.Kcal,
-                  targets.calories
-                )}`}
-              >
-                Calories:{" "}
-                {formatProgress(dayData.totals.Kcal, targets.calories)}
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // New function to calculate daily data when date range spans less than 2 weeks
-  const calculateDailyNutrition = () => {
-    if (!weeklyData) return [];
-
-    // Gather all daily data across all weeks
-    const allDays: {
-      date: string;
-      formattedDate: string;
-      protein: number;
-      carbs: number;
-      fat: number;
-      calories: number;
-      dayType: string;
-    }[] = [];
-
-    // Extract daily data from all weeks
-    Object.values(weeklyData).forEach((week) => {
-      Object.entries(week.dailyData).forEach(([date, dayData]) => {
-        allDays.push({
-          date,
-          formattedDate: formatDate(date),
-          protein: dayData.totals["Protein (g)"],
-          carbs: dayData.totals["Carbohydrate (g)"],
-          fat: dayData.totals["Fat (g)"],
-          calories: dayData.totals.Kcal,
-          dayType: dayData.dayType,
-        });
-      });
-    });
-
-    // Filter by date range
-    if (comparisonPeriod === "custom" && startDate && endDate) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-
-      return allDays
-        .filter((day) => {
-          const dayDate = new Date(day.date);
-          return dayDate >= startDateObj && dayDate <= endDateObj;
-        })
-        .sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-    }
-
-    return allDays.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-  };
-
-  const getFilteredWeeklyData = () => {
-    if (!weeklyData) return {};
-
-    if (comparisonPeriod === "all") {
-      return weeklyData;
-    }
-
-    // Handle custom date range
-    if (comparisonPeriod === "custom") {
-      if (startDate && endDate) {
-        const startDateObj = new Date(startDate);
-        const endDateObj = new Date(endDate);
-
-        // Calculate date difference in days
-        const daysDifference =
-          (endDateObj.getTime() - startDateObj.getTime()) / (1000 * 3600 * 24);
-
-        // If less than 2 weeks, return daily data instead of weekly averages
-        if (daysDifference < 14) {
-          // This will be handled differently in the render function
-          // by checking if the result from calculateDailyNutrition() is used
-          return weeklyData;
-        }
-
-        return Object.entries(weeklyData).reduce((filtered, [week, data]) => {
-          const earliestDate = new Date(
-            Math.min(...data.dates.map((d) => new Date(d).getTime()))
-          );
-
-          if (earliestDate >= startDateObj && earliestDate <= endDateObj) {
-            filtered[week] = data;
-          }
-          return filtered;
-        }, {} as WeekData);
-      }
-    }
-
-    const now = new Date();
-    const cutoffDate = new Date();
-
-    switch (comparisonPeriod) {
-      case "monthly":
-        cutoffDate.setMonth(now.getMonth() - 1);
-        break;
-      case "quarterly":
-        cutoffDate.setMonth(now.getMonth() - 3);
-        break;
-      case "yearly":
-        cutoffDate.setFullYear(now.getFullYear() - 1);
-        break;
-      default:
-        return weeklyData;
-    }
-
-    return Object.entries(weeklyData).reduce((filtered, [week, data]) => {
-      const earliestDate = new Date(
-        Math.min(...data.dates.map((d) => new Date(d).getTime()))
-      );
-
-      if (earliestDate >= cutoffDate) {
-        filtered[week] = data;
-      }
-
-      return filtered;
-    }, {} as WeekData);
-  };
-
-  // Helper function to sort weeks chronologically
-  const sortedWeekEntries = (data: WeekData) => {
-    return Object.entries(data)
-      .map(([week, weekData]) => ({
-        week,
-        weekNumber:
-          weekData.weekNumber || parseInt(week.replace("Week ", ""), 10) || 0,
-        ...weekData,
-      }))
-      .sort((a, b) => a.weekNumber - b.weekNumber);
-  };
-
-  // Helper function to sort dates chronologically
-  const sortedDates = (dates: string[]) => {
-    return [...dates].sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    );
-  };
-
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!weeklyData) return <div className="p-6">No nutrition data found</div>;
-
-  const filteredData = getFilteredWeeklyData();
-
-  const summaryMetrics = [
-    {
-      label: "Avg Protein",
-      value: `${weeklyData[selectedWeek]?.avgProtein || 0}g`,
-      target: `${targets.protein}g`,
-      progress: `${weeklyData[selectedWeek]?.avgProtein || 0}/${
-        targets.protein
-      }g`,
-      color: `${getProgressColor(
-        weeklyData[selectedWeek]?.avgProtein || 0,
-        targets.protein
-      )}`,
-    },
-    {
-      label: "Avg Carbs",
-      value: `${weeklyData[selectedWeek]?.avgCarbs || 0}g`,
-      target: `${targets.carbs}g`,
-      progress: `${weeklyData[selectedWeek]?.avgCarbs || 0}/${targets.carbs}g`,
-      color: `${getProgressColor(
-        weeklyData[selectedWeek]?.avgCarbs || 0,
-        targets.carbs
-      )}`,
-    },
-    {
-      label: "Avg Fat",
-      value: `${weeklyData[selectedWeek]?.avgFat || 0}g`,
-      target: `${targets.fat}g`,
-      progress: `${weeklyData[selectedWeek]?.avgFat || 0}/${targets.fat}g`,
-      color: `${getProgressColor(
-        weeklyData[selectedWeek]?.avgFat || 0,
-        targets.fat
-      )}`,
-    },
-    {
-      label: "Avg Calories",
-      value: `${weeklyData[selectedWeek]?.avgCalories || 0}`,
-      target: `${targets.calories}`,
-      progress: `${weeklyData[selectedWeek]?.avgCalories || 0}/${
-        targets.calories
-      }`,
-      color: `${getProgressColor(
-        weeklyData[selectedWeek]?.avgCalories || 0,
-        targets.calories
-      )}`,
-    },
-  ];
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation
-        title={`${clientName}'s Nutrition`}
-        subtitle="Nutrition Progress"
-        email={params.email as string}
+    <div className="min-h-screen bg-[#07172C] text-white">
+      <Navigation 
+        title="Nutrition" 
+        subtitle="Track your nutrition intake"
+        email={decodeURIComponent(email)}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex space-x-4 mb-6">
-          <button
-            onClick={() => setViewMode("weekly")}
-            className={`px-6 py-2.5 rounded-lg transition-colors ${
-              viewMode === "weekly"
-                ? "bg-[#0a1c3f] text-white"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-            } font-medium text-sm`}
-          >
-            Weekly View
-          </button>
-          <button
-            onClick={() => setViewMode("overview")}
-            className={`px-6 py-2.5 rounded-lg transition-colors ${
-              viewMode === "overview"
-                ? "bg-[#0a1c3f] text-white"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-            } font-medium text-sm`}
-          >
-            Progress Overview
-          </button>
+
+      <div className="px-4 py-6 space-y-8">
+        {/* Macro Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Daily Protein Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium">Daily Protein</h3>
+              <div className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">On Target</div>
+            </div>
+            <div className="text-3xl font-bold mb-2">{macroData.protein.value}g</div>
+            <div className="flex items-center">
+              <svg className="w-4 h-4 text-green-500 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 15l-6-6-6 6"/>
+              </svg>
+              <span className="text-green-500 text-sm">{macroData.protein.percentage}%</span>
+            </div>
+          </div>
+
+          {/* Daily Carbs Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium">Daily Carbs</h3>
+              <div className="bg-[#FF5252] text-xs rounded-md px-2 py-0.5">Below Target</div>
+            </div>
+            <div className="text-3xl font-bold mb-2">{macroData.carbs.value}g</div>
+            <div className="flex items-center">
+              <svg className="w-4 h-4 text-blue-400 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 15l-6-6-6 6"/>
+              </svg>
+              <span className="text-blue-400 text-sm">{macroData.carbs.percentage}%</span>
+            </div>
+          </div>
+
+          {/* Daily Fats Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium">Daily Fats</h3>
+              <div className="bg-[#FF5252] text-xs rounded-md px-2 py-0.5">Below Target</div>
+            </div>
+            <div className="text-3xl font-bold mb-2">{macroData.fats.value}g</div>
+            <div className="flex items-center">
+              <svg className="w-4 h-4 text-blue-400 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 15l-6-6-6 6"/>
+              </svg>
+              <span className="text-blue-400 text-sm">{macroData.fats.percentage}%</span>
+            </div>
+          </div>
+
+          {/* Daily Calories Card */}
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium">Daily Calories</h3>
+              <div className="bg-[#FF5252] text-xs rounded-md px-2 py-0.5">Below Target</div>
+            </div>
+            <div className="text-3xl font-bold mb-2">{macroData.calories.value} kcal</div>
+            <div className="flex items-center">
+              <svg className="w-4 h-4 text-blue-400 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 15l-6-6-6 6"/>
+              </svg>
+              <span className="text-blue-400 text-sm">{macroData.calories.percentage}%</span>
+            </div>
+          </div>
         </div>
 
-        {viewMode === "weekly" ? (
+        {/* View mode toggle */}
+        <div className="flex justify-start">
+          <div className="flex">
+            <button 
+              onClick={() => setViewMode("graphs")}
+              className={`px-6 py-2 rounded-l text-base ${viewMode === "graphs" ? "bg-[#DD3333]" : "bg-gray-700"}`}
+            >
+              Graphs
+            </button>
+            <button 
+              onClick={() => setViewMode("tabular")}
+              className={`px-6 py-2 rounded-r text-base ${viewMode === "tabular" ? "bg-[#DD3333]" : "bg-gray-700"}`}
+            >
+              Tabular
+            </button>
+          </div>
+        </div>
+
+        {viewMode === "graphs" ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">Select Week</h2>
-              <div className="overflow-x-auto">
-                <div className="flex gap-3">
-                  {Object.entries(weeklyData).map(([week, data]) => (
-                    <button
-                      key={week}
-                      onClick={() => setSelectedWeek(week)}
-                      className={`flex-shrink-0 px-4 py-3 rounded-lg transition-colors ${
-                        selectedWeek === week
-                          ? "bg-[#0a1c3f] text-white"
-                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      <div className="text-sm font-medium">{week}</div>
-                      <div className="text-xs opacity-75">
-                        {getWeekRange(data.dates)}
-                      </div>
-                    </button>
-                  ))}
+            {/* Daily Macronutrient Trends */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Daily Macronutrient Trends</h3>
+                <div className="flex bg-[#ffffff20] rounded-md overflow-hidden">
+                  <button 
+                    onClick={() => setMacroRangeTab("weekly")}
+                    className={`px-4 py-1 text-sm ${macroRangeTab === "weekly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Weekly
+                  </button>
+                  <button 
+                    onClick={() => setMacroRangeTab("monthly")}
+                    className={`px-4 py-1 text-sm ${macroRangeTab === "monthly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Monthly
+                  </button>
+                  <button 
+                    onClick={() => setMacroRangeTab("yearly")}
+                    className={`px-4 py-1 text-sm ${macroRangeTab === "yearly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Yearly
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={macroTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#0f172a', 
+                        borderColor: '#334155',
+                        color: '#fff' 
+                      }}
+                    />
+                    <Legend 
+                      wrapperStyle={{ display: 'none' }} // Hide the default legend
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="carbs" 
+                      name="Carbs (g)" 
+                      stroke="#F6A249" 
+                      activeDot={{ r: 8 }} 
+                      dot={{ r: 4 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="fats" 
+                      name="Fats (g)" 
+                      stroke="#F03028" 
+                      dot={{ r: 4 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="fiber" 
+                      name="Fiber (g)" 
+                      stroke="#FFE7A7" 
+                      dot={{ r: 4 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="protein" 
+                      name="Protein (g)" 
+                      stroke="#F95928" 
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Custom Legend */}
+              <div className="flex justify-center space-x-12 mt-6">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#F6A249] mr-2"></div>
+                  <span>Carbs (g)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#F03028] mr-2"></div>
+                  <span>Fats (g)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#FFE7A7] mr-2"></div>
+                  <span>Fiber (g)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#F95928] mr-2"></div>
+                  <span>Protein (g)</span>
                 </div>
               </div>
             </div>
 
-            {selectedWeek && weeklyData[selectedWeek] && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-semibold mb-4">Weekly Summary</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {summaryMetrics.map((metric) => (
-                      <div
-                        key={metric.label}
-                        className="bg-white rounded-lg p-4 border border-gray-200"
-                      >
-                        <div className="text-sm text-gray-500">
-                          {metric.label}
-                        </div>
-                        <div className="flex justify-between items-center mt-1">
-                          <div
-                            className={`text-lg font-semibold ${metric.color}`}
-                          >
-                            {metric.progress}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          Target: {metric.target}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Weekly Macronutrients
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={weeklyData[selectedWeek].dates.map(
-                              (date) => ({
-                                date,
-                                protein:
-                                  weeklyData[selectedWeek].dailyData[date]
-                                    .totals["Protein (g)"],
-                                carbs:
-                                  weeklyData[selectedWeek].dailyData[date]
-                                    .totals["Carbohydrate (g)"],
-                                fat: weeklyData[selectedWeek].dailyData[date]
-                                  .totals["Fat (g)"],
-                              })
-                            )}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="date"
-                              tickFormatter={(date) =>
-                                `${getDayName(date).slice(0, 3)} ${formatDate(
-                                  date
-                                )}`
-                              }
-                              height={60}
-                              angle={-45}
-                              textAnchor="end"
-                            />
-                            <YAxis />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend />
-                            <Bar
-                              dataKey="protein"
-                              fill="#4ade80"
-                              name="Protein"
-                            />
-                            <Bar dataKey="carbs" fill="#f59e0b" name="Carbs" />
-                            <Bar dataKey="fat" fill="#ef4444" name="Fat" />
-                            <ReferenceLine
-                              y={targets.protein}
-                              stroke="#4ade80"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Protein Target",
-                                position: "insideTopRight",
-                                fill: "#4ade80",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.carbs}
-                              stroke="#f59e0b"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Carbs Target",
-                                position: "insideTopRight",
-                                fill: "#f59e0b",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.fat}
-                              stroke="#ef4444"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Fat Target",
-                                position: "insideTopRight",
-                                fill: "#ef4444",
-                              }}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Weekly Calories
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={weeklyData[selectedWeek].dates.map(
-                              (date) => ({
-                                date,
-                                calories:
-                                  weeklyData[selectedWeek].dailyData[date]
-                                    .totals.Kcal,
-                              })
-                            )}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="date"
-                              tickFormatter={(date) =>
-                                `${getDayName(date).slice(0, 3)} ${formatDate(
-                                  date
-                                )}`
-                              }
-                              height={60}
-                              angle={-45}
-                              textAnchor="end"
-                            />
-                            <YAxis />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend />
-                            <Bar
-                              dataKey="calories"
-                              fill="#8b5cf6"
-                              name="Calories"
-                            />
-                            <ReferenceLine
-                              y={targets.calories}
-                              stroke="#8b5cf6"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Calorie Target",
-                                position: "insideTopRight",
-                                fill: "#8b5cf6",
-                              }}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Day Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Protein (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Carbs (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Fat (g)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Calories
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {weeklyData[selectedWeek].dates.map((date) => {
-                        const dayData =
-                          weeklyData[selectedWeek].dailyData[date];
-                        return (
-                          <tr key={date}>
-                            <td
-                              className="px-6 py-4 cursor-pointer hover:text-blue-600"
-                              onClick={() => {
-                                const dayData =
-                                  weeklyData[selectedWeek].dailyData[date];
-                                setSelectedDateData({
-                                  date,
-                                  data: dayData,
-                                });
-                                setIsModalOpen(true);
-                              }}
-                            >
-                              {formatDate(date)}
-                            </td>
-                            <td className="px-6 py-4">{dayData.dayType}</td>
-                            <td
-                              className={`px-6 py-4 ${getProgressColor(
-                                dayData.totals["Protein (g)"],
-                                targets.protein
-                              )}`}
-                            >
-                              {formatProgress(
-                                dayData.totals["Protein (g)"],
-                                targets.protein
-                              )}
-                            </td>
-                            <td
-                              className={`px-6 py-4 ${getProgressColor(
-                                dayData.totals["Carbohydrate (g)"],
-                                targets.carbs
-                              )}`}
-                            >
-                              {formatProgress(
-                                dayData.totals["Carbohydrate (g)"],
-                                targets.carbs
-                              )}
-                            </td>
-                            <td
-                              className={`px-6 py-4 ${getProgressColor(
-                                dayData.totals["Fat (g)"],
-                                targets.fat
-                              )}`}
-                            >
-                              {formatProgress(
-                                dayData.totals["Fat (g)"],
-                                targets.fat
-                              )}
-                            </td>
-                            <td
-                              className={`px-6 py-4 ${getProgressColor(
-                                dayData.totals.Kcal,
-                                targets.calories
-                              )}`}
-                            >
-                              {formatProgress(
-                                dayData.totals.Kcal,
-                                targets.calories
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      <tr className="bg-gray-50 font-medium">
-                        <td className="px-6 py-4">Week Average</td>
-                        <td className="px-6 py-4">-</td>
-                        <td
-                          className={`px-6 py-4 ${getProgressColor(
-                            weeklyData[selectedWeek].avgProtein,
-                            targets.protein
-                          )}`}
-                        >
-                          {formatProgress(
-                            weeklyData[selectedWeek].avgProtein,
-                            targets.protein
-                          )}
-                        </td>
-                        <td
-                          className={`px-6 py-4 ${getProgressColor(
-                            weeklyData[selectedWeek].avgCarbs,
-                            targets.carbs
-                          )}`}
-                        >
-                          {formatProgress(
-                            weeklyData[selectedWeek].avgCarbs,
-                            targets.carbs
-                          )}
-                        </td>
-                        <td
-                          className={`px-6 py-4 ${getProgressColor(
-                            weeklyData[selectedWeek].avgFat,
-                            targets.fat
-                          )}`}
-                        >
-                          {formatProgress(
-                            weeklyData[selectedWeek].avgFat,
-                            targets.fat
-                          )}
-                        </td>
-                        <td
-                          className={`px-6 py-4 ${getProgressColor(
-                            weeklyData[selectedWeek].avgCalories,
-                            targets.calories
-                          )}`}
-                        >
-                          {formatProgress(
-                            weeklyData[selectedWeek].avgCalories,
-                            targets.calories
-                          )}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+            {/* Meal Calorie Distribution */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Meal Calorie Distribution</h3>
+                <div className="flex bg-[#ffffff20] rounded-md overflow-hidden">
+                  <button 
+                    onClick={() => setCalorieRangeTab("weekly")}
+                    className={`px-4 py-1 text-sm ${calorieRangeTab === "weekly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Weekly
+                  </button>
+                  <button 
+                    onClick={() => setCalorieRangeTab("monthly")}
+                    className={`px-4 py-1 text-sm ${calorieRangeTab === "monthly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Monthly
+                  </button>
+                  <button 
+                    onClick={() => setCalorieRangeTab("yearly")}
+                    className={`px-4 py-1 text-sm ${calorieRangeTab === "yearly" ? "bg-white text-[#07172C]" : ""}`}
+                  >
+                    Yearly
+                  </button>
                 </div>
               </div>
-            )}
+
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={mealCalorieData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#0f172a', 
+                        borderColor: '#334155',
+                        color: '#fff' 
+                      }}
+                      cursor={false} // This will remove the background highlight on hover
+                    />
+                    <Legend 
+                      wrapperStyle={{ display: 'none' }} // Hide the default legend
+                    />
+                    <Bar dataKey="afternoon" name="Afternoon" stackId="a" fill="#BC8346" />
+                    <Bar dataKey="dinner" name="Dinner" stackId="a" fill="#992F30" />
+                    <Bar dataKey="lunch" name="Lunch" stackId="a" fill="#C3B68C" />
+                    <Bar dataKey="preWorkout" name="Pre-Workout" stackId="a" fill="#BE4D2E" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Custom Legend */}
+              <div className="flex justify-center space-x-12 mt-6">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-[#BC8346] mr-2"></div>
+                  <span>Afternoon</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-[#992F30] mr-2"></div>
+                  <span>Dinner</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-[#C3B68C] mr-2"></div>
+                  <span>Lunch</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-[#BE4D2E] mr-2"></div>
+                  <span>Pre-Workout</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Supplement Tracking */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+              <div className="flex items-center mb-6">
+                <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4"/>
+                </svg>
+                <h3 className="text-xl font-semibold">Supplement Tracking</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <tbody>
+                    {Object.entries(supplementData).map(([date, supplements]) => (
+                      <tr key={date} className="border-b border-[#22364F] last:border-b-0">
+                        <td className="py-3 pl-3 pr-6 align-top whitespace-nowrap w-32">
+                          <div className="font-medium">{date}</div>
+                        </td>
+                        <td className="py-3">
+                          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                          {supplements.map((supplement, idx) => (
+                            <div 
+                              key={`${date}-${idx}`} 
+                              className="bg-[#FFFFFF12] rounded-md p-2 text-left" // Changed from text-center to text-left
+                              style={{ border: '0.5px solid rgba(255, 255, 255, 0.2)' }}
+                            >
+                              <div className="text-white text-sm font-medium mb-1">{supplement.name}</div> {/* Increased from text-xs to text-sm and added font-medium */}
+                              <div className="text-xs text-gray-400">Dosage: {supplement.dosage}</div> {/* Decreased from text-sm to text-xs */}
+                            </div>
+                          ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </>
         ) : (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-lg font-semibold">Nutrition Timeline</h2>
-                <div className="relative w-full sm:w-48">
-                  <button
-                    onClick={() =>
-                      setIsPeriodDropdownOpen(!isPeriodDropdownOpen)
-                    }
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center justify-between w-full"
-                  >
-                    <span>
-                      {comparisonPeriod === "all"
-                        ? "All Time"
-                        : comparisonPeriod === "yearly"
-                        ? "Past Year"
-                        : comparisonPeriod === "quarterly"
-                        ? "Past Quarter"
-                        : comparisonPeriod === "monthly"
-                        ? "Past Month"
-                        : "Custom"}
-                    </span>
-                    <svg
-                      className="h-5 w-5 transition-transform ${isPeriodDropdownOpen ? 'rotate-180' : ''}"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
+          <>
+            {/* Tabular view - Daily Macronutrient Trends */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
+              <h3 className="text-xl font-semibold mb-4">Daily Macronutrient Trends</h3>
+              
+              {/* Date filter dropdown */}
+              <div className="flex items-center mb-4">
+                <div className="relative w-64">
+                  <button className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between">
+                    <span>All Days</span>
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
                   </button>
-
-                  {isPeriodDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden">
-                      {[
-                        { id: "all", label: "All Time" },
-                        { id: "yearly", label: "Past Year" },
-                        { id: "quarterly", label: "Past Quarter" },
-                        { id: "monthly", label: "Past Month" },
-                        { id: "custom", label: "Custom" },
-                      ].map((period) => (
-                        <button
-                          key={period.id}
-                          onClick={() => {
-                            setComparisonPeriod(period.id);
-                            setIsPeriodDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                            comparisonPeriod === period.id ? "bg-blue-100" : ""
-                          }`}
-                        >
-                          {period.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
+                
+                <button className="ml-2 bg-[#0E1F34] border border-[#22364F] p-2 rounded flex items-center justify-center">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </button>
               </div>
-
-              {/* Custom Date Range Selector */}
-              {comparisonPeriod === "custom" && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">
-                    Custom
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      onClick={() => {
-                        // Re-trigger the filtering by toggling the state
-                        setComparisonPeriod("temp");
-                        setTimeout(() => setComparisonPeriod("custom"), 10);
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      Apply Date Range
-                    </button>
-                  </div>
-                </div>
-              )}
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left bg-[#1A2C43] rounded-t">
+                      <th className="py-3 px-4 font-medium">Date</th>
+                      <th className="py-3 px-4 font-medium">Day Type</th>
+                      <th className="py-3 px-4 font-medium">Protein (g)</th>
+                      <th className="py-3 px-4 font-medium">Carbs (g)</th>
+                      <th className="py-3 px-4 font-medium">Fats (g)</th>
+                      <th className="py-3 px-4 font-medium">Fiber (g)</th>
+                      <th className="py-3 px-4 font-medium">Calories</th>
+                      <th className="py-3 px-4 font-medium">Supplements</th>
+                      <th className="py-3 px-4 font-medium">Graph</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Order rows to show most recent date first */}
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">28-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#F59E0B] text-xs rounded-md px-2 py-0.5">Rest</span>
+                      </td>
+                      <td className="py-4 px-4">50</td>
+                      <td className="py-4 px-4">75</td>
+                      <td className="py-4 px-4">20</td>
+                      <td className="py-4 px-4">10</td>
+                      <td className="py-4 px-4">2680</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Omega-3, Creatine Monohydrate, Vitamin D, Caffeine, Multivitamin, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("28-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">27-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#F59E0B] text-xs rounded-md px-2 py-0.5">Rest</span>
+                      </td>
+                      <td className="py-4 px-4">65</td>
+                      <td className="py-4 px-4">115</td>
+                      <td className="py-4 px-4">42</td>
+                      <td className="py-4 px-4">10</td>
+                      <td className="py-4 px-4">1500</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Creatine Monohydrate, Vitamin D, Caffeine, Iodized Salt, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("27-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">26-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">Training</span>
+                      </td>
+                      <td className="py-4 px-4">65</td>
+                      <td className="py-4 px-4">85</td>
+                      <td className="py-4 px-4">28</td>
+                      <td className="py-4 px-4">15</td>
+                      <td className="py-4 px-4">1822</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Omega-3, Creatine Monohydrate, Vitamin D, Caffeine, Magnesium, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("26-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">25-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">Training</span>
+                      </td>
+                      <td className="py-4 px-4">50</td>
+                      <td className="py-4 px-4">75</td>
+                      <td className="py-4 px-4">20</td>
+                      <td className="py-4 px-4">10</td>
+                      <td className="py-4 px-4">2680</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Creatine Monohydrate, Vitamin D, Caffeine, Zinc, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("25-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">24-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">Training</span>
+                      </td>
+                      <td className="py-4 px-4">45</td>
+                      <td className="py-4 px-4">65</td>
+                      <td className="py-4 px-4">18</td>
+                      <td className="py-4 px-4">12</td>
+                      <td className="py-4 px-4">2578</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Omega-3, Creatine Monohydrate, Vitamin D, Caffeine, Magnesium, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("24-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">23-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">Training</span>
+                      </td>
+                      <td className="py-4 px-4">35</td>
+                      <td className="py-4 px-4">55</td>
+                      <td className="py-4 px-4">15</td>
+                      <td className="py-4 px-4">8</td>
+                      <td className="py-4 px-4">2440</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Creatine Monohydrate, Vitamin D, Caffeine, Multivitamin, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("23-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[#20354A]">
+                      <td className="py-4 px-4">22-07-2025</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5">Training</span>
+                      </td>
+                      <td className="py-4 px-4">25</td>
+                      <td className="py-4 px-4">45</td>
+                      <td className="py-4 px-4">8</td>
+                      <td className="py-4 px-4">5</td>
+                      <td className="py-4 px-4">2360</td>
+                      <td className="py-4 px-4 text-xs text-gray-300">
+                        Omega-3, Creatine Monohydrate, Vitamin D, Caffeine, Magnesium, Protein Powder
+                      </td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedRow("22-07-2025");
+                            setShowGraphOverlay(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-500"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Check if we should display daily or weekly data */}
-            {comparisonPeriod === "custom" &&
-            startDate &&
-            endDate &&
-            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-              (1000 * 3600 * 24) <
-              14 ? (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Macronutrients Progress Chart - Daily */}
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Daily Macronutrients
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={calculateDailyNutrition()}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="formattedDate"
-                              height={60}
-                              angle={-45}
-                              textAnchor="end"
-                            />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="protein"
-                              stroke="#4ade80"
-                              name="Protein (g)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="carbs"
-                              stroke="#f59e0b"
-                              name="Carbs (g)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="fat"
-                              stroke="#ef4444"
-                              name="Fat (g)"
-                            />
-                            <ReferenceLine
-                              y={targets.protein}
-                              stroke="#4ade80"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Protein Target",
-                                position: "insideTopRight",
-                                fill: "#4ade80",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.carbs}
-                              stroke="#f59e0b"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Carbs Target",
-                                position: "insideTopRight",
-                                fill: "#f59e0b",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.fat}
-                              stroke="#ef4444"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Fat Target",
-                                position: "insideTopRight",
-                                fill: "#ef4444",
-                              }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
+            {/* Keep the Supplement Tracking section in tabular view */}
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5 mt-8">
+              <div className="flex items-center mb-6">
+                <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4"/>
+                </svg>
+                <h3 className="text-xl font-semibold">Supplement Tracking</h3>
+              </div>
 
-                  {/* Calories Progress Chart - Daily */}
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Daily Calories
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={calculateDailyNutrition()}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="formattedDate"
-                              height={60}
-                              angle={-45}
-                              textAnchor="end"
-                            />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="calories"
-                              stroke="#8b5cf6"
-                              name="Calories"
-                            />
-                            <ReferenceLine
-                              y={targets.calories}
-                              stroke="#8b5cf6"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Calorie Target",
-                                position: "insideTopRight",
-                                fill: "#8b5cf6",
-                              }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Daily Nutrition Table */}
-                <div className="overflow-auto">
-                  <div className="min-w-[800px]">
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Day Type
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Protein (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Carbs (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Fat (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Calories
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {calculateDailyNutrition().map((day) => (
-                            <tr key={day.date}>
-                              <td
-                                className="px-6 py-4 cursor-pointer hover:text-blue-600"
-                                onClick={() => {
-                                  // Find the week that contains this date
-                                  const weekKey = Object.keys(weeklyData).find(
-                                    (week) =>
-                                      Object.keys(
-                                        weeklyData[week].dailyData
-                                      ).includes(day.date)
-                                  );
-                                  if (weekKey) {
-                                    setSelectedDateData({
-                                      date: day.date,
-                                      data: weeklyData[weekKey].dailyData[
-                                        day.date
-                                      ],
-                                    });
-                                    setIsModalOpen(true);
-                                  }
-                                }}
-                              >
-                                {day.formattedDate}
-                              </td>
-                              <td className="px-6 py-4">{day.dayType}</td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  day.protein,
-                                  targets.protein
-                                )}`}
-                              >
-                                {formatProgress(day.protein, targets.protein)}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  day.carbs,
-                                  targets.carbs
-                                )}`}
-                              >
-                                {formatProgress(day.carbs, targets.carbs)}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  day.fat,
-                                  targets.fat
-                                )}`}
-                              >
-                                {formatProgress(day.fat, targets.fat)}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  day.calories,
-                                  targets.calories
-                                )}`}
-                              >
-                                {formatProgress(day.calories, targets.calories)}
-                              </td>
-                            </tr>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <tbody>
+                    {Object.entries(supplementData).sort((a, b) => {
+                      // Sort dates in reverse (newest first)
+                      return new Date(b[0]).getTime() - new Date(a[0]).getTime();
+                    }).map(([date, supplements]) => (
+                      <tr key={date} className="border-b border-[#22364F] last:border-b-0">
+                        <td className="py-3 pl-3 pr-6 align-top whitespace-nowrap w-32">
+                          <div className="font-medium">{date}</div>
+                        </td>
+                        <td className="py-3">
+                          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                          {supplements.map((supplement, idx) => (
+                            <div 
+                              key={`${date}-${idx}`} 
+                              className="bg-[#FFFFFF12] rounded-md p-2 text-left"
+                              style={{ border: '0.5px solid rgba(255, 255, 255, 0.2)' }}
+                            >
+                              <div className="text-white text-sm font-medium mb-1">{supplement.name}</div>
+                              <div className="text-xs text-gray-400">Dosage: {supplement.dosage}</div>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Macronutrients Progress Chart - Weekly */}
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Macronutrients Progress
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={sortedWeekEntries(filteredData).map(
-                              (weekData) => ({
-                                week: weekData.week,
-                                protein: weekData.avgProtein,
-                                carbs: weekData.avgCarbs,
-                                fat: weekData.avgFat,
-                              })
-                            )}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="week" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="protein"
-                              stroke="#4ade80"
-                              name="Avg Protein (g)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="carbs"
-                              stroke="#f59e0b"
-                              name="Avg Carbs (g)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="fat"
-                              stroke="#ef4444"
-                              name="Avg Fat (g)"
-                            />
-                            <ReferenceLine
-                              y={targets.protein}
-                              stroke="#4ade80"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Protein Target",
-                                position: "insideTopRight",
-                                fill: "#4ade80",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.carbs}
-                              stroke="#f59e0b"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Carbs Target",
-                                position: "insideTopRight",
-                                fill: "#f59e0b",
-                              }}
-                            />
-                            <ReferenceLine
-                              y={targets.fat}
-                              stroke="#ef4444"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Fat Target",
-                                position: "insideTopRight",
-                                fill: "#ef4444",
-                              }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
-                  {/* Calories Progress Chart - Weekly */}
-                  <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4">
-                      Calories Progress
-                    </h2>
-                    <div className="h-[400px] overflow-x-auto">
-                      <div className="min-w-[500px] h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={sortedWeekEntries(filteredData).map(
-                              (weekData) => ({
-                                week: weekData.week,
-                                calories: weekData.avgCalories,
-                              })
-                            )}
-                            margin={{ right: 30, bottom: 20 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="week" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="calories"
-                              stroke="#8b5cf6"
-                              name="Avg Calories"
-                            />
-                            <ReferenceLine
-                              y={targets.calories}
-                              stroke="#8b5cf6"
-                              strokeDasharray="3 3"
-                              label={{
-                                value: "Calorie Target",
-                                position: "insideTopRight",
-                                fill: "#8b5cf6",
-                              }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
+        {/* Graph overlay when a specific day is selected */}
+        {showGraphOverlay && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5 w-full max-w-4xl">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Nutrition Data: {selectedRow}</h3>
+                <button 
+                  onClick={() => setShowGraphOverlay(false)}
+                  className="text-gray-400"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Macronutrient Distribution */}
+                <div className="h-[300px]">
+                  <h4 className="text-lg mb-3">Macronutrient Distribution</h4>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <BarChart
+                      data={[
+                        {
+                          name: "Protein",
+                          value: macroTrendData.find(d => d.date === selectedRow)?.protein || 0,
+                        },
+                        {
+                          name: "Carbs",
+                          value: macroTrendData.find(d => d.date === selectedRow)?.carbs || 0,
+                        },
+                        {
+                          name: "Fats",
+                          value: macroTrendData.find(d => d.date === selectedRow)?.fats || 0,
+                        },
+                        {
+                          name: "Fiber",
+                          value: macroTrendData.find(d => d.date === selectedRow)?.fiber || 0,
+                        }
+                      ]}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="name" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#0f172a',
+                          borderColor: '#334155',
+                          color: '#fff'
+                        }}
+                        cursor={false}
+                      />
+                      <Bar dataKey="value" fill="#DD3333" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-
-                {/* Weekly Nutrition Table */}
-                <div className="overflow-auto">
-                  <div className="min-w-[800px]">
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Week
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Date Range
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Avg Protein (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Avg Carbs (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Avg Fat (g)
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Avg Calories
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {sortedWeekEntries(filteredData).map((weekData) => (
-                            <tr key={weekData.week}>
-                              <td className="px-6 py-4">{weekData.week}</td>
-                              <td className="px-6 py-4">
-                                {getWeekRange(weekData.dates)}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  weekData.avgProtein,
-                                  targets.protein
-                                )}`}
-                              >
-                                {formatProgress(
-                                  weekData.avgProtein,
-                                  targets.protein
-                                )}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  weekData.avgCarbs,
-                                  targets.carbs
-                                )}`}
-                              >
-                                {formatProgress(
-                                  weekData.avgCarbs,
-                                  targets.carbs
-                                )}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  weekData.avgFat,
-                                  targets.fat
-                                )}`}
-                              >
-                                {formatProgress(weekData.avgFat, targets.fat)}
-                              </td>
-                              <td
-                                className={`px-6 py-4 ${getProgressColor(
-                                  weekData.avgCalories,
-                                  targets.calories
-                                )}`}
-                              >
-                                {formatProgress(
-                                  weekData.avgCalories,
-                                  targets.calories
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                
+                {/* Calorie Distribution */}
+                <div className="h-[300px]">
+                  <h4 className="text-lg mb-3">Meal Calorie Distribution</h4>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <BarChart
+                      data={[
+                        {
+                          name: "Lunch",
+                          value: mealCalorieData.find(d => d.date === selectedRow)?.lunch || 0,
+                        },
+                        {
+                          name: "Dinner",
+                          value: mealCalorieData.find(d => d.date === selectedRow)?.dinner || 0,
+                        },
+                        {
+                          name: "Pre-Workout",
+                          value: mealCalorieData.find(d => d.date === selectedRow)?.preWorkout || 0,
+                        },
+                        {
+                          name: "Afternoon",
+                          value: mealCalorieData.find(d => d.date === selectedRow)?.afternoon || 0,
+                        }
+                      ]}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="name" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#0f172a',
+                          borderColor: '#334155',
+                          color: '#fff'
+                        }}
+                        cursor={false}
+                      />
+                      <Bar dataKey="value" fill="#4CAF50" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {selectedDateData && (
-        <NutritionModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedDateData(null);
-          }}
-          date={selectedDateData.date}
-          dayData={selectedDateData.data}
-        />
-      )}
     </div>
   );
 }
