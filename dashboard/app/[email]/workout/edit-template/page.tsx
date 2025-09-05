@@ -263,7 +263,19 @@ export default function EditTemplate() {
   const [saving, setSaving] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [clientName, setClientName] = useState<string>("");
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
+  const [userName, setUserName] = useState<string>("User");
+
+  // Add new state for edit modals
+  const [editingWarmUpExercise, setEditingWarmUpExercise] = useState<{
+    index: number;
+    exercise: WarmUpExercise;
+  } | null>(null);
+  const [editingSessionExercise, setEditingSessionExercise] = useState<{
+    sessionName: string;
+    index: number;
+    exercise: OrderedExercise;
+  } | null>(null);
+  const [editingStepsModal, setEditingStepsModal] = useState(false);
 
   // State for exercise options and links
   const [warmUpOptions, setWarmUpOptions] = useState<string[]>(
@@ -683,6 +695,81 @@ export default function EditTemplate() {
     setShowWarmUpModal(!showWarmUpModal);
   };
 
+  // Add handlers for editing warm-up exercises
+  const handleEditWarmUp = (index: number) => {
+    setEditingWarmUpExercise({
+      index,
+      exercise: { ...warmUpExercises[index] },
+    });
+  };
+
+  const handleSaveWarmUpEdit = () => {
+    if (editingWarmUpExercise) {
+      const updated = [...warmUpExercises];
+      updated[editingWarmUpExercise.index] = editingWarmUpExercise.exercise;
+      setWarmUpExercises(updated);
+      setEditingWarmUpExercise(null);
+    }
+  };
+
+  const handleCancelWarmUpEdit = () => {
+    setEditingWarmUpExercise(null);
+  };
+
+  // Add handlers for editing session exercises
+  const handleEditSessionExercise = (sessionName: string, index: number) => {
+    if (!orderedTemplate) return;
+    const sessionType = sessionName as keyof OrderedTemplate;
+    const exercise = orderedTemplate[sessionType].exercises[index];
+
+    setEditingSessionExercise({
+      sessionName,
+      index,
+      exercise: { ...exercise },
+    });
+  };
+
+  const handleSaveSessionExerciseEdit = () => {
+    if (editingSessionExercise && orderedTemplate) {
+      const sessionType =
+        editingSessionExercise.sessionName as keyof OrderedTemplate;
+      const updatedExercises = [...orderedTemplate[sessionType].exercises];
+      updatedExercises[editingSessionExercise.index] =
+        editingSessionExercise.exercise;
+
+      // Sort exercises after editing
+      updatedExercises.sort((a, b) => a.name.localeCompare(b.name));
+
+      setOrderedTemplate((prev) => ({
+        ...prev!,
+        [sessionType]: {
+          ...prev![sessionType],
+          exercises: updatedExercises,
+        },
+      }));
+
+      setEditingSessionExercise(null);
+    }
+  };
+
+  const handleCancelSessionExerciseEdit = () => {
+    setEditingSessionExercise(null);
+  };
+
+  // Add handlers for editing steps
+  const handleEditSteps = () => {
+    setEditingStepsModal(true);
+  };
+
+  const handleSaveStepsEdit = () => {
+    setEditingStepsModal(false);
+    // Steps are already updated via the input handlers
+  };
+
+  const handleCancelStepsEdit = () => {
+    setEditingStepsModal(false);
+  };
+
   if (loading)
     return (
       <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
@@ -766,11 +853,11 @@ export default function EditTemplate() {
           {/* Steps Card */}
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-6 flex justify-between items-center">
             <div>
-              <h3 className="font-medium text-4xl">8,000-10,000</h3>
+              <h3 className="font-medium text-4xl">{dailySteps.target}</h3>
               <p className="text-gray-400 text-sm mt-1">Steps per Day</p>
             </div>
             <button
-              onClick={() => setEditingSteps(true)}
+              onClick={handleEditSteps}
               className="text-gray-400 hover:text-white"
             >
               <svg
@@ -862,9 +949,7 @@ export default function EditTemplate() {
                             </a>
                           )}
                           <button
-                            onClick={() =>
-                              handleWarmUpChange(index, "link", "")
-                            }
+                            onClick={() => handleEditWarmUp(index)}
                             className="text-gray-400 hover:text-white"
                           >
                             <svg
@@ -875,6 +960,20 @@ export default function EditTemplate() {
                               strokeWidth="2"
                             >
                               <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteWarmUpExercise(index)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                           </button>
                         </div>
@@ -982,12 +1081,7 @@ export default function EditTemplate() {
                             )}
                             <button
                               onClick={() =>
-                                handleValueChange(
-                                  "Session A",
-                                  index,
-                                  "Link",
-                                  ""
-                                )
+                                handleEditSessionExercise("Session A", index)
                               }
                               className="text-gray-400 hover:text-white"
                             >
@@ -999,6 +1093,20 @@ export default function EditTemplate() {
                                 strokeWidth="2"
                               >
                                 <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deleteExercise("Session A", index)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                               </svg>
                             </button>
                           </div>
@@ -1104,12 +1212,7 @@ export default function EditTemplate() {
                             )}
                             <button
                               onClick={() =>
-                                handleValueChange(
-                                  "Session B",
-                                  index,
-                                  "Link",
-                                  ""
-                                )
+                                handleEditSessionExercise("Session B", index)
                               }
                               className="text-gray-400 hover:text-white"
                             >
@@ -1121,6 +1224,20 @@ export default function EditTemplate() {
                                 strokeWidth="2"
                               >
                                 <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deleteExercise("Session B", index)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                               </svg>
                             </button>
                           </div>
@@ -1226,12 +1343,7 @@ export default function EditTemplate() {
                             )}
                             <button
                               onClick={() =>
-                                handleValueChange(
-                                  "Session C",
-                                  index,
-                                  "Link",
-                                  ""
-                                )
+                                handleEditSessionExercise("Session C", index)
                               }
                               className="text-gray-400 hover:text-white"
                             >
@@ -1243,6 +1355,20 @@ export default function EditTemplate() {
                                 strokeWidth="2"
                               >
                                 <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deleteExercise("Session C", index)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                               </svg>
                             </button>
                           </div>
@@ -1276,27 +1402,24 @@ export default function EditTemplate() {
         </div>
       </div>
 
-      {/* Warm Up Edit Modal */}
-      {showWarmUpModal && (
+      {/* Steps Edit Modal */}
+      {editingStepsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Overlay with improved blur effect */}
           <div
-            className="fixed inset-0 backdrop-blur-sm bg-white/30"
-            onClick={toggleWarmUpModal}
+            className="fixed inset-0 backdrop-blur-sm bg-black/50"
+            onClick={handleCancelStepsEdit}
           ></div>
 
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 p-6 z-10">
+          <div className="relative bg-[#142437] rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 border border-[#22364F]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Edit Warm Up Exercises
+              <h2 className="text-xl font-semibold text-white">
+                Edit Daily Steps
               </h2>
               <button
-                onClick={toggleWarmUpModal}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={handleCancelStepsEdit}
+                className="text-gray-400 hover:text-white"
               >
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -1312,142 +1435,348 @@ export default function EditTemplate() {
               </button>
             </div>
 
-            <div className="max-h-[70vh] overflow-y-auto p-1">
-              <div className="space-y-3">
-                {/* Header Row */}
-                <div className="grid grid-cols-12 gap-2 items-center pb-2 border-b">
-                  <div className="col-span-4 text-gray-700 font-medium">
-                    Exercise Name
-                  </div>
-                  <div className="col-span-1 text-gray-700 font-medium text-center">
-                    Sets
-                  </div>
-                  <div className="col-span-2 text-gray-700 font-medium">
-                    Reps
-                  </div>
-                  <div className="col-span-4 text-gray-700 font-medium">
-                    Video Link
-                  </div>
-                  <div className="col-span-1 text-gray-700 font-medium text-center">
-                    Action
-                  </div>
-                </div>
-
-                {warmUpExercises.map((exercise, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-12 gap-2 items-center py-3 border-b border-gray-100"
-                  >
-                    <div className="col-span-4">
-                      <select
-                        value={exercise.name}
-                        onChange={(e) =>
-                          handleWarmUpChange(index, "name", e.target.value)
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select Exercise</option>
-                        {warmUpOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-span-1">
-                      <input
-                        type="text"
-                        value={exercise.sets}
-                        onChange={(e) =>
-                          handleWarmUpChange(index, "sets", e.target.value)
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-center text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Sets"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="text"
-                        value={exercise.reps}
-                        onChange={(e) =>
-                          handleWarmUpChange(index, "reps", e.target.value)
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Reps"
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <input
-                        type="text"
-                        value={exercise.link || ""}
-                        onChange={(e) =>
-                          handleWarmUpChange(index, "link", e.target.value)
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-[#333333] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://www.youtube.com"
-                      />
-                    </div>
-                    <div className="col-span-1 text-center">
-                      <button
-                        onClick={() => deleteWarmUpExercise(index)}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Daily Steps Target
+                </label>
+                <input
+                  type="text"
+                  value={dailySteps.target}
+                  onChange={(e) =>
+                    setDailySteps((prev) => ({
+                      ...prev,
+                      target: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 10,000"
+                />
               </div>
 
-              {/* Add Button */}
-              <div className="mt-5">
-                <button
-                  onClick={addWarmUpExercise}
-                  className="w-full py-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Add Warm-up Exercise
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Walk Duration
+                </label>
+                <input
+                  type="text"
+                  value={dailySteps.walkDuration}
+                  onChange={(e) =>
+                    setDailySteps((prev) => ({
+                      ...prev,
+                      walkDuration: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 30 minutes"
+                />
               </div>
             </div>
 
-            {/* Footer with Save Button */}
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={toggleWarmUpModal}
-                className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors mr-3"
+                onClick={handleCancelStepsEdit}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={toggleWarmUpModal}
-                className="px-6 py-2 rounded-lg bg-[#0a1c3f] hover:bg-[#0b2552] text-white font-medium text-sm transition-colors"
+                onClick={handleSaveStepsEdit}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warm Up Edit Modal */}
+      {editingWarmUpExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 backdrop-blur-sm bg-black/50"
+            onClick={handleCancelWarmUpEdit}
+          ></div>
+
+          <div className="relative bg-[#142437] rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 border border-[#22364F]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">
+                Edit Warm-up Exercise
+              </h2>
+              <button
+                onClick={handleCancelWarmUpEdit}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Exercise Name
+                </label>
+                <select
+                  value={editingWarmUpExercise.exercise.name}
+                  onChange={(e) =>
+                    setEditingWarmUpExercise((prev) => ({
+                      ...prev!,
+                      exercise: {
+                        ...prev!.exercise,
+                        name: e.target.value,
+                        link:
+                          exerciseLinks[e.target.value] || prev!.exercise.link,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {warmUpOptions.map((option) => (
+                    <option
+                      key={option}
+                      value={option}
+                      className="bg-[#0E1F34] text-white"
+                    >
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Sets
+                </label>
+                <input
+                  type="text"
+                  value={editingWarmUpExercise.exercise.sets}
+                  onChange={(e) =>
+                    setEditingWarmUpExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, sets: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Reps
+                </label>
+                <input
+                  type="text"
+                  value={editingWarmUpExercise.exercise.reps}
+                  onChange={(e) =>
+                    setEditingWarmUpExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, reps: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 8 Reps"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Video Link
+                </label>
+                <input
+                  type="text"
+                  value={editingWarmUpExercise.exercise.link || ""}
+                  onChange={(e) =>
+                    setEditingWarmUpExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, link: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://www.youtube.com/..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={handleCancelWarmUpEdit}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveWarmUpEdit}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Exercise Edit Modal */}
+      {editingSessionExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 backdrop-blur-sm bg-black/50"
+            onClick={handleCancelSessionExerciseEdit}
+          ></div>
+
+          <div className="relative bg-[#142437] rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 border border-[#22364F]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">
+                Edit Exercise
+              </h2>
+              <button
+                onClick={handleCancelSessionExerciseEdit}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Exercise Name
+                </label>
+                <select
+                  value={editingSessionExercise.exercise.name}
+                  onChange={(e) =>
+                    setEditingSessionExercise((prev) => ({
+                      ...prev!,
+                      exercise: {
+                        ...prev!.exercise,
+                        name: e.target.value,
+                        Link:
+                          exerciseLinks[e.target.value] || prev!.exercise.Link,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {workoutOptions.map((option) => (
+                    <option
+                      key={option}
+                      value={option}
+                      className="bg-[#0E1F34] text-white"
+                    >
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Sets
+                </label>
+                <input
+                  type="text"
+                  value={editingSessionExercise.exercise.Sets}
+                  onChange={(e) =>
+                    setEditingSessionExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, Sets: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Reps
+                </label>
+                <input
+                  type="text"
+                  value={editingSessionExercise.exercise.Reps}
+                  onChange={(e) =>
+                    setEditingSessionExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, Reps: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 8-12"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Weight
+                </label>
+                <input
+                  type="text"
+                  value={editingSessionExercise.exercise.Weight}
+                  onChange={(e) =>
+                    setEditingSessionExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, Weight: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 50 lbs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Video Link
+                </label>
+                <input
+                  type="text"
+                  value={editingSessionExercise.exercise.Link || ""}
+                  onChange={(e) =>
+                    setEditingSessionExercise((prev) => ({
+                      ...prev!,
+                      exercise: { ...prev!.exercise, Link: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-[#0E1F34] border border-[#22364F] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://www.youtube.com/..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={handleCancelSessionExerciseEdit}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSessionExerciseEdit}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors"
               >
                 Save Changes
               </button>
