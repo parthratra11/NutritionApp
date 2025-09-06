@@ -554,7 +554,7 @@ export default function ClientOverview() {
 
           {/* Nutrition Card */}
           <div
-            className="col-span-12 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
+            className="col-span-12 bg-[#FFFFFF1A]  backdrop-blur-xl rounded-xl p-4 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/nutrition`)}
           >
             <div className="flex items-center gap-2 font-semibold text-base">
@@ -599,13 +599,13 @@ export default function ClientOverview() {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">165g</div>
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
                     style={{ width: "91%" }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-xs mt-1">
+                <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Protein</span>
                   <span className="text-gray-400">91%</span>
                 </div>
@@ -620,13 +620,13 @@ export default function ClientOverview() {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">73g</div>
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
                     style={{ width: "110%" }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-xs mt-1">
+                <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Fat</span>
                   <span className="text-gray-400">110%</span>
                 </div>
@@ -641,13 +641,13 @@ export default function ClientOverview() {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">220g</div>
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
                     style={{ width: "89%" }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-xs mt-1">
+                <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Carbs</span>
                   <span className="text-gray-400">89%</span>
                 </div>
@@ -662,13 +662,13 @@ export default function ClientOverview() {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
                     style={{ width: "98%" }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-xs mt-1">
+                <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Calories</span>
                   <span className="text-gray-400">98%</span>
                 </div>
