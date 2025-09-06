@@ -1,25 +1,9 @@
 "use client";
 
-import Navigation from "@/components/shared/Navigation";
 import { useEffect, useState } from "react";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  BarChart,
-  Bar,
-  Legend,
-} from "recharts";
+import { useRouter, useParams } from "next/navigation";
 
 interface IntakeForm {
   fullName: string;
@@ -33,70 +17,17 @@ interface IntakeForm {
   };
 }
 
-interface DayData {
-  weight: string;
-  timestamp: string;
-  // ...other day data fields
-}
-
-interface WeekData {
-  [day: string]: DayData;
-  // other week data fields
-}
-
-interface WeeklyForms {
-  [week: string]: WeekData;
-}
-
-interface WeightDataPoint {
-  date: string;
-  weight: number;
-}
-
 export default function ClientOverview() {
   const params = useParams();
   const router = useRouter();
   const [client, setClient] = useState<IntakeForm | null>(null);
-  const [latestWeight, setLatestWeight] = useState<string | null>(null);
-  const [latestWeightDate, setLatestWeightDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showNav, setShowNav] = useState(false);
-  const [weightData, setWeightData] = useState<WeightDataPoint[]>([]);
-  // Add stepData state
-  const [stepData, setStepData] = useState({
-    current: 5000,
-    goal: 10000,
-  });
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
-
-  // Sample data for visualization charts - refine the hunger data for stacked visualization
-  const hungerData = [
-    { name: "Pre Workout", protein: 30, carbs: 20, fat: 15, total: 65 },
-    { name: "Lunch", protein: 45, carbs: 60, fat: 30, total: 135 },
-    { name: "Afternoon", protein: 25, carbs: 40, fat: 20, total: 85 },
-    { name: "Dinner", protein: 40, carbs: 50, fat: 35, total: 125 },
-  ];
-
-  const sleepData = {
-    deep: 45,
-    light: 32,
-    awake: 23,
-  };
-
-  const moodData = [
-    { day: "Sun", mood: "Happy", size: 40, yPosition: 20 },
-    { day: "Mon", mood: "Tired", size: 30, yPosition: 50 },
-    { day: "Tue", mood: "Energetic", size: 45, yPosition: 15 },
-    { day: "Wed", mood: "Calm", size: 35, yPosition: 40 },
-    { day: "Thu", mood: "Low", size: 25, yPosition: 60 },
-    { day: "Fri", mood: "Happy", size: 42, yPosition: 30 },
-    { day: "Sat", mood: "Energetic", size: 50, yPosition: 10 },
-  ];
-
-  // Create date strip for current week
+  const [userName, setUserName] = useState<string>("Aria Michele");
+  
+  // Generate days of the week with dates for the header
   const generateDateStrip = () => {
-    const days = ["S", "M", "T", "W", "T", "F", "S"];
+    const days = ["S", "M", "T", "W", "Th", "F", "S"];
     const today = new Date();
     const currentDay = today.getDay(); // 0 is Sunday
 
@@ -122,79 +53,15 @@ export default function ClientOverview() {
 
       try {
         const decodedEmail = decodeURIComponent(params.email as string);
-
-        // Fetch client details
         const clientDocRef = doc(db, "intakeForms", decodedEmail);
         const clientDocSnap = await getDoc(clientDocRef);
 
         if (clientDocSnap.exists()) {
           const clientData = clientDocSnap.data() as IntakeForm;
           setClient(clientData);
-          setUserName(clientData.fullName || "User"); // Set userName from client data
+          setUserName(clientData.fullName || "Aria Michele");
         } else {
           setError("Client not found");
-          return;
-        }
-
-        // Fetch weekly forms data to get latest weight and historical data
-        const weeklyDocRef = doc(db, "weeklyForms", decodedEmail);
-        const weeklyDocSnap = await getDoc(weeklyDocRef);
-
-        if (weeklyDocSnap.exists()) {
-          const weeklyData = weeklyDocSnap.data() as WeeklyForms;
-
-          // Find the latest weight entry
-          let latestDate = new Date(0);
-          let latestWeightValue = null;
-          let latestWeightTimestamp = null;
-
-          // Collect all weight data points for the chart
-          const allWeightData: WeightDataPoint[] = [];
-
-          // Loop through all weeks and days to find the latest weight entry and collect data
-          Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
-            if (weekKey === "firstEntryDate") return;
-
-            Object.entries(weekData).forEach(([dayKey, dayData]) => {
-              // Add more robust null checking
-              if (!dayData || typeof dayData !== "object") return;
-
-              // Check if required properties exist
-              if (!("timestamp" in dayData) || !("weight" in dayData)) return;
-              if (!dayData.timestamp || !dayData.weight) return;
-
-              try {
-                const entryDate = new Date(dayData.timestamp);
-
-                // Add to chart data
-                allWeightData.push({
-                  date: entryDate.toLocaleDateString(),
-                  weight: parseFloat(dayData.weight),
-                });
-
-                // Update latest weight
-                if (entryDate > latestDate) {
-                  latestDate = entryDate;
-                  latestWeightValue = dayData.weight;
-                  latestWeightTimestamp = dayData.timestamp;
-                }
-              } catch (e) {
-                console.error("Error processing date:", e);
-              }
-            });
-          });
-
-          if (latestWeightValue) {
-            setLatestWeight(latestWeightValue);
-            setLatestWeightDate(latestWeightTimestamp);
-          }
-
-          // Sort weight data by date
-          allWeightData.sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-          );
-
-          setWeightData(allWeightData);
         }
       } catch (err) {
         setError("Failed to fetch client data");
@@ -207,582 +74,401 @@ export default function ClientOverview() {
     fetchClientData();
   }, [params?.email]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!client) return <div className="p-6">No client data found</div>;
-
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return "No date";
-    return date.toLocaleDateString();
-  };
-
-  // Custom gradient for the weight chart
-  const renderGradient = () => (
-    <defs>
-      <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor="#ff6b6b" stopOpacity={0.8} />
-        <stop offset="95%" stopColor="#ff6b6b" stopOpacity={0} />
-      </linearGradient>
-    </defs>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation
-        title="Overview"
-        subtitle={
-          client?.timestamp?.toDate
-            ? formatDate(client.timestamp.toDate())
-            : undefined
-        }
-        email={params.email as string}
-        userName={userName}
-      />
-
-      <div className="p-4 md:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Summary Card */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Summary
-            </h2>
-            <div className="space-y-2">
-              <p className="text-gray-700">
-                <span className="font-medium">Age:</span> {client?.age || "N/A"}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Height:</span>{" "}
-                {client?.height || "N/A"}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Initial Weight:</span>{" "}
-                {client?.weight || "N/A"}
-              </p>
-              {latestWeight && latestWeight !== client?.weight && (
-                <p className="text-gray-700">
-                  <span className="font-medium">Current Weight:</span>{" "}
-                  {latestWeight}
-                  {latestWeightDate && (
-                    <span className="text-xs text-gray-500 ml-2">
-                      (as of {new Date(latestWeightDate).toLocaleDateString()})
-                    </span>
-                  )}
-                </p>
-              )}
-              <p className="text-gray-700">
-                <span className="font-medium">Goals:</span>{" "}
-                {client?.goals || "N/A"}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Email:</span>{" "}
-                {client?.email || "N/A"}
-              </p>
-            </div>
+    <div className="min-h-screen bg-[#07172C] text-white">
+      {/* Top Bar */}
+      <div className="flex justify-between items-center px-6 pt-3 pb-2">
+        {/* Left Icons */}
+        <div className="flex items-center gap-6">
+          <button className="text-white">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center bg-[#FFFFFF1A] backdrop-blur-xl rounded-full p-1 h-8 shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <button className="w-8 h-6 flex items-center justify-center text-white">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            </button>
+            <button className="w-8 h-6 flex items-center justify-center bg-[#CBD3DB] text-[#07172C] rounded-full">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </button>
+            <button className="w-8 h-6 flex items-center justify-center text-white">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </button>
           </div>
-
-          {/* Weight Chart - Replace placeholder with actual chart */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/${params.email}/weight`)}
-          >
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">
-              Weight Progress
-            </h2>
-            <div className="h-48">
-              {weightData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={weightData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-                  >
-                    {renderGradient()}
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return `${date.getMonth() + 1}/${date.getDate()}`;
-                      }}
-                      minTickGap={15}
-                    />
-                    <YAxis
-                      domain={["dataMin - 1", "dataMax + 1"]}
-                      tick={{ fontSize: 10 }}
-                      width={30}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`${value} kg`, "Weight"]}
-                      labelFormatter={(label) => `Date: ${label}`}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <defs>
-                      <linearGradient
-                        id="colorWeight"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#ff6b6b"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#ff6b6b"
-                          stopOpacity={0.1}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="weight"
-                      stroke="#ff5252"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorWeight)"
-                      activeDot={{ r: 6, strokeWidth: 1, stroke: "#fff" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="weight"
-                      stroke="#ff5252"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 6, strokeWidth: 1, stroke: "#fff" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full bg-gray-100 rounded flex items-center justify-center">
-                  <p className="text-gray-500">No weight data available</p>
-                </div>
-              )}
+        </div>
+        
+        {/* Week Day Selector */}
+        <div className="flex items-center gap-2">
+          {dateStrip.map((item, index) => (
+            <div 
+              key={index} 
+              className={`flex flex-col items-center justify-center rounded-full w-8 h-12 ${
+                item.isToday ? 'bg-[#DD3333] text-white shadow-[-2px_6px_22.6px_-3px_#00000040]' : 'bg-[#FFFFFF1A] backdrop-blur-xl text-gray-300 shadow-[-2px_6px_22.6px_-3px_#00000040]'
+              }`}
+            >
+              <span className="text-xs leading-none">{item.day}</span>
+              <span className="text-xs leading-none mt-1">{item.date}</span>
             </div>
-          </div>
-
-          {/* Hunger Distribution - UPDATED TO STACKED BARS */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
-            onClick={() => router.push(`/${params.email}/nutrition`)}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-semibold text-gray-800">
-                <span className="mr-2"></span> Hunger Distribution
-              </h2>
-              <span className="text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-            </div>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={hungerData}
-                  margin={{ top: 5, right: 5, bottom: 20, left: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    opacity={0.3}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: "#0a1c3f", fontSize: 10 }}
-                    interval={0}
-                    height={40}
-                    tickMargin={5}
-                  />
-                  <YAxis hide domain={[0, 150]} />
-                  <Tooltip
-                    formatter={(value, name) => {
-                      const formattedName =
-                        {
-                          protein: "Protein",
-                          carbs: "Carbs",
-                          fat: "Fat",
-                        }[name] || name;
-                      return [`${value}g`, formattedName];
-                    }}
-                    contentStyle={{
-                      backgroundColor: "white",
-                      borderRadius: "8px",
-                      border: "1px solid #e2e8f0",
-                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                  <Bar
-                    dataKey="fat"
-                    name="Fat"
-                    stackId="a"
-                    fill="#f3a7a2"
-                    radius={[0, 0, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="carbs"
-                    name="Carbs"
-                    stackId="a"
-                    fill="#e05e55"
-                    radius={[0, 0, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="protein"
-                    name="Protein"
-                    stackId="a"
-                    fill="#c2362c"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Steps Progress Card - FIXED */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
-            onClick={() => router.push(`/${params.email}/steps`)}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-semibold text-gray-800">
-                <span className="mr-2"></span> Steps
-              </h2>
-              <span className="text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-            </div>
-            <div className="flex justify-center">
-              <div className="relative h-40 w-40">
-                {/* Fixed SVG donut chart with proper calculations */}
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Background circle (complete ring) */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="#f3a7a2"
-                    strokeWidth="12"
-                  />
-
-                  {/* Calculate the circumference and the progress stroke */}
-                  {(() => {
-                    const radius = 40;
-                    const circumference = 2 * Math.PI * radius;
-                    const progressPercent = stepData.current / stepData.goal;
-                    const progressOffset =
-                      circumference * (1 - progressPercent);
-
-                    return (
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        stroke="#c2362c"
-                        strokeWidth="12"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={progressOffset}
-                        strokeLinecap="round"
-                        transform="rotate(-90 50 50)"
-                      />
-                    );
-                  })()}
-                </svg>
-
-                {/* Center text */}
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <p className="font-bold text-2xl text-gray-800">
-                    {stepData.current.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-800">Steps</p>
-                  <p className="text-xs text-gray-500">
-                    Out of {stepData.goal.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sleep Breakdown - UPDATED TO DONUT */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
+          ))}
+        </div>
+        
+        {/* Removed user profile from top bar as it's now in the right panel */}
+        <div className="w-[500px]">
+          {/* This space is intentionally left empty to maintain layout */}
+        </div>
+      </div>
+      
+      {/* Main Content with Right Panel */}
+      <div className="px-6 pb-3 pr-[510px]">
+        {/* Cards Grid */}
+        <div className="grid grid-cols-12 gap-3 h-[calc(100vh-70px)] overflow-hidden">
+          {/* Sleep Card */}
+          <div 
+            className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-2.5 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/sleep`)}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-semibold text-gray-800">
-                <span className="mr-2"></span> Sleep Breakdown
-              </h2>
-              <span className="text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
+            <div className="flex items-center gap-1 font-semibold text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+              Sleep
+              <svg className="w-3 h-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="relative h-40 w-40">
-                {/* Implement a more reliable donut chart with SVG arcs */}
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Background circles for each ring */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="none"
-                    stroke="#white"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="27"
-                    fill="none"
-                    stroke="#white"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="16"
-                    fill="none"
-                    stroke="#white"
-                    strokeWidth="10"
-                  />
-
-                  {/* Center white circle for donut hole */}
-                  <circle cx="50" cy="50" r="10" fill="white" />
-
-                  {/* Progress arcs for each ring */}
-                  {(() => {
-                    // Outer ring - awake
-                    const r1 = 38;
-                    const c1 = 2 * Math.PI * r1;
-                    const pct1 = sleepData.awake / 100;
-                    const dashArray1 = `${c1 * pct1} ${c1 * (1 - pct1)}`;
-
-                    // Middle ring - light
-                    const r2 = 27;
-                    const c2 = 2 * Math.PI * r2;
-                    const pct2 = sleepData.light / 100;
-                    const dashArray2 = `${c2 * pct2} ${c2 * (1 - pct2)}`;
-
-                    // Inner ring - deep
-                    const r3 = 16;
-                    const c3 = 2 * Math.PI * r3;
-                    const pct3 = sleepData.deep / 100;
-                    const dashArray3 = `${c3 * pct3} ${c3 * (1 - pct3)}`;
-
-                    return (
-                      <>
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="38"
-                          fill="none"
-                          stroke="#c2362c"
-                          strokeWidth="10"
-                          strokeDasharray={dashArray1}
-                          strokeDashoffset="0"
-                          transform="rotate(-90 50 50)"
-                          strokeLinecap="round"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="27"
-                          fill="none"
-                          stroke="#e05e55"
-                          strokeWidth="10"
-                          strokeDasharray={dashArray2}
-                          strokeDashoffset="0"
-                          transform="rotate(-90 50 50)"
-                          strokeLinecap="round"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="16"
-                          fill="none"
-                          stroke="#f3a7a2"
-                          strokeWidth="10"
-                          strokeDasharray={dashArray3}
-                          strokeDashoffset="0"
-                          transform="rotate(-90 50 50)"
-                          strokeLinecap="round"
-                        />
-                      </>
-                    );
-                  })()}
-                </svg>
+            
+            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
+              28 July
+            </div>
+            
+            <div className="flex justify-between mt-1.5">
+              {/* Sleep Hours - Left Side */}
+              <div>
+                <div className="flex items-end">
+                  <span className="text-3xl leading-none font-semibold">6</span>
+                  <span className="text-xs mb-1 ml-1">hr</span>
+                  <span className="text-3xl leading-none font-semibold ml-1">42</span>
+                  <span className="text-xs mb-1 ml-1">min</span>
+                </div>
+                <div className="text-[9px] text-gray-400 mt-1">
+                  Sleep Hours
+                </div>
               </div>
-
-              <div className="flex justify-between w-full text-xs text-gray-600 mt-3">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-1 bg-[#f3a7a2]"></div>
-                  <span>Deep: {sleepData.deep}%</span>
+              
+              {/* Sleep Quality - Right Side */}
+              <div className="text-right">
+                <div className="text-xl font-semibold">
+                  Restful
                 </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-1 bg-[#e05e55]"></div>
-                  <span>Light: {sleepData.light}%</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-1 bg-[#c2362c]"></div>
-                  <span>Awake: {sleepData.awake}%</span>
+                <div className="text-[9px] text-gray-400">
+                  Sleep Quality
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Moods Bubble Chart - UPDATED */}
-          <div
-            className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow relative"
+          {/* Weight Card */}
+          <div 
+            className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-2.5 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
+            onClick={() => router.push(`/${params.email}/weight`)}
+          >
+            <div className="flex items-center gap-1 font-semibold text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2" />
+              </svg>
+              Weight
+              <svg className="w-3 h-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            
+            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
+              28 July
+            </div>
+            
+            <div className="flex items-end mt-2">
+              <span className="text-3xl leading-none font-semibold">74.2</span>
+              <span className="text-xs mb-1 ml-1">Kg</span>
+            </div>
+          </div>
+
+          {/* Nutrition Card */}
+          <div 
+            className="col-span-12 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
+            onClick={() => router.push(`/${params.email}/nutrition`)}
+          >
+            <div className="flex items-center gap-2 font-semibold text-base">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h8M12 18h8" />
+              </svg>
+              Nutrition
+              <svg className="w-4 h-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            
+            <div className="absolute top-4 right-4 text-sm text-gray-400">
+              28 July
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              {/* Protein */}
+              <div>
+                <div className="text-4xl font-semibold mb-1">150<span className="text-base ml-1 font-normal text-gray-400">g</span></div>
+                <div className="text-xs text-gray-400 mb-1">165g</div>
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-600" style={{ width: "91%" }}></div>
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span>Protein</span>
+                  <span className="text-gray-400">91%</span>
+                </div>
+              </div>
+              
+              {/* Fat */}
+              <div>
+                <div className="text-4xl font-semibold mb-1">80<span className="text-base ml-1 font-normal text-gray-400">g</span></div>
+                <div className="text-xs text-gray-400 mb-1">73g</div>
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-600" style={{ width: "110%" }}></div>
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span>Fat</span>
+                  <span className="text-gray-400">110%</span>
+                </div>
+              </div>
+
+              {/* Carbs */}
+              <div>
+                <div className="text-4xl font-semibold mb-1">195<span className="text-base ml-1 font-normal text-gray-400">g</span></div>
+                <div className="text-xs text-gray-400 mb-1">220g</div>
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-600" style={{ width: "89%" }}></div>
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span>Carbs</span>
+                  <span className="text-gray-400">89%</span>
+                </div>
+              </div>
+
+              {/* Calories */}
+              <div>
+                <div className="text-4xl font-semibold mb-1">2,150<span className="text-base ml-1 font-normal text-gray-400">Kcal</span></div>
+                <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-600" style={{ width: "98%" }}></div>
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span>Calories</span>
+                  <span className="text-gray-400">98%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Steps Card */}
+          <div 
+            className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
+            onClick={() => router.push(`/${params.email}/steps`)}
+          >
+            <div className="flex items-center gap-1 font-semibold text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              Steps
+              <svg className="w-3 h-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            
+            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
+              28 July
+            </div>
+            
+            <div className="mt-2">
+              <div className="text-3xl font-semibold">5,000</div>
+              <div className="text-[10px] text-gray-400 mt-1">10,000 Steps</div>
+            </div>
+          </div>
+
+          {/* Moods Card */}
+          <div 
+            className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/moods`)}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-semibold text-gray-800">
-                <span className="mr-2"></span> Mood Patterns
-              </h2>
-              <span className="text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
+            <div className="flex items-center gap-1 font-semibold text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Moods
+              <svg className="w-3 h-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
             </div>
-            <div className="h-40 relative">
-              {/* Labels for days of week at bottom */}
-              <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-500">
-                {moodData.map((item) => (
-                  <div key={item.day}>{item.day}</div>
-                ))}
+            
+            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
+              28 July
+            </div>
+            
+            <div className="flex items-center mt-2">
+              <div className="w-12 h-12 rounded-lg bg-[#BFD8E9] flex items-center justify-center mr-4">
+                <svg className="w-8 h-8 text-[#07172C]" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-8a3 3 0 11-6 0h6z" clipRule="evenodd" />
+                </svg>
               </div>
+              <div>
+                <div className="text-xl font-semibold">Calm</div>
+                <div className="text-[10px] text-gray-400">16:28pm</div>
+              </div>
+            </div>
+          </div>
 
-              {/* Mood bubbles with vertical variation */}
-              <div className="h-36 relative">
-                {moodData.map((item, index) => {
-                  // Calculate horizontal position (evenly spaced)
-                  const leftPosition = `${
-                    (index / (moodData.length - 1)) * 92 + 4
-                  }%`;
+          {/* Exercises Card */}
+          <div 
+            className="col-span-12 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
+            onClick={() => router.push(`/${params.email}/workout`)}
+          >
+            <div className="flex items-center gap-1 font-semibold text-sm mb-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+              Exercises
+              <svg className="w-3 h-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            
+            <ul className="text-xs leading-tight space-y-0.5">
+              <li>Barbell Hip Thrust</li>
+              <li>Heels Elevated Zercher Squat</li>
+              <li>Scrape Rack L-Seated Shoulder Press</li>
+              <li>Seated DB Lateral Raise</li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
-                  return (
-                    <div
-                      key={item.day}
-                      className="absolute rounded-full flex items-center justify-center text-white text-xs transition-transform hover:scale-110"
-                      style={{
-                        backgroundColor: "#c2362c",
-                        opacity: 0.7 + item.size / 100,
-                        height: `${item.size * 1.2}px`,
-                        width: `${item.size * 1.2}px`,
-                        left: leftPosition,
-                        top: `${item.yPosition * 1.4}%`,
-                        transform: "translate(-50%, -50%)",
-                      }}
-                    >
-                      {item.size > 30 ? item.mood : ""}
-                    </div>
-                  );
-                })}
+      {/* Right Panel */}
+      <div className="fixed top-0 right-0 h-full w-[500px] bg-[#FFFFFF1A] border-l border-[#1F3247] pt-4 px-5 overflow-y-auto shadow-[-2px_6px_22.6px_-3px_#00000040]">
+        {/* User Profile - Top of Panel */}
+        <div className="mb-5">
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl px-4 py-3.5 shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="flex items-center gap-3">
+              <img 
+                src="/User.png" 
+                alt="Profile" 
+                className="h-16 w-16 rounded-full object-cover ring-2 ring-[#0E1F34]"
+              />
+              <div className="flex flex-col">
+                <div className="flex items-center text-lg font-semibold">
+                  {userName}
+                  <svg className="w-4 h-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex items-center text-xs text-gray-300 mt-1">
+                  <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Sydney, Australia
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <button
-            onClick={() => router.push(`/${params.email}/details`)}
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            View Full Details
-          </button>
-          <button
-            onClick={() => router.push(`/${params.email}/nutrition`)}
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            Nutrition
-          </button>
-          <button
-            onClick={() => router.push(`/${params.email}/report`)}
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            Reports
-          </button>
-          <button
-            onClick={() => router.push(`/${params.email}/workout`)}
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            Workout
-          </button>
-          <button
-            onClick={() =>
-              router.push(`/${params.email}/workout/edit-template`)
-            }
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            Edit Workout Template
-          </button>
-          <button
-            onClick={() =>
-              router.push(
-                `/slack/dms?email=${encodeURIComponent(client.email)}`
-              )
-            }
-            className="bg-[#0a1c3f] text-white px-6 py-2 rounded-lg hover:bg-[#0b2552] w-full"
-          >
-            Contact via Slack
-          </button>
+        {/* Payment Status */}
+        <div className="mb-5">
+          <div className="text-sm font-medium mb-2">Payment Status</div>
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 flex items-center justify-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <span className="text-green-500 font-semibold text-xl">Paid</span>
+          </div>
         </div>
-
-        <div className="mt-6 flex justify-end">
-          <Link href="/" className="text-[#0a1c3f] hover:text-[#0b2552]">
-            Back to Dashboard
-          </Link>
+        
+        {/* Anthropometric Data */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 text-sm font-medium mb-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Anthropometric Data
+          </div>
+          
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 flex justify-between shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="flex flex-col items-center flex-1">
+              <div className="text-2xl font-semibold">57<span className="text-[10px] ml-0.5 font-normal">kg</span></div>
+              <div className="text-xs text-gray-400">Weight</div>
+            </div>
+            <div className="flex flex-col items-center flex-1">
+              <div className="text-2xl font-semibold">167<span className="text-[10px] ml-0.5 font-normal">cm</span></div>
+              <div className="text-xs text-gray-400">Height</div>
+            </div>
+            <div className="flex flex-col items-center flex-1">
+              <div className="text-2xl font-semibold">29</div>
+              <div className="text-xs text-gray-400">Age</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Body Metrics */}
+        <div className="text-xs text-gray-400 mb-2">20 July</div>
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 flex flex-col items-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="text-xl font-semibold">23<span className="text-[10px] ml-0.5 font-normal">%</span></div>
+            <div className="text-xs text-gray-400">Body Fat</div>
+          </div>
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 flex flex-col items-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="text-xl font-semibold">96.5<span className="text-[10px] ml-0.5 font-normal">cm</span></div>
+            <div className="text-xs text-gray-400 text-center">Hip Circumference</div>
+          </div>
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 flex flex-col items-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="text-xl font-semibold">71<span className="text-[10px] ml-0.5 font-normal">cm</span></div>
+            <div className="text-xs text-gray-400 text-center">Waist Circumference</div>
+          </div>
+        </div>
+        
+        {/* Goals */}
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium mb-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Goals
+          </div>
+          
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>I want to lose body fat and tone up.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>I want to improve my stamina and endurance.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>I want to create a consistent workout routine.</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
