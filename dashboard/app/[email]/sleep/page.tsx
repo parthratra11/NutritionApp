@@ -1,10 +1,183 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
+
+// Weekly sleep data
+const weeklySleepData = [
+  {
+    day: "Su",
+    sleepStart: 23,
+    sleepEnd: 7,
+    highlight: false,
+    date: "2025-07-22",
+  },
+  {
+    day: "M",
+    sleepStart: 22,
+    sleepEnd: 6,
+    highlight: false,
+    date: "2025-07-23",
+  },
+  {
+    day: "T",
+    sleepStart: 23.5,
+    sleepEnd: 7.5,
+    highlight: false,
+    date: "2025-07-24",
+  },
+  {
+    day: "W",
+    sleepStart: 22.5,
+    sleepEnd: 5.5,
+    highlight: false,
+    date: "2025-07-25",
+  },
+  {
+    day: "Th",
+    sleepStart: 23,
+    sleepEnd: 7,
+    highlight: false,
+    date: "2025-07-26",
+  },
+  {
+    day: "F",
+    sleepStart: 22,
+    sleepEnd: 7,
+    highlight: false,
+    date: "2025-07-27",
+  },
+  {
+    day: "Sa",
+    sleepStart: 21,
+    sleepEnd: 7,
+    highlight: true,
+    date: "2025-07-28",
+  },
+];
+
+// Monthly sleep data (4 weeks average)
+const monthlySleepData = [
+  {
+    day: "W1",
+    sleepStart: 22.5,
+    sleepEnd: 6.8,
+    highlight: false,
+    date: "2025-07-01",
+  },
+  {
+    day: "W2",
+    sleepStart: 23,
+    sleepEnd: 7.2,
+    highlight: false,
+    date: "2025-07-08",
+  },
+  {
+    day: "W3",
+    sleepStart: 22.2,
+    sleepEnd: 6.5,
+    highlight: false,
+    date: "2025-07-15",
+  },
+  {
+    day: "W4",
+    sleepStart: 22.7,
+    sleepEnd: 7,
+    highlight: true,
+    date: "2025-07-22",
+  },
+];
+
+// Yearly sleep data (12 months average)
+const yearlySleepData = [
+  {
+    day: "Jan",
+    sleepStart: 23,
+    sleepEnd: 7.5,
+    highlight: false,
+    date: "2025-01-01",
+  },
+  {
+    day: "Feb",
+    sleepStart: 22.5,
+    sleepEnd: 7,
+    highlight: false,
+    date: "2025-02-01",
+  },
+  {
+    day: "Mar",
+    sleepStart: 22.8,
+    sleepEnd: 6.8,
+    highlight: false,
+    date: "2025-03-01",
+  },
+  {
+    day: "Apr",
+    sleepStart: 22.2,
+    sleepEnd: 6.5,
+    highlight: false,
+    date: "2025-04-01",
+  },
+  {
+    day: "May",
+    sleepStart: 22.5,
+    sleepEnd: 6.8,
+    highlight: false,
+    date: "2025-05-01",
+  },
+  {
+    day: "Jun",
+    sleepStart: 23.2,
+    sleepEnd: 7.2,
+    highlight: false,
+    date: "2025-06-01",
+  },
+  {
+    day: "Jul",
+    sleepStart: 22.6,
+    sleepEnd: 6.9,
+    highlight: true,
+    date: "2025-07-01",
+  },
+  {
+    day: "Aug",
+    sleepStart: 22.8,
+    sleepEnd: 7,
+    highlight: false,
+    date: "2025-08-01",
+  },
+  {
+    day: "Sep",
+    sleepStart: 22.4,
+    sleepEnd: 6.7,
+    highlight: false,
+    date: "2025-09-01",
+  },
+  {
+    day: "Oct",
+    sleepStart: 23,
+    sleepEnd: 7.3,
+    highlight: false,
+    date: "2025-10-01",
+  },
+  {
+    day: "Nov",
+    sleepStart: 23.5,
+    sleepEnd: 7.5,
+    highlight: false,
+    date: "2025-11-01",
+  },
+  {
+    day: "Dec",
+    sleepStart: 23.8,
+    sleepEnd: 8,
+    highlight: false,
+    date: "2025-12-01",
+  },
+];
 
 export default function SleepScreen() {
   const params = useParams();
@@ -20,28 +193,77 @@ export default function SleepScreen() {
   const [endDate, setEndDate] = useState<string>("");
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
-  // Generate sleep schedule data
-  const sleepScheduleData = [
-    { day: "Su", sleepStart: 23, sleepEnd: 7, highlight: false }, // Changed from "S" to "Su"
-    { day: "M", sleepStart: 22, sleepEnd: 6, highlight: false },
-    { day: "T", sleepStart: 23.5, sleepEnd: 7.5, highlight: false },
-    { day: "W", sleepStart: 22.5, sleepEnd: 5.5, highlight: false },
-    { day: "Th", sleepStart: 23, sleepEnd: 7, highlight: false },
-    { day: "F", sleepStart: 22, sleepEnd: 7, highlight: false },
-    { day: "Sa", sleepStart: 21, sleepEnd: 7, highlight: true }, // Changed from "S" to "Sa"
-  ];
+  // Get current sleep schedule data based on range
+  const currentSleepData = useMemo(() => {
+    let baseData;
+    if (rangeTab === "weekly") baseData = weeklySleepData;
+    else if (rangeTab === "monthly") baseData = monthlySleepData;
+    else baseData = yearlySleepData;
 
-  // Generate sleep quality data - same as in the image
-  const sleepQualityData = {
-    xAxis: ["Su", "M", "T", "W", "Th", "F", "Sa"], // Updated to match the schedule data
-    values: [
-      { type: "Deep", values: [45, 48, 52, 40, 38, 42, 55] },
-      { type: "Light", values: [20, 25, 18, 22, 30, 28, 20] },
-      { type: "Restful", values: [25, 20, 24, 28, 22, 20, 15] },
-      { type: "Interrupted", values: [10, 7, 6, 10, 10, 10, 10] },
-      { type: "Restless", values: [0, 0, 0, 0, 0, 0, 0] },
-    ],
-  };
+    // Filter by custom date range if both dates are selected
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return baseData.filter((item) => {
+        const itemDate = new Date(item.date);
+        return itemDate >= start && itemDate <= end;
+      });
+    }
+
+    return baseData;
+  }, [rangeTab, startDate, endDate]);
+
+  // Generate sleep quality data based on current range
+  const sleepQualityData = useMemo(() => {
+    const xAxis = currentSleepData.map((item) => item.day);
+
+    if (rangeTab === "weekly") {
+      return {
+        xAxis,
+        values: [
+          { type: "Deep", values: [45, 48, 52, 40, 38, 42, 55] },
+          { type: "Light", values: [20, 25, 18, 22, 30, 28, 20] },
+          { type: "Restful", values: [25, 20, 24, 28, 22, 20, 15] },
+          { type: "Interrupted", values: [10, 7, 6, 10, 10, 10, 10] },
+          { type: "Restless", values: [0, 0, 0, 0, 0, 0, 0] },
+        ],
+      };
+    } else if (rangeTab === "monthly") {
+      return {
+        xAxis,
+        values: [
+          { type: "Deep", values: [48, 45, 50, 47] },
+          { type: "Light", values: [22, 28, 20, 25] },
+          { type: "Restful", values: [20, 18, 22, 20] },
+          { type: "Interrupted", values: [10, 9, 8, 8] },
+          { type: "Restless", values: [0, 0, 0, 0] },
+        ],
+      };
+    } else {
+      return {
+        xAxis,
+        values: [
+          {
+            type: "Deep",
+            values: [45, 48, 46, 50, 47, 44, 49, 46, 48, 45, 43, 47],
+          },
+          {
+            type: "Light",
+            values: [25, 22, 26, 20, 23, 28, 22, 25, 23, 26, 29, 24],
+          },
+          {
+            type: "Restful",
+            values: [20, 22, 18, 22, 20, 18, 21, 20, 19, 20, 18, 20],
+          },
+          {
+            type: "Interrupted",
+            values: [10, 8, 10, 8, 10, 10, 8, 9, 10, 9, 10, 9],
+          },
+          { type: "Restless", values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        ],
+      };
+    }
+  }, [rangeTab, currentSleepData]);
 
   // Simple calendar component
   const Calendar = ({
@@ -105,58 +327,180 @@ export default function SleepScreen() {
     );
   };
 
-  // Generate dummy data for tabular view
-  const sleepTableData = [
-    {
-      date: "22 July 2025",
-      quality: "Light",
-      sleepTime: "10:30 PM",
-      wakeTime: "6:30 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "23 July 2025",
-      quality: "Deep",
-      sleepTime: "11:00 PM",
-      wakeTime: "7:00 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "24 July 2025",
-      quality: "Interrupted",
-      sleepTime: "11:30 PM",
-      wakeTime: "7:30 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "25 July 2025",
-      quality: "Awake",
-      sleepTime: "10:30 PM",
-      wakeTime: "6:30 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "26 July 2025",
-      quality: "Deep",
-      sleepTime: "11:00 PM",
-      wakeTime: "7:00 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "27 July 2025",
-      quality: "Light",
-      sleepTime: "10:00 PM",
-      wakeTime: "6:00 AM",
-      duration: "8h 0m",
-    },
-    {
-      date: "28 July 2025",
-      quality: "Interrupted",
-      sleepTime: "9:00 PM",
-      wakeTime: "7:00 AM",
-      duration: "10h 0m",
-    },
-  ];
+  // Generate table data based on current range
+  const getTableData = useMemo(() => {
+    if (rangeTab === "weekly") {
+      return [
+        {
+          date: "22 July 2025",
+          quality: "Light",
+          sleepTime: "11:00 PM",
+          wakeTime: "7:00 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "23 July 2025",
+          quality: "Deep",
+          sleepTime: "10:00 PM",
+          wakeTime: "6:00 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "24 July 2025",
+          quality: "Interrupted",
+          sleepTime: "11:30 PM",
+          wakeTime: "7:30 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "25 July 2025",
+          quality: "Light",
+          sleepTime: "10:30 PM",
+          wakeTime: "5:30 AM",
+          duration: "7h 0m",
+        },
+        {
+          date: "26 July 2025",
+          quality: "Deep",
+          sleepTime: "11:00 PM",
+          wakeTime: "7:00 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "27 July 2025",
+          quality: "Light",
+          sleepTime: "10:00 PM",
+          wakeTime: "7:00 AM",
+          duration: "9h 0m",
+        },
+        {
+          date: "28 July 2025",
+          quality: "Deep",
+          sleepTime: "9:00 PM",
+          wakeTime: "7:00 AM",
+          duration: "10h 0m",
+        },
+      ];
+    } else if (rangeTab === "monthly") {
+      return [
+        {
+          date: "Week 1 July 2025",
+          quality: "Light",
+          sleepTime: "10:30 PM",
+          wakeTime: "6:48 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "Week 2 July 2025",
+          quality: "Deep",
+          sleepTime: "11:00 PM",
+          wakeTime: "7:12 AM",
+          duration: "8h 12m",
+        },
+        {
+          date: "Week 3 July 2025",
+          quality: "Interrupted",
+          sleepTime: "10:12 PM",
+          wakeTime: "6:30 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "Week 4 July 2025",
+          quality: "Deep",
+          sleepTime: "10:42 PM",
+          wakeTime: "7:00 AM",
+          duration: "8h 18m",
+        },
+      ];
+    } else {
+      return [
+        {
+          date: "January 2025",
+          quality: "Light",
+          sleepTime: "11:00 PM",
+          wakeTime: "7:30 AM",
+          duration: "8h 30m",
+        },
+        {
+          date: "February 2025",
+          quality: "Deep",
+          sleepTime: "10:30 PM",
+          wakeTime: "7:00 AM",
+          duration: "8h 30m",
+        },
+        {
+          date: "March 2025",
+          quality: "Light",
+          sleepTime: "10:48 PM",
+          wakeTime: "6:48 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "April 2025",
+          quality: "Deep",
+          sleepTime: "10:12 PM",
+          wakeTime: "6:30 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "May 2025",
+          quality: "Light",
+          sleepTime: "10:30 PM",
+          wakeTime: "6:48 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "June 2025",
+          quality: "Interrupted",
+          sleepTime: "11:12 PM",
+          wakeTime: "7:12 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "July 2025",
+          quality: "Deep",
+          sleepTime: "10:36 PM",
+          wakeTime: "6:54 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "August 2025",
+          quality: "Light",
+          sleepTime: "10:48 PM",
+          wakeTime: "7:00 AM",
+          duration: "8h 12m",
+        },
+        {
+          date: "September 2025",
+          quality: "Deep",
+          sleepTime: "10:24 PM",
+          wakeTime: "6:42 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "October 2025",
+          quality: "Light",
+          sleepTime: "11:00 PM",
+          wakeTime: "7:18 AM",
+          duration: "8h 18m",
+        },
+        {
+          date: "November 2025",
+          quality: "Interrupted",
+          sleepTime: "11:30 PM",
+          wakeTime: "7:30 AM",
+          duration: "8h 0m",
+        },
+        {
+          date: "December 2025",
+          quality: "Deep",
+          sleepTime: "11:48 PM",
+          wakeTime: "8:00 AM",
+          duration: "8h 12m",
+        },
+      ];
+    }
+  }, [rangeTab]);
 
   // Fetch client name
   useEffect(() => {
@@ -211,79 +555,56 @@ export default function SleepScreen() {
           </div>
         </div>
 
-        {/* Sleep History Card */}
+        {/* Custom Date Range Selector */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
-          <h2 className="text-lg font-semibold mb-4">Sleep History</h2>
-
-          <div className="flex space-x-3">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowStartCalendar(!showStartCalendar);
-                  setShowEndCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{startDate || "Select Start Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showStartCalendar && (
-                <Calendar
-                  onSelect={(date) => setStartDate(date)}
-                  onClose={() => setShowStartCalendar(false)}
-                />
-              )}
+          <h3 className="text-lg font-semibold mb-4">Custom Date Range</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={
+                  startDate
+                    ? new Date(startDate).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
-
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowEndCalendar(!showEndCalendar);
-                  setShowStartCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{endDate || "Select End Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showEndCalendar && (
-                <Calendar
-                  onSelect={(date) => setEndDate(date)}
-                  onClose={() => setShowEndCalendar(false)}
-                />
-              )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={
+                  endDate ? new Date(endDate).toISOString().split("T")[0] : ""
+                }
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
           </div>
+          {startDate && endDate && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Selected range: {new Date(startDate).toLocaleDateString()} -{" "}
+                {new Date(endDate).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-sm text-[#DD3333] hover:text-[#FF4444]"
+              >
+                Clear dates
+              </button>
+            </div>
+          )}
         </div>
 
         {viewMode === "graphs" ? (
@@ -340,11 +661,11 @@ export default function SleepScreen() {
 
                 {/* Sleep schedule chart */}
                 <div className="pl-12 h-full flex justify-between">
-                  {sleepScheduleData.map((day, index) => {
+                  {currentSleepData.map((day, index) => {
                     // Calculate position and height for the sleep bar
-                    const top = ((day.sleepStart - 18) / 18) * 100; // Map 6 PM (18) to 0% and 12 PM (next day, 36) to 100%
+                    const top = ((day.sleepStart - 18) / 18) * 100;
                     const height =
-                      ((day.sleepEnd + 24 - day.sleepStart) / 18) * 100; // Height based on sleep duration
+                      ((day.sleepEnd + 24 - day.sleepStart) / 18) * 100;
 
                     return (
                       <div
@@ -357,8 +678,8 @@ export default function SleepScreen() {
                               day.highlight ? "bg-[#DD3333]" : "bg-gray-600"
                             }`}
                             style={{
-                              top: `${top}%`,
-                              height: `${height}%`,
+                              top: `${Math.max(0, Math.min(80, top))}%`,
+                              height: `${Math.max(10, Math.min(60, height))}%`,
                             }}
                           ></div>
                         </div>
@@ -388,7 +709,6 @@ export default function SleepScreen() {
 
                 {/* Sleep quality chart - area chart */}
                 <div className="ml-20 h-full relative">
-                  {/* SVG for the line chart with more pronounced up and down movement */}
                   <svg
                     className="w-full h-full"
                     viewBox="0 0 700 300"
@@ -415,15 +735,27 @@ export default function SleepScreen() {
                       </linearGradient>
                     </defs>
 
-                    {/* More dynamic path with pronounced ups and downs */}
+                    {/* Dynamic path based on data length */}
                     <path
-                      d="M0,100 C50,50 100,150 150,80 C200,200 250,60 300,180 C350,100 400,200 450,50 C500,150 550,80 600,120 L600,300 L0,300 Z"
+                      d={
+                        currentSleepData.length === 7
+                          ? "M0,100 C50,50 100,150 150,80 C200,200 250,60 300,180 C350,100 400,200 450,50 C500,150 550,80 600,120 L600,300 L0,300 Z"
+                          : currentSleepData.length === 4
+                          ? "M0,120 C150,60 300,180 450,90 C600,140 700,100 700,100 L700,300 L0,300 Z"
+                          : "M0,110 C60,70 120,140 180,90 C240,160 300,80 360,130 C420,70 480,150 540,100 C600,120 660,90 700,110 L700,300 L0,300 Z"
+                      }
                       fill="url(#sleepGradient)"
                     />
 
-                    {/* Line on top of area with more dramatic movement */}
+                    {/* Line on top of area */}
                     <path
-                      d="M0,100 C50,50 100,150 150,80 C200,200 250,60 300,180 C350,100 400,200 450,50 C500,150 550,80 600,120"
+                      d={
+                        currentSleepData.length === 7
+                          ? "M0,100 C50,50 100,150 150,80 C200,200 250,60 300,180 C350,100 400,200 450,50 C500,150 550,80 600,120"
+                          : currentSleepData.length === 4
+                          ? "M0,120 C150,60 300,180 450,90 C600,140 700,100 700,100"
+                          : "M0,110 C60,70 120,140 180,90 C240,160 300,80 360,130 C420,70 480,150 540,100 C600,120 660,90 700,110"
+                      }
                       fill="none"
                       stroke="#DD3333"
                       strokeWidth="3"
@@ -445,6 +777,32 @@ export default function SleepScreen() {
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold">Sleep Data</h3>
+              <div className="flex bg-[#ffffff20] rounded-md overflow-hidden">
+                <button
+                  onClick={() => setRangeTab("weekly")}
+                  className={`px-4 py-1 text-sm ${
+                    rangeTab === "weekly" ? "bg-white text-[#07172C]" : ""
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setRangeTab("monthly")}
+                  className={`px-4 py-1 text-sm ${
+                    rangeTab === "monthly" ? "bg-white text-[#07172C]" : ""
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setRangeTab("yearly")}
+                  className={`px-4 py-1 text-sm ${
+                    rangeTab === "yearly" ? "bg-white text-[#07172C]" : ""
+                  }`}
+                >
+                  Yearly
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -459,7 +817,7 @@ export default function SleepScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sleepTableData.map((item, index) => (
+                  {getTableData.map((item, index) => (
                     <tr
                       key={index}
                       className="border-b border-[#20354A] last:border-0"

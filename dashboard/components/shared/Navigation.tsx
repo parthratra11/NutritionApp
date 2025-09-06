@@ -382,7 +382,7 @@ export default function Navigation({
 
         {/* Date strip - centered */}
         <div className="flex justify-center w-1/5 mx-4">
-          <div className="flex items-center bg-[#0F1D3C] px-2 lg:px-4 h-[55px] lg:h-[65px] rounded-lg">
+          <div className="flex items-center px-2 lg:px-4 h-[55px] lg:h-[65px] rounded-lg">
             <div className="flex space-x-1 lg:space-x-2 items-center">
               {generateDateStrip().map((item, idx) => (
                 <button
@@ -527,7 +527,7 @@ export default function Navigation({
 
         {/* Mobile date strip - full width */}
         <div className="w-full py-2 px-1">
-          <div className="flex items-center bg-[#0F1D3C] px-1 h-[48px] rounded-lg justify-center">
+          <div className="flex items-center  px-1 h-[48px] rounded-lg justify-center">
             <div className="flex space-x-1 items-center">
               {generateDateStrip().map((item, idx) => (
                 <button

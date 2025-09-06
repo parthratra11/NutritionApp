@@ -1,15 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 
-// Generate random step data in a realistic range
-const generateRandomSteps = () => {
-  return 6000 + Math.floor(Math.random() * 6000); // Between 6000-12000 steps
-};
+// Weekly steps data
+const weeklyStepsData = [
+  { day: "S", steps: 8400, date: "2025-07-22" },
+  { day: "M", steps: 8100, date: "2025-07-23" },
+  { day: "T", steps: 8250, date: "2025-07-24" },
+  { day: "W", steps: 8550, date: "2025-07-25" },
+  { day: "Th", steps: 9000, date: "2025-07-26" },
+  { day: "F", steps: 9800, date: "2025-07-27" },
+  { day: "S", steps: 9400, date: "2025-07-28", highlight: true },
+];
+
+// Monthly steps data
+const monthlyStepsData = [
+  { day: "W1", steps: 58500, date: "2025-07-01" },
+  { day: "W2", steps: 61200, date: "2025-07-08" },
+  { day: "W3", steps: 59800, date: "2025-07-15" },
+  { day: "W4", steps: 63100, date: "2025-07-22" },
+];
+
+// Yearly steps data
+const yearlyStepsData = [
+  { day: "Jan", steps: 245000, date: "2025-01-01" },
+  { day: "Feb", steps: 228000, date: "2025-02-01" },
+  { day: "Mar", steps: 267000, date: "2025-03-01" },
+  { day: "Apr", steps: 252000, date: "2025-04-01" },
+  { day: "May", steps: 274000, date: "2025-05-01" },
+  { day: "Jun", steps: 259000, date: "2025-06-01" },
+  { day: "Jul", steps: 282000, date: "2025-07-01" },
+  { day: "Aug", steps: 268000, date: "2025-08-01" },
+  { day: "Sep", steps: 255000, date: "2025-09-01" },
+  { day: "Oct", steps: 271000, date: "2025-10-01" },
+  { day: "Nov", steps: 248000, date: "2025-11-01" },
+  { day: "Dec", steps: 263000, date: "2025-12-01" },
+];
 
 export default function StepsScreen() {
   const params = useParams();
@@ -26,27 +56,62 @@ export default function StepsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
-  // Steps data for the graph
-  const [stepsData, setStepsData] = useState([
-    { day: "S", steps: 8400 },
-    { day: "M", steps: 8100 },
-    { day: "T", steps: 8250 },
-    { day: "W", steps: 8550 },
-    { day: "Th", steps: 9000 },
-    { day: "F", steps: 9800 },
-    { day: "S", steps: 9400, highlight: true },
-  ]);
+  // Get current dataset based on range
+  const currentStepsData = useMemo(() => {
+    let baseData;
+    if (rangeTab === "weekly") baseData = weeklyStepsData;
+    else if (rangeTab === "monthly") baseData = monthlyStepsData;
+    else baseData = yearlyStepsData;
 
-  // Generate table data
-  const [stepsTableData, setStepsTableData] = useState([
-    { date: "28 July 2025", steps: 9400, change: "+600" },
-    { date: "27 July 2025", steps: 8800, change: "-200" },
-    { date: "26 July 2025", steps: 9000, change: "+450" },
-    { date: "25 July 2025", steps: 8550, change: "+300" },
-    { date: "24 July 2025", steps: 8250, change: "+150" },
-    { date: "23 July 2025", steps: 8100, change: "-300" },
-    { date: "22 July 2025", steps: 8400, change: "+200" },
-  ]);
+    // Filter by custom date range if both dates are selected
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return baseData.filter((item) => {
+        const itemDate = new Date(item.date);
+        return itemDate >= start && itemDate <= end;
+      });
+    }
+
+    return baseData;
+  }, [rangeTab, startDate, endDate]);
+
+  // Generate table data based on current range
+  const getTableData = useMemo(() => {
+    if (rangeTab === "weekly") {
+      return [
+        { date: "28 July 2025", steps: 9400, change: "+600" },
+        { date: "27 July 2025", steps: 9800, change: "+200" },
+        { date: "26 July 2025", steps: 9000, change: "+450" },
+        { date: "25 July 2025", steps: 8550, change: "+300" },
+        { date: "24 July 2025", steps: 8250, change: "+150" },
+        { date: "23 July 2025", steps: 8100, change: "-300" },
+        { date: "22 July 2025", steps: 8400, change: "+200" },
+      ];
+    } else if (rangeTab === "monthly") {
+      return [
+        { date: "Week 4 July 2025", steps: 63100, change: "+3300" },
+        { date: "Week 3 July 2025", steps: 59800, change: "-1400" },
+        { date: "Week 2 July 2025", steps: 61200, change: "+2700" },
+        { date: "Week 1 July 2025", steps: 58500, change: "+1200" },
+      ];
+    } else {
+      return [
+        { date: "December 2025", steps: 263000, change: "+15000" },
+        { date: "November 2025", steps: 248000, change: "-23000" },
+        { date: "October 2025", steps: 271000, change: "+16000" },
+        { date: "September 2025", steps: 255000, change: "-13000" },
+        { date: "August 2025", steps: 268000, change: "-14000" },
+        { date: "July 2025", steps: 282000, change: "+23000" },
+        { date: "June 2025", steps: 259000, change: "-15000" },
+        { date: "May 2025", steps: 274000, change: "+22000" },
+        { date: "April 2025", steps: 252000, change: "-15000" },
+        { date: "March 2025", steps: 267000, change: "+39000" },
+        { date: "February 2025", steps: 228000, change: "-17000" },
+        { date: "January 2025", steps: 245000, change: "+12000" },
+      ];
+    }
+  }, [rangeTab]);
 
   // Fetch client name
   useEffect(() => {
@@ -138,6 +203,18 @@ export default function StepsScreen() {
     );
   };
 
+  // Calculate min and max for chart scaling
+  const { minSteps, maxSteps } = useMemo(() => {
+    const steps = currentStepsData.map((d) => d.steps);
+    const min = Math.min(...steps);
+    const max = Math.max(...steps);
+    const buffer = (max - min) * 0.1;
+    return {
+      minSteps: Math.max(0, min - buffer),
+      maxSteps: max + buffer,
+    };
+  }, [currentStepsData]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#07172C] text-white">
@@ -187,79 +264,56 @@ export default function StepsScreen() {
           </div>
         </div>
 
-        {/* Steps History Card */}
+        {/* Custom Date Range Selector */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
-          <h2 className="text-lg font-semibold mb-4">Steps History</h2>
-
-          <div className="flex space-x-3">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowStartCalendar(!showStartCalendar);
-                  setShowEndCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{startDate || "Select Start Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showStartCalendar && (
-                <Calendar
-                  onSelect={(date) => setStartDate(date)}
-                  onClose={() => setShowStartCalendar(false)}
-                />
-              )}
+          <h3 className="text-lg font-semibold mb-4">Custom Date Range</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={
+                  startDate
+                    ? new Date(startDate).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
-
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowEndCalendar(!showEndCalendar);
-                  setShowStartCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{endDate || "Select End Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showEndCalendar && (
-                <Calendar
-                  onSelect={(date) => setEndDate(date)}
-                  onClose={() => setShowEndCalendar(false)}
-                />
-              )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={
+                  endDate ? new Date(endDate).toISOString().split("T")[0] : ""
+                }
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
           </div>
+          {startDate && endDate && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Selected range: {new Date(startDate).toLocaleDateString()} -{" "}
+                {new Date(endDate).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-sm text-[#DD3333] hover:text-[#FF4444]"
+              >
+                Clear dates
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Overall Steps Progress Card */}
@@ -315,16 +369,16 @@ export default function StepsScreen() {
             <div className="h-[300px] relative mt-6">
               {/* Y-axis steps labels */}
               <div className="absolute left-0 top-0 bottom-0 w-14 flex flex-col justify-between text-xs text-gray-400">
-                <div>10,000</div>
-                <div>9,500</div>
-                <div>9,000</div>
-                <div>8,500</div>
-                <div>8,000</div>
+                <div>{Math.round(maxSteps).toLocaleString()}</div>
+                <div>{Math.round(maxSteps * 0.75).toLocaleString()}</div>
+                <div>{Math.round(maxSteps * 0.5).toLocaleString()}</div>
+                <div>{Math.round(maxSteps * 0.25).toLocaleString()}</div>
+                <div>{Math.round(minSteps).toLocaleString()}</div>
               </div>
 
               {/* Steps Chart */}
               <div className="ml-14 h-full flex items-end">
-                {stepsData.map((item, index) => (
+                {currentStepsData.map((item, index) => (
                   <div
                     key={index}
                     className="flex flex-col items-center flex-1"
@@ -334,9 +388,10 @@ export default function StepsScreen() {
                         item.highlight ? "bg-[#DD3333]" : "bg-gray-500"
                       }`}
                       style={{
-                        // This calculation was causing the bars to be too small or invisible
-                        // Let's use a better calculation that ensures visible bars
-                        height: `${((item.steps - 7500) / 3000) * 250}px`,
+                        height: `${
+                          ((item.steps - minSteps) / (maxSteps - minSteps)) *
+                          250
+                        }px`,
                       }}
                     ></div>
                     <div className="mt-2 text-sm">{item.day}</div>
@@ -356,7 +411,7 @@ export default function StepsScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stepsTableData.map((item, index) => (
+                  {getTableData.map((item, index) => (
                     <tr
                       key={index}
                       className="border-b border-[#20354A] last:border-0"

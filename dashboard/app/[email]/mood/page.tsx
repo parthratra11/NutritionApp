@@ -12,16 +12,42 @@ type MoodPoint = {
   day: string;
   mood: string;
   score: number; // 1-10
+  date?: string; // Add date for filtering
 };
 
+// Weekly data
 const weeklyBase: MoodPoint[] = [
-  { day: "Sun", mood: "Calm", score: 4 },
-  { day: "Mon", mood: "Tired", score: 3 },
-  { day: "Tue", mood: "Energetic", score: 6 },
-  { day: "Wed", mood: "Happy", score: 8 },
-  { day: "Thu", mood: "Low", score: 5 },
-  { day: "Fri", mood: "Focused", score: 7 },
-  { day: "Sat", mood: "Energetic", score: 9 },
+  { day: "Sun", mood: "Calm", score: 4, date: "2025-07-22" },
+  { day: "Mon", mood: "Tired", score: 3, date: "2025-07-23" },
+  { day: "Tue", mood: "Energetic", score: 6, date: "2025-07-24" },
+  { day: "Wed", mood: "Happy", score: 8, date: "2025-07-25" },
+  { day: "Thu", mood: "Low", score: 5, date: "2025-07-26" },
+  { day: "Fri", mood: "Focused", score: 7, date: "2025-07-27" },
+  { day: "Sat", mood: "Energetic", score: 9, date: "2025-07-28" },
+];
+
+// Monthly data (4 weeks)
+const monthlyBase: MoodPoint[] = [
+  { day: "Week 1", mood: "Mixed", score: 6, date: "2025-07-01" },
+  { day: "Week 2", mood: "Happy", score: 7, date: "2025-07-08" },
+  { day: "Week 3", mood: "Stressed", score: 4, date: "2025-07-15" },
+  { day: "Week 4", mood: "Energetic", score: 8, date: "2025-07-22" },
+];
+
+// Yearly data (12 months)
+const yearlyBase: MoodPoint[] = [
+  { day: "Jan", mood: "Calm", score: 5, date: "2025-01-01" },
+  { day: "Feb", mood: "Happy", score: 7, date: "2025-02-01" },
+  { day: "Mar", mood: "Stressed", score: 4, date: "2025-03-01" },
+  { day: "Apr", mood: "Energetic", score: 8, date: "2025-04-01" },
+  { day: "May", mood: "Tired", score: 3, date: "2025-05-01" },
+  { day: "Jun", mood: "Focused", score: 6, date: "2025-06-01" },
+  { day: "Jul", mood: "Happy", score: 9, date: "2025-07-01" },
+  { day: "Aug", mood: "Low", score: 4, date: "2025-08-01" },
+  { day: "Sep", mood: "Motivated", score: 7, date: "2025-09-01" },
+  { day: "Oct", mood: "Calm", score: 6, date: "2025-10-01" },
+  { day: "Nov", mood: "Anxious", score: 3, date: "2025-11-01" },
+  { day: "Dec", mood: "Peaceful", score: 8, date: "2025-12-01" },
 ];
 
 export default function MoodScreen() {
@@ -39,18 +65,23 @@ export default function MoodScreen() {
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   const dataset = useMemo(() => {
-    if (rangeTab === "weekly") return weeklyBase;
-    if (rangeTab === "monthly") {
-      return weeklyBase.map((mp) => ({
-        ...mp,
-        score: Math.min(10, Math.round((mp.score * 3 + 5) / 2)),
-      }));
+    let baseData;
+    if (rangeTab === "weekly") baseData = weeklyBase;
+    else if (rangeTab === "monthly") baseData = monthlyBase;
+    else baseData = yearlyBase;
+
+    // Filter by custom date range if both dates are selected
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return baseData.filter((item) => {
+        const itemDate = new Date(item.date!);
+        return itemDate >= start && itemDate <= end;
+      });
     }
-    return weeklyBase.map((mp) => ({
-      ...mp,
-      score: Math.min(10, Math.round((mp.score + 6) / 2)),
-    }));
-  }, [rangeTab]);
+
+    return baseData;
+  }, [rangeTab, startDate, endDate]);
 
   const currentDayIndex = 28;
   const daysOfWeek = ["S", "M", "T", "W", "Th", "F", "S"];
@@ -138,31 +169,43 @@ export default function MoodScreen() {
     fetchClientName();
   }, [params?.email]);
 
-  // Generate dummy data for tabular view that matches the image format
-  const dummyTableData = [
-    { date: "07 July 2025", mood: "Tired" },
-    { date: "08 July 2025", mood: "Tired" },
-    { date: "09 July 2025", mood: "Calm" },
-    { date: "10 July 2025", mood: "Motivated" },
-    { date: "11 July 2025", mood: "Anxious" },
-    { date: "12 July 2025", mood: "Sad" },
-    { date: "13 July 2025", mood: "Angry" },
-    { date: "14 July 2025", mood: "Happy" },
-    { date: "15 July 2025", mood: "Tired" },
-    { date: "16 July 2025", mood: "Calm" },
-    { date: "17 July 2025", mood: "Motivated" },
-    { date: "18 July 2025", mood: "Anxious" },
-    { date: "19 July 2025", mood: "Sad" },
-    { date: "20 July 2025", mood: "Angry" },
-    { date: "21 July 2025", mood: "Happy" },
-    { date: "22 July 2025", mood: "Tired" },
-    { date: "23 July 2025", mood: "Calm" },
-    { date: "24 July 2025", mood: "Motivated" },
-    { date: "25 July 2025", mood: "Anxious" },
-    { date: "26 July 2025", mood: "Sad" },
-    { date: "27 July 2025", mood: "Angry" },
-    { date: "28 July 2025", mood: "Happy" },
-  ];
+  // Generate table data based on current range
+  const getTableData = useMemo(() => {
+    if (rangeTab === "weekly") {
+      return [
+        { date: "22 July 2025", mood: "Calm" },
+        { date: "23 July 2025", mood: "Tired" },
+        { date: "24 July 2025", mood: "Energetic" },
+        { date: "25 July 2025", mood: "Happy" },
+        { date: "26 July 2025", mood: "Low" },
+        { date: "27 July 2025", mood: "Focused" },
+        { date: "28 July 2025", mood: "Energetic" },
+      ];
+    } else if (rangeTab === "monthly") {
+      return [
+        { date: "01 July 2025", mood: "Mixed" },
+        { date: "08 July 2025", mood: "Happy" },
+        { date: "15 July 2025", mood: "Stressed" },
+        { date: "22 July 2025", mood: "Energetic" },
+        { date: "29 July 2025", mood: "Calm" },
+      ];
+    } else {
+      return [
+        { date: "January 2025", mood: "Calm" },
+        { date: "February 2025", mood: "Happy" },
+        { date: "March 2025", mood: "Stressed" },
+        { date: "April 2025", mood: "Energetic" },
+        { date: "May 2025", mood: "Tired" },
+        { date: "June 2025", mood: "Focused" },
+        { date: "July 2025", mood: "Happy" },
+        { date: "August 2025", mood: "Low" },
+        { date: "September 2025", mood: "Motivated" },
+        { date: "October 2025", mood: "Calm" },
+        { date: "November 2025", mood: "Anxious" },
+        { date: "December 2025", mood: "Peaceful" },
+      ];
+    }
+  }, [rangeTab]);
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
@@ -197,79 +240,56 @@ export default function MoodScreen() {
           </div>
         </div>
 
-        {/* Mood History Card */}
+        {/* Custom Date Range Selector */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
-          <h2 className="text-lg font-semibold mb-4">Mood History</h2>
-
-          <div className="flex space-x-3">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowStartCalendar(!showStartCalendar);
-                  setShowEndCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between z"
-              >
-                <span>{startDate || "Select Start Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showStartCalendar && (
-                <Calendar
-                  onSelect={(date) => setStartDate(date)}
-                  onClose={() => setShowStartCalendar(false)}
-                />
-              )}
+          <h3 className="text-lg font-semibold mb-4">Custom Date Range</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={
+                  startDate
+                    ? new Date(startDate).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
-
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowEndCalendar(!showEndCalendar);
-                  setShowStartCalendar(false);
-                }}
-                className="bg-[#0E1F34] border border-[#22364F] text-gray-300 w-full p-2 rounded flex items-center justify-between"
-              >
-                <span>{endDate || "Select End Date"}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-              {showEndCalendar && (
-                <Calendar
-                  onSelect={(date) => setEndDate(date)}
-                  onClose={() => setShowEndCalendar(false)}
-                />
-              )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={
+                  endDate ? new Date(endDate).toISOString().split("T")[0] : ""
+                }
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
+              />
             </div>
           </div>
+          {startDate && endDate && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Selected range: {new Date(startDate).toLocaleDateString()} -{" "}
+                {new Date(endDate).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-sm text-[#DD3333] hover:text-[#FF4444]"
+              >
+                Clear dates
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Mood Graph / Table */}
@@ -309,18 +329,43 @@ export default function MoodScreen() {
               {/* Bubbles */}
               <div className="absolute inset-0">
                 {dataset.map((d, idx) => {
-                  // Position bubbles similar to the screenshot
-                  let positions = {
-                    Sun: { left: "8%", top: "70%" },
-                    Mon: { left: "18%", top: "85%" },
-                    Tue: { left: "32%", top: "55%" },
-                    Wed: { left: "45%", top: "30%" },
-                    Thu: { left: "60%", top: "70%" },
-                    Fri: { left: "75%", top: "45%" },
-                    Sat: { left: "88%", top: "20%" },
-                  };
+                  // Dynamic positions based on data length
+                  const positions =
+                    dataset.length === 7
+                      ? {
+                          Sun: { left: "8%", top: "70%" },
+                          Mon: { left: "18%", top: "85%" },
+                          Tue: { left: "32%", top: "55%" },
+                          Wed: { left: "45%", top: "30%" },
+                          Thu: { left: "60%", top: "70%" },
+                          Fri: { left: "75%", top: "45%" },
+                          Sat: { left: "88%", top: "20%" },
+                        }
+                      : dataset.length === 4
+                      ? {
+                          "Week 1": { left: "20%", top: "60%" },
+                          "Week 2": { left: "40%", top: "40%" },
+                          "Week 3": { left: "60%", top: "80%" },
+                          "Week 4": { left: "80%", top: "30%" },
+                        }
+                      : {
+                          Jan: { left: "8%", top: "70%" },
+                          Feb: { left: "16%", top: "40%" },
+                          Mar: { left: "24%", top: "85%" },
+                          Apr: { left: "32%", top: "25%" },
+                          May: { left: "40%", top: "90%" },
+                          Jun: { left: "48%", top: "60%" },
+                          Jul: { left: "56%", top: "15%" },
+                          Aug: { left: "64%", top: "85%" },
+                          Sep: { left: "72%", top: "45%" },
+                          Oct: { left: "80%", top: "65%" },
+                          Nov: { left: "88%", top: "90%" },
+                          Dec: { left: "96%", top: "30%" },
+                        };
 
-                  const position = positions[d.day];
+                  const position = positions[d.day as keyof typeof positions];
+                  if (!position) return null;
+
                   const size = 30 + d.score * 5;
 
                   return (
@@ -338,7 +383,7 @@ export default function MoodScreen() {
                         boxShadow: "0 4px 8px rgba(0,0,0,0.35)",
                       }}
                     >
-                      {d.day}
+                      {rangeTab === "yearly" ? d.day.slice(0, 3) : d.day}
                     </div>
                   );
                 })}
@@ -354,7 +399,7 @@ export default function MoodScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dummyTableData.map((item, index) => (
+                  {getTableData.map((item, index) => (
                     <tr
                       key={index}
                       className="border-b border-[#20354A] last:border-0"
