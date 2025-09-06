@@ -447,6 +447,17 @@ export default function WorkoutDashboard() {
     setShowCalendar(false);
   };
 
+  // Update this function in your existing code
+  const handleSessionSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedSession = e.target.value;
+    setFilter(selectedSession);
+
+    // If a specific session is selected (not "All Sessions"), navigate to the session page
+    if (selectedSession !== "All Sessions") {
+      router.push(`/${params.email}/workout/session?type=${selectedSession}`);
+    }
+  };
+
   if (loading)
     return (
       <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
@@ -559,7 +570,7 @@ export default function WorkoutDashboard() {
               <div className="relative">
                 <select
                   value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
+                  onChange={handleSessionSelect}
                   className="pl-3 pr-8 py-2 bg-[#0E1F34] border border-[#22364F] rounded-md text-white text-sm appearance-none"
                 >
                   <option>All Sessions</option>
