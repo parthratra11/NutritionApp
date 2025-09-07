@@ -438,7 +438,7 @@ export default function Home() {
 
           {/* Date strip - responsive positioning */}
           <div className="flex justify-center lg:justify-start lg:mr-12">
-            <div className="flex items-center bg-[#0F1D3C] px-2 lg:px-4 h-[55px] lg:h-[65px] rounded-lg">
+            <div className="flex items-center px-2 lg:px-4 h-[55px] lg:h-[65px] rounded-lg">
               <div className="flex space-x-1 lg:space-x-2 items-center">
                 {generateDateStrip().map((item, idx) => (
                   <button
