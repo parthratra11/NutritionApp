@@ -206,7 +206,7 @@ export default function ClientOverview() {
     },
     {
       label: "Mood",
-      path: "/moods",
+      path: "/mood",
       icon: (
         <svg
           width="24"
@@ -722,7 +722,7 @@ export default function ClientOverview() {
           {/* Moods Card */}
           <div
             className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
-            onClick={() => router.push(`/${params.email}/moods`)}
+            onClick={() => router.push(`/${params.email}/mood`)}
           >
             <div className="flex items-center gap-1 font-semibold text-sm">
               <svg
