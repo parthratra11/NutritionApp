@@ -48,11 +48,69 @@ export default function WeightScreen() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [userName, setUserName] = useState<string>("User");
+  const [measurementType, setMeasurementType] = useState<
+    "weight" | "circumference"
+  >("weight");
+  const [isMeasurementDropdownOpen, setIsMeasurementDropdownOpen] =
+    useState(false);
 
   // Backend data states
   const [weeklyData, setWeeklyData] = useState<WeeklyForms | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dummy data for waist/hip circumference
+  const dummyCircumferenceData = [
+    {
+      date: "2025-07-22",
+      formattedDate: "Jul 22, 25",
+      dayName: "Mon",
+      waist: 85.2,
+      hip: 95.8,
+    },
+    {
+      date: "2025-07-23",
+      formattedDate: "Jul 23, 25",
+      dayName: "Tue",
+      waist: 85.0,
+      hip: 95.6,
+    },
+    {
+      date: "2025-07-24",
+      formattedDate: "Jul 24, 25",
+      dayName: "Wed",
+      waist: 84.8,
+      hip: 95.4,
+    },
+    {
+      date: "2025-07-25",
+      formattedDate: "Jul 25, 25",
+      dayName: "Thu",
+      waist: 84.6,
+      hip: 95.2,
+    },
+    {
+      date: "2025-07-26",
+      formattedDate: "Jul 26, 25",
+      dayName: "Fri",
+      waist: 84.4,
+      hip: 95.0,
+    },
+    {
+      date: "2025-07-27",
+      formattedDate: "Jul 27, 25",
+      dayName: "Sat",
+      waist: 84.2,
+      hip: 94.8,
+    },
+    {
+      date: "2025-07-28",
+      formattedDate: "Jul 28, 25",
+      dayName: "Sun",
+      waist: 84.0,
+      hip: 94.6,
+    },
+  ];
 
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
@@ -148,6 +206,95 @@ export default function WeightScreen() {
     );
   };
 
+  // Calculate circumference data with filtering
+  const getCircumferenceData = () => {
+    let filteredData = [...dummyCircumferenceData];
+
+    if (comparisonPeriod === "custom" && startDate && endDate) {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      endDateObj.setHours(23, 59, 59, 999);
+
+      filteredData = dummyCircumferenceData.filter((day) => {
+        const dayDate = new Date(day.date);
+        return dayDate >= startDateObj && dayDate <= endDateObj;
+      });
+    } else if (comparisonPeriod !== "all") {
+      const now = new Date();
+      const cutoffDate = new Date();
+
+      switch (comparisonPeriod) {
+        case "weekly":
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case "monthly":
+          cutoffDate.setMonth(now.getMonth() - 1);
+          break;
+        case "quarterly":
+          cutoffDate.setMonth(now.getMonth() - 3);
+          break;
+        case "yearly":
+          cutoffDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+
+      filteredData = dummyCircumferenceData.filter(
+        (day) => new Date(day.date) >= cutoffDate
+      );
+    }
+
+    // Apply range filtering
+    switch (rangeTab) {
+      case "weekly":
+        return filteredData.slice(-7);
+      case "monthly":
+        return filteredData.slice(-30);
+      case "yearly":
+        // For yearly, create monthly averages
+        const monthlyData: {
+          [month: string]: {
+            waistTotal: number;
+            hipTotal: number;
+            count: number;
+          };
+        } = {};
+
+        filteredData.forEach((day) => {
+          const date = new Date(day.date);
+          const monthKey = `${date.getFullYear()}-${String(
+            date.getMonth() + 1
+          ).padStart(2, "0")}`;
+
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { waistTotal: 0, hipTotal: 0, count: 0 };
+          }
+
+          monthlyData[monthKey].waistTotal += day.waist;
+          monthlyData[monthKey].hipTotal += day.hip;
+          monthlyData[monthKey].count += 1;
+        });
+
+        return Object.entries(monthlyData).map(([monthKey, data]) => ({
+          month: monthKey,
+          label: new Date(monthKey + "-01").toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          }),
+          waist: parseFloat((data.waistTotal / data.count).toFixed(1)),
+          hip: parseFloat((data.hipTotal / data.count).toFixed(1)),
+          formattedDate: new Date(monthKey + "-01").toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              year: "numeric",
+            }
+          ),
+        }));
+      default:
+        return filteredData;
+    }
+  };
+
   // Calculate monthly averages
   const calculateMonthlyAverages = () => {
     const dailyData = calculateDailyWeights();
@@ -235,6 +382,29 @@ export default function WeightScreen() {
     return null;
   };
 
+  // Custom tooltip for circumference chart
+  const CircumferenceTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-gray-900 text-white p-3 rounded-lg shadow-lg border border-gray-700">
+          <p className="font-medium">
+            {rangeTab === "yearly"
+              ? data.label
+              : `${data.dayName} - ${data.formattedDate}`}
+          </p>
+          {payload.map((entry: any) => (
+            <p key={entry.dataKey} style={{ color: entry.color }}>
+              <strong>{entry.dataKey === "waist" ? "Waist" : "Hip"}:</strong>{" "}
+              {entry.value} cm
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!params?.email) return;
@@ -307,8 +477,8 @@ export default function WeightScreen() {
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title="Weight"
-        subtitle="Track your weight progress"
+        title="Body Metrics"
+        subtitle="Track your body measurements"
         email={decodeURIComponent(email)}
         userName={userName}
       />
@@ -431,12 +601,72 @@ export default function WeightScreen() {
           </div>
         )}
 
-        {/* Weight Graph or Table */}
+        {/* Body Metrics Graph or Table */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
-              <h3 className="font-semibold">Weight Progress</h3>
-              <div className="ml-2 bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
+            <div className="flex items-center space-x-4">
+              {/* Measurement Type Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setIsMeasurementDropdownOpen(!isMeasurementDropdownOpen)
+                  }
+                  className="px-4 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-lg flex items-center justify-between min-w-[200px]"
+                >
+                  <span>
+                    {measurementType === "weight"
+                      ? "Weight Progress"
+                      : "Waist / Hip Circumference"}
+                  </span>
+                  <svg
+                    className={`h-4 w-4 ml-2 transition-transform ${
+                      isMeasurementDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {isMeasurementDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full bg-[#0E1F34] border border-[#22364F] rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setMeasurementType("weight");
+                        setIsMeasurementDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-[#22364F] ${
+                        measurementType === "weight" ? "bg-[#22364F]" : ""
+                      }`}
+                    >
+                      Weight Progress
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMeasurementType("circumference");
+                        setIsMeasurementDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-[#22364F] ${
+                        measurementType === "circumference"
+                          ? "bg-[#22364F]"
+                          : ""
+                      }`}
+                    >
+                      Waist / Hip Circumference
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
                 <svg
                   className="w-3 h-3 mr-1"
                   viewBox="0 0 24 24"
@@ -483,32 +713,88 @@ export default function WeightScreen() {
           {viewMode === "graphs" ? (
             <div className="h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={getFilteredData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis
-                    dataKey={rangeTab === "yearly" ? "label" : "formattedDate"}
-                    stroke="#94a3b8"
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis
-                    stroke="#94a3b8"
-                    tick={{ fill: "#94a3b8" }}
-                    domain={["dataMin - 2", "dataMax + 2"]}
-                  />
-                  <Tooltip content={<WeightTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="weight"
-                    stroke="#DD3333"
-                    strokeWidth={3}
-                    dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
-                    activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
-                  />
-                </LineChart>
+                {measurementType === "weight" ? (
+                  <LineChart data={getFilteredData()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis
+                      dataKey={
+                        rangeTab === "yearly" ? "label" : "formattedDate"
+                      }
+                      stroke="#94a3b8"
+                      tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      tick={{ fill: "#94a3b8" }}
+                      domain={["dataMin - 2", "dataMax + 2"]}
+                    />
+                    <Tooltip content={<WeightTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="weight"
+                      stroke="#DD3333"
+                      strokeWidth={3}
+                      dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                ) : (
+                  <LineChart data={getCircumferenceData()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis
+                      dataKey={
+                        rangeTab === "yearly" ? "label" : "formattedDate"
+                      }
+                      stroke="#94a3b8"
+                      tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      tick={{ fill: "#94a3b8" }}
+                      domain={["dataMin - 5", "dataMax + 5"]}
+                    />
+                    <Tooltip content={<CircumferenceTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="waist"
+                      stroke="#FF6B6B"
+                      strokeWidth={3}
+                      dot={{ fill: "#FF6B6B", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#FF6B6B", strokeWidth: 2 }}
+                      name="Waist"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="hip"
+                      stroke="#4ECDC4"
+                      strokeWidth={3}
+                      dot={{ fill: "#4ECDC4", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#4ECDC4", strokeWidth: 2 }}
+                      name="Hip"
+                    />
+                  </LineChart>
+                )}
               </ResponsiveContainer>
+
+              {/* Legend for circumference chart */}
+              {measurementType === "circumference" && (
+                <div className="flex justify-center space-x-8 mt-4">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-[#FF6B6B] rounded-full mr-2"></div>
+                    <span className="text-sm">Waist (cm)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-[#4ECDC4] rounded-full mr-2"></div>
+                    <span className="text-sm">Hip (cm)</span>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -518,54 +804,137 @@ export default function WeightScreen() {
                     <th className="py-3 pr-4 font-medium">
                       {rangeTab === "yearly" ? "Month" : "Date"}
                     </th>
-                    <th className="py-3 pr-4 font-medium">
-                      {rangeTab === "yearly" ? "Avg Weight" : "Weight"}
-                    </th>
-                    <th className="py-3 pr-4 font-medium">Change</th>
+                    {measurementType === "weight" ? (
+                      <>
+                        <th className="py-3 pr-4 font-medium">
+                          {rangeTab === "yearly" ? "Avg Weight" : "Weight"}
+                        </th>
+                        <th className="py-3 pr-4 font-medium">Change</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3 pr-4 font-medium">
+                          {rangeTab === "yearly" ? "Avg Waist" : "Waist"}
+                        </th>
+                        <th className="py-3 pr-4 font-medium">
+                          {rangeTab === "yearly" ? "Avg Hip" : "Hip"}
+                        </th>
+                        <th className="py-3 pr-4 font-medium">Waist Change</th>
+                        <th className="py-3 pr-4 font-medium">Hip Change</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredData()
-                    .slice()
-                    .reverse()
-                    .map((item, index, array) => {
-                      const nextItem = array[index + 1];
-                      const weightChange = nextItem
-                        ? (item.weight - nextItem.weight).toFixed(1)
-                        : null;
+                  {measurementType === "weight"
+                    ? getFilteredData()
+                        .slice()
+                        .reverse()
+                        .map((item, index, array) => {
+                          const nextItem = array[index + 1];
+                          const weightChange = nextItem
+                            ? (item.weight - nextItem.weight).toFixed(1)
+                            : null;
 
-                      return (
-                        <tr
-                          key={rangeTab === "yearly" ? item.month : item.date}
-                          className="border-b border-[#20354A] last:border-0"
-                        >
-                          <td className="py-3 pr-4">
-                            {rangeTab === "yearly"
-                              ? item.label
-                              : item.formattedDate}
-                          </td>
-                          <td className="py-3 pr-4">{item.weight} kg</td>
-                          <td className="py-3 pr-4">
-                            {weightChange ? (
-                              <span
-                                className={
-                                  parseFloat(weightChange) > 0
-                                    ? "text-red-500"
-                                    : parseFloat(weightChange) < 0
-                                    ? "text-green-500"
-                                    : "text-gray-400"
-                                }
-                              >
-                                {parseFloat(weightChange) > 0 ? "+" : ""}
-                                {weightChange} kg
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          return (
+                            <tr
+                              key={
+                                rangeTab === "yearly" ? item.month : item.date
+                              }
+                              className="border-b border-[#20354A] last:border-0"
+                            >
+                              <td className="py-3 pr-4">
+                                {rangeTab === "yearly"
+                                  ? item.label
+                                  : item.formattedDate}
+                              </td>
+                              <td className="py-3 pr-4">{item.weight} kg</td>
+                              <td className="py-3 pr-4">
+                                {weightChange ? (
+                                  <span
+                                    className={
+                                      parseFloat(weightChange) > 0
+                                        ? "text-red-500"
+                                        : parseFloat(weightChange) < 0
+                                        ? "text-green-500"
+                                        : "text-gray-400"
+                                    }
+                                  >
+                                    {parseFloat(weightChange) > 0 ? "+" : ""}
+                                    {weightChange} kg
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                    : getCircumferenceData()
+                        .slice()
+                        .reverse()
+                        .map((item, index, array) => {
+                          const nextItem = array[index + 1];
+                          const waistChange = nextItem
+                            ? (item.waist - nextItem.waist).toFixed(1)
+                            : null;
+                          const hipChange = nextItem
+                            ? (item.hip - nextItem.hip).toFixed(1)
+                            : null;
+
+                          return (
+                            <tr
+                              key={
+                                rangeTab === "yearly" ? item.month : item.date
+                              }
+                              className="border-b border-[#20354A] last:border-0"
+                            >
+                              <td className="py-3 pr-4">
+                                {rangeTab === "yearly"
+                                  ? item.label
+                                  : item.formattedDate}
+                              </td>
+                              <td className="py-3 pr-4">{item.waist} cm</td>
+                              <td className="py-3 pr-4">{item.hip} cm</td>
+                              <td className="py-3 pr-4">
+                                {waistChange ? (
+                                  <span
+                                    className={
+                                      parseFloat(waistChange) > 0
+                                        ? "text-red-500"
+                                        : parseFloat(waistChange) < 0
+                                        ? "text-green-500"
+                                        : "text-gray-400"
+                                    }
+                                  >
+                                    {parseFloat(waistChange) > 0 ? "+" : ""}
+                                    {waistChange} cm
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 pr-4">
+                                {hipChange ? (
+                                  <span
+                                    className={
+                                      parseFloat(hipChange) > 0
+                                        ? "text-red-500"
+                                        : parseFloat(hipChange) < 0
+                                        ? "text-green-500"
+                                        : "text-gray-400"
+                                    }
+                                  >
+                                    {parseFloat(hipChange) > 0 ? "+" : ""}
+                                    {hipChange} cm
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                 </tbody>
               </table>
             </div>
