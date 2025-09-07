@@ -141,6 +141,15 @@ export default function StepsScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   // Simple calendar component
   const Calendar = ({
     onSelect,
@@ -394,7 +403,15 @@ export default function StepsScreen() {
                         }px`,
                       }}
                     ></div>
-                    <div className="mt-2 text-sm">{item.day}</div>
+                    <div className="mt-2 text-sm text-center">
+                      <div>{item.day}</div>
+                      {/* Add date below day name */}
+                      {item.date && rangeTab !== "yearly" && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {formatDateForDisplay(item.date)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

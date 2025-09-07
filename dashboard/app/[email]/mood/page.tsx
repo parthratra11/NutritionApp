@@ -169,6 +169,15 @@ export default function MoodScreen() {
     fetchClientName();
   }, [params?.email]);
 
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   // Generate table data based on current range
   const getTableData = useMemo(() => {
     if (rangeTab === "weekly") {
@@ -325,9 +334,12 @@ export default function MoodScreen() {
           </div>
 
           {viewMode === "graphs" ? (
-            <div className="h-[340px] relative">
+            <div className="h-[380px] relative">
               {/* Bubbles */}
-              <div className="absolute inset-0">
+              <div
+                className="absolute inset-0"
+                style={{ height: "calc(100% - 40px)" }}
+              >
                 {dataset.map((d, idx) => {
                   // Dynamic positions based on data length
                   const positions =
@@ -388,6 +400,36 @@ export default function MoodScreen() {
                   );
                 })}
               </div>
+
+              {/* X-axis dates at bottom - only show for weekly and monthly views */}
+              {rangeTab !== "yearly" && (
+                <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2">
+                  {dataset.map((d, idx) => {
+                    const positions =
+                      dataset.length === 7
+                        ? ["8%", "18%", "32%", "45%", "60%", "75%", "88%"]
+                        : dataset.length === 4
+                        ? ["20%", "40%", "60%", "80%"]
+                        : [];
+
+                    if (!positions[idx] || !d.date) return null;
+
+                    return (
+                      <div
+                        key={`date-${d.day}`}
+                        className="text-xs text-gray-400 text-center"
+                        style={{
+                          position: "absolute",
+                          left: positions[idx],
+                          transform: "translateX(-50%)",
+                        }}
+                      >
+                        {formatDateForDisplay(d.date)}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <div className="overflow-y-auto max-h-[400px]">

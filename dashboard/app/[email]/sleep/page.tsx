@@ -502,6 +502,15 @@ export default function SleepScreen() {
     }
   }, [rangeTab]);
 
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   // Fetch client name
   useEffect(() => {
     const fetchClientName = async () => {
@@ -683,7 +692,15 @@ export default function SleepScreen() {
                             }}
                           ></div>
                         </div>
-                        <div className="mt-2 text-sm">{day.day}</div>
+                        <div className="mt-2 text-sm text-center">
+                          <div>{day.day}</div>
+                          {/* Add date below day name */}
+                          {day.date && rangeTab !== "yearly" && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              {formatDateForDisplay(day.date)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -764,8 +781,19 @@ export default function SleepScreen() {
 
                   {/* X-axis labels */}
                   <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-400">
-                    {sleepQualityData.xAxis.map((day) => (
-                      <div key={day}>{day}</div>
+                    {sleepQualityData.xAxis.map((day, index) => (
+                      <div key={day} className="text-center">
+                        <div>{day}</div>
+                        {/* Add date below day name for quality chart */}
+                        {currentSleepData[index]?.date &&
+                          rangeTab !== "yearly" && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatDateForDisplay(
+                                currentSleepData[index].date
+                              )}
+                            </div>
+                          )}
+                      </div>
                     ))}
                   </div>
                 </div>
