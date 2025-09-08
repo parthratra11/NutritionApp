@@ -17,37 +17,37 @@ type MoodPoint = {
 
 // Weekly data
 const weeklyBase: MoodPoint[] = [
-  { day: "Sun", mood: "Calm", score: 4, date: "2025-07-22" },
-  { day: "Mon", mood: "Tired", score: 3, date: "2025-07-23" },
-  { day: "Tue", mood: "Energetic", score: 6, date: "2025-07-24" },
-  { day: "Wed", mood: "Happy", score: 8, date: "2025-07-25" },
-  { day: "Thu", mood: "Low", score: 5, date: "2025-07-26" },
-  { day: "Fri", mood: "Focused", score: 7, date: "2025-07-27" },
-  { day: "Sat", mood: "Energetic", score: 9, date: "2025-07-28" },
+  { mood: "Calm", score: 4, date: "2025-07-22" },
+  { mood: "Tired", score: 3, date: "2025-07-23" },
+  { mood: "Energetic", score: 6, date: "2025-07-24" },
+  { mood: "Happy", score: 8, date: "2025-07-25" },
+  { mood: "Low", score: 5, date: "2025-07-26" },
+  { mood: "Focused", score: 7, date: "2025-07-27" },
+  { mood: "Energetic", score: 9, date: "2025-07-28" },
 ];
 
 // Monthly data (4 weeks)
 const monthlyBase: MoodPoint[] = [
-  { day: "Week 1", mood: "Mixed", score: 6, date: "2025-07-01" },
-  { day: "Week 2", mood: "Happy", score: 7, date: "2025-07-08" },
-  { day: "Week 3", mood: "Stressed", score: 4, date: "2025-07-15" },
-  { day: "Week 4", mood: "Energetic", score: 8, date: "2025-07-22" },
+  { mood: "Mixed", score: 6, date: "2025-07-01" },
+  { mood: "Happy", score: 7, date: "2025-07-08" },
+  { mood: "Stressed", score: 4, date: "2025-07-15" },
+  { mood: "Energetic", score: 8, date: "2025-07-22" },
 ];
 
 // Yearly data (12 months)
 const yearlyBase: MoodPoint[] = [
-  { day: "Jan", mood: "Calm", score: 5, date: "2025-01-01" },
-  { day: "Feb", mood: "Happy", score: 7, date: "2025-02-01" },
-  { day: "Mar", mood: "Stressed", score: 4, date: "2025-03-01" },
-  { day: "Apr", mood: "Energetic", score: 8, date: "2025-04-01" },
-  { day: "May", mood: "Tired", score: 3, date: "2025-05-01" },
-  { day: "Jun", mood: "Focused", score: 6, date: "2025-06-01" },
-  { day: "Jul", mood: "Happy", score: 9, date: "2025-07-01" },
-  { day: "Aug", mood: "Low", score: 4, date: "2025-08-01" },
-  { day: "Sep", mood: "Motivated", score: 7, date: "2025-09-01" },
-  { day: "Oct", mood: "Calm", score: 6, date: "2025-10-01" },
-  { day: "Nov", mood: "Anxious", score: 3, date: "2025-11-01" },
-  { day: "Dec", mood: "Peaceful", score: 8, date: "2025-12-01" },
+  { mood: "Calm", score: 5, date: "2025-01-01" },
+  { mood: "Happy", score: 7, date: "2025-02-01" },
+  { mood: "Stressed", score: 4, date: "2025-03-01" },
+  { mood: "Energetic", score: 8, date: "2025-04-01" },
+  { mood: "Tired", score: 3, date: "2025-05-01" },
+  { mood: "Focused", score: 6, date: "2025-06-01" },
+  { mood: "Happy", score: 9, date: "2025-07-01" },
+  { mood: "Low", score: 4, date: "2025-08-01" },
+  { mood: "Motivated", score: 7, date: "2025-09-01" },
+  { mood: "Calm", score: 6, date: "2025-10-01" },
+  { mood: "Anxious", score: 3, date: "2025-11-01" },
+  { mood: "Peaceful", score: 8, date: "2025-12-01" },
 ];
 
 export default function MoodScreen() {
@@ -344,45 +344,34 @@ export default function MoodScreen() {
                   // Dynamic positions based on data length
                   const positions =
                     dataset.length === 7
-                      ? {
-                          Sun: { left: "8%", top: "70%" },
-                          Mon: { left: "18%", top: "85%" },
-                          Tue: { left: "32%", top: "55%" },
-                          Wed: { left: "45%", top: "30%" },
-                          Thu: { left: "60%", top: "70%" },
-                          Fri: { left: "75%", top: "45%" },
-                          Sat: { left: "88%", top: "20%" },
-                        }
+                      ? ["8%", "18%", "32%", "45%", "60%", "75%", "88%"]
                       : dataset.length === 4
-                      ? {
-                          "Week 1": { left: "20%", top: "60%" },
-                          "Week 2": { left: "40%", top: "40%" },
-                          "Week 3": { left: "60%", top: "80%" },
-                          "Week 4": { left: "80%", top: "30%" },
-                        }
-                      : {
-                          Jan: { left: "8%", top: "70%" },
-                          Feb: { left: "16%", top: "40%" },
-                          Mar: { left: "24%", top: "85%" },
-                          Apr: { left: "32%", top: "25%" },
-                          May: { left: "40%", top: "90%" },
-                          Jun: { left: "48%", top: "60%" },
-                          Jul: { left: "56%", top: "15%" },
-                          Aug: { left: "64%", top: "85%" },
-                          Sep: { left: "72%", top: "45%" },
-                          Oct: { left: "80%", top: "65%" },
-                          Nov: { left: "88%", top: "90%" },
-                          Dec: { left: "96%", top: "30%" },
-                        };
+                      ? ["20%", "40%", "60%", "80%"]
+                      : [
+                          "8%",
+                          "16%",
+                          "24%",
+                          "32%",
+                          "40%",
+                          "48%",
+                          "56%",
+                          "64%",
+                          "72%",
+                          "80%",
+                          "88%",
+                          "96%",
+                        ];
 
-                  const position = positions[d.day as keyof typeof positions];
-                  if (!position) return null;
+                  const position = {
+                    left: positions[idx] || "50%",
+                    top: `${Math.random() * 60 + 20}%`,
+                  };
 
                   const size = 30 + d.score * 5;
 
                   return (
                     <div
-                      key={d.day}
+                      key={idx}
                       className="absolute rounded-full flex items-center justify-center text-sm font-medium"
                       style={{
                         left: position.left,
@@ -395,41 +384,50 @@ export default function MoodScreen() {
                         boxShadow: "0 4px 8px rgba(0,0,0,0.35)",
                       }}
                     >
-                      {rangeTab === "yearly" ? d.day.slice(0, 3) : d.day}
+                      {d.score}
                     </div>
                   );
                 })}
               </div>
 
-              {/* X-axis dates at bottom - only show for weekly and monthly views */}
-              {rangeTab !== "yearly" && (
-                <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2">
-                  {dataset.map((d, idx) => {
-                    const positions =
-                      dataset.length === 7
-                        ? ["8%", "18%", "32%", "45%", "60%", "75%", "88%"]
-                        : dataset.length === 4
-                        ? ["20%", "40%", "60%", "80%"]
-                        : [];
+              {/* X-axis dates at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2">
+                {dataset.map((d, idx) => {
+                  const positions =
+                    dataset.length === 7
+                      ? ["8%", "18%", "32%", "45%", "60%", "75%", "88%"]
+                      : dataset.length === 4
+                      ? ["20%", "40%", "60%", "80%"]
+                      : [
+                          "8%",
+                          "16%",
+                          "24%",
+                          "32%",
+                          "40%",
+                          "48%",
+                          "56%",
+                          "64%",
+                          "72%",
+                          "80%",
+                          "88%",
+                          "96%",
+                        ];
 
-                    if (!positions[idx] || !d.date) return null;
-
-                    return (
-                      <div
-                        key={`date-${d.day}`}
-                        className="text-xs text-gray-400 text-center"
-                        style={{
-                          position: "absolute",
-                          left: positions[idx],
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        {formatDateForDisplay(d.date)}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                  return (
+                    <div
+                      key={`date-${idx}`}
+                      className="text-xs text-gray-400 text-center"
+                      style={{
+                        position: "absolute",
+                        left: positions[idx],
+                        transform: "translateX(-50%)",
+                      }}
+                    >
+                      {formatDateForDisplay(d.date)}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="overflow-y-auto max-h-[400px]">

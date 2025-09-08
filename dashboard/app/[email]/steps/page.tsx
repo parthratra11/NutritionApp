@@ -8,37 +8,37 @@ import { doc, getDoc } from "firebase/firestore";
 
 // Weekly steps data
 const weeklyStepsData = [
-  { day: "S", steps: 8400, date: "2025-07-22" },
-  { day: "M", steps: 8100, date: "2025-07-23" },
-  { day: "T", steps: 8250, date: "2025-07-24" },
-  { day: "W", steps: 8550, date: "2025-07-25" },
-  { day: "Th", steps: 9000, date: "2025-07-26" },
-  { day: "F", steps: 9800, date: "2025-07-27" },
-  { day: "S", steps: 9400, date: "2025-07-28", highlight: true },
+  { steps: 8400, date: "2025-07-22" },
+  { steps: 8100, date: "2025-07-23" },
+  { steps: 8250, date: "2025-07-24" },
+  { steps: 8550, date: "2025-07-25" },
+  { steps: 9000, date: "2025-07-26" },
+  { steps: 9800, date: "2025-07-27" },
+  { steps: 9400, date: "2025-07-28", highlight: true },
 ];
 
 // Monthly steps data
 const monthlyStepsData = [
-  { day: "W1", steps: 58500, date: "2025-07-01" },
-  { day: "W2", steps: 61200, date: "2025-07-08" },
-  { day: "W3", steps: 59800, date: "2025-07-15" },
-  { day: "W4", steps: 63100, date: "2025-07-22" },
+  { steps: 58500, date: "2025-07-01" },
+  { steps: 61200, date: "2025-07-08" },
+  { steps: 59800, date: "2025-07-15" },
+  { steps: 63100, date: "2025-07-22" },
 ];
 
 // Yearly steps data
 const yearlyStepsData = [
-  { day: "Jan", steps: 245000, date: "2025-01-01" },
-  { day: "Feb", steps: 228000, date: "2025-02-01" },
-  { day: "Mar", steps: 267000, date: "2025-03-01" },
-  { day: "Apr", steps: 252000, date: "2025-04-01" },
-  { day: "May", steps: 274000, date: "2025-05-01" },
-  { day: "Jun", steps: 259000, date: "2025-06-01" },
-  { day: "Jul", steps: 282000, date: "2025-07-01" },
-  { day: "Aug", steps: 268000, date: "2025-08-01" },
-  { day: "Sep", steps: 255000, date: "2025-09-01" },
-  { day: "Oct", steps: 271000, date: "2025-10-01" },
-  { day: "Nov", steps: 248000, date: "2025-11-01" },
-  { day: "Dec", steps: 263000, date: "2025-12-01" },
+  { steps: 245000, date: "2025-01-01" },
+  { steps: 228000, date: "2025-02-01" },
+  { steps: 267000, date: "2025-03-01" },
+  { steps: 252000, date: "2025-04-01" },
+  { steps: 274000, date: "2025-05-01" },
+  { steps: 259000, date: "2025-06-01" },
+  { steps: 282000, date: "2025-07-01" },
+  { steps: 268000, date: "2025-08-01" },
+  { steps: 255000, date: "2025-09-01" },
+  { steps: 271000, date: "2025-10-01" },
+  { steps: 248000, date: "2025-11-01" },
+  { steps: 263000, date: "2025-12-01" },
 ];
 
 export default function StepsScreen() {
@@ -403,14 +403,8 @@ export default function StepsScreen() {
                         }px`,
                       }}
                     ></div>
-                    <div className="mt-2 text-sm text-center">
-                      <div>{item.day}</div>
-                      {/* Add date below day name */}
-                      {item.date && rangeTab !== "yearly" && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          {formatDateForDisplay(item.date)}
-                        </div>
-                      )}
+                    <div className="mt-2 text-xs text-center text-gray-400">
+                      {formatDateForDisplay(item.date)}
                     </div>
                   </div>
                 ))}

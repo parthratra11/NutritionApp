@@ -9,49 +9,42 @@ import { doc, getDoc } from "firebase/firestore";
 // Weekly sleep data
 const weeklySleepData = [
   {
-    day: "Su",
     sleepStart: 23,
     sleepEnd: 7,
     highlight: false,
     date: "2025-07-22",
   },
   {
-    day: "M",
     sleepStart: 22,
     sleepEnd: 6,
     highlight: false,
     date: "2025-07-23",
   },
   {
-    day: "T",
     sleepStart: 23.5,
     sleepEnd: 7.5,
     highlight: false,
     date: "2025-07-24",
   },
   {
-    day: "W",
     sleepStart: 22.5,
     sleepEnd: 5.5,
     highlight: false,
     date: "2025-07-25",
   },
   {
-    day: "Th",
     sleepStart: 23,
     sleepEnd: 7,
     highlight: false,
     date: "2025-07-26",
   },
   {
-    day: "F",
     sleepStart: 22,
     sleepEnd: 7,
     highlight: false,
     date: "2025-07-27",
   },
   {
-    day: "Sa",
     sleepStart: 21,
     sleepEnd: 7,
     highlight: true,
@@ -62,28 +55,24 @@ const weeklySleepData = [
 // Monthly sleep data (4 weeks average)
 const monthlySleepData = [
   {
-    day: "W1",
     sleepStart: 22.5,
     sleepEnd: 6.8,
     highlight: false,
     date: "2025-07-01",
   },
   {
-    day: "W2",
     sleepStart: 23,
     sleepEnd: 7.2,
     highlight: false,
     date: "2025-07-08",
   },
   {
-    day: "W3",
     sleepStart: 22.2,
     sleepEnd: 6.5,
     highlight: false,
     date: "2025-07-15",
   },
   {
-    day: "W4",
     sleepStart: 22.7,
     sleepEnd: 7,
     highlight: true,
@@ -94,84 +83,72 @@ const monthlySleepData = [
 // Yearly sleep data (12 months average)
 const yearlySleepData = [
   {
-    day: "Jan",
     sleepStart: 23,
     sleepEnd: 7.5,
     highlight: false,
     date: "2025-01-01",
   },
   {
-    day: "Feb",
     sleepStart: 22.5,
     sleepEnd: 7,
     highlight: false,
     date: "2025-02-01",
   },
   {
-    day: "Mar",
     sleepStart: 22.8,
     sleepEnd: 6.8,
     highlight: false,
     date: "2025-03-01",
   },
   {
-    day: "Apr",
     sleepStart: 22.2,
     sleepEnd: 6.5,
     highlight: false,
     date: "2025-04-01",
   },
   {
-    day: "May",
     sleepStart: 22.5,
     sleepEnd: 6.8,
     highlight: false,
     date: "2025-05-01",
   },
   {
-    day: "Jun",
     sleepStart: 23.2,
     sleepEnd: 7.2,
     highlight: false,
     date: "2025-06-01",
   },
   {
-    day: "Jul",
     sleepStart: 22.6,
     sleepEnd: 6.9,
     highlight: true,
     date: "2025-07-01",
   },
   {
-    day: "Aug",
     sleepStart: 22.8,
     sleepEnd: 7,
     highlight: false,
     date: "2025-08-01",
   },
   {
-    day: "Sep",
     sleepStart: 22.4,
     sleepEnd: 6.7,
     highlight: false,
     date: "2025-09-01",
   },
   {
-    day: "Oct",
     sleepStart: 23,
     sleepEnd: 7.3,
     highlight: false,
     date: "2025-10-01",
   },
   {
-    day: "Nov",
     sleepStart: 23.5,
     sleepEnd: 7.5,
     highlight: false,
     date: "2025-11-01",
   },
   {
-    day: "Dec",
     sleepStart: 23.8,
     sleepEnd: 8,
     highlight: false,
@@ -192,6 +169,15 @@ export default function SleepScreen() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [userName, setUserName] = useState<string>("User"); // Add userName state
+
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   // Get current sleep schedule data based on range
   const currentSleepData = useMemo(() => {
@@ -215,7 +201,9 @@ export default function SleepScreen() {
 
   // Generate sleep quality data based on current range
   const sleepQualityData = useMemo(() => {
-    const xAxis = currentSleepData.map((item) => item.day);
+    const xAxis = currentSleepData.map((item) =>
+      formatDateForDisplay(item.date)
+    );
 
     if (rangeTab === "weekly") {
       return {
@@ -502,15 +490,6 @@ export default function SleepScreen() {
     }
   }, [rangeTab]);
 
-  // Helper function to format date for display
-  const formatDateForDisplay = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   // Fetch client name
   useEffect(() => {
     const fetchClientName = async () => {
@@ -692,14 +671,8 @@ export default function SleepScreen() {
                             }}
                           ></div>
                         </div>
-                        <div className="mt-2 text-sm text-center">
-                          <div>{day.day}</div>
-                          {/* Add date below day name */}
-                          {day.date && rangeTab !== "yearly" && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              {formatDateForDisplay(day.date)}
-                            </div>
-                          )}
+                        <div className="mt-2 text-xs text-center text-gray-400">
+                          {formatDateForDisplay(day.date)}
                         </div>
                       </div>
                     );
@@ -781,18 +754,9 @@ export default function SleepScreen() {
 
                   {/* X-axis labels */}
                   <div className="absolute bottom-0 w-full flex justify-between px-2 text-xs text-gray-400">
-                    {sleepQualityData.xAxis.map((day, index) => (
-                      <div key={day} className="text-center">
-                        <div>{day}</div>
-                        {/* Add date below day name for quality chart */}
-                        {currentSleepData[index]?.date &&
-                          rangeTab !== "yearly" && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {formatDateForDisplay(
-                                currentSleepData[index].date
-                              )}
-                            </div>
-                          )}
+                    {sleepQualityData.xAxis.map((date, index) => (
+                      <div key={index} className="text-center">
+                        <div>{date}</div>
                       </div>
                     ))}
                   </div>
