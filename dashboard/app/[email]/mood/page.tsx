@@ -172,46 +172,47 @@ export default function MoodScreen() {
   // Helper function to format date for display
   const formatDateForDisplay = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
   };
 
   // Generate table data based on current range
   const getTableData = useMemo(() => {
     if (rangeTab === "weekly") {
       return [
-        { date: "22 July 2025", mood: "Calm" },
-        { date: "23 July 2025", mood: "Tired" },
-        { date: "24 July 2025", mood: "Energetic" },
-        { date: "25 July 2025", mood: "Happy" },
-        { date: "26 July 2025", mood: "Low" },
-        { date: "27 July 2025", mood: "Focused" },
-        { date: "28 July 2025", mood: "Energetic" },
+        { date: "22 Jul 2025", mood: "Calm" },
+        { date: "23 Jul 2025", mood: "Tired" },
+        { date: "24 Jul 2025", mood: "Energetic" },
+        { date: "25 Jul 2025", mood: "Happy" },
+        { date: "26 Jul 2025", mood: "Low" },
+        { date: "27 Jul 2025", mood: "Focused" },
+        { date: "28 Jul 2025", mood: "Energetic" },
       ];
     } else if (rangeTab === "monthly") {
       return [
-        { date: "01 July 2025", mood: "Mixed" },
-        { date: "08 July 2025", mood: "Happy" },
-        { date: "15 July 2025", mood: "Stressed" },
-        { date: "22 July 2025", mood: "Energetic" },
-        { date: "29 July 2025", mood: "Calm" },
+        { date: "1 Jul 2025", mood: "Mixed" },
+        { date: "8 Jul 2025", mood: "Happy" },
+        { date: "15 Jul 2025", mood: "Stressed" },
+        { date: "22 Jul 2025", mood: "Energetic" },
+        { date: "29 Jul 2025", mood: "Calm" },
       ];
     } else {
       return [
-        { date: "January 2025", mood: "Calm" },
-        { date: "February 2025", mood: "Happy" },
-        { date: "March 2025", mood: "Stressed" },
-        { date: "April 2025", mood: "Energetic" },
+        { date: "Jan 2025", mood: "Calm" },
+        { date: "Feb 2025", mood: "Happy" },
+        { date: "Mar 2025", mood: "Stressed" },
+        { date: "Apr 2025", mood: "Energetic" },
         { date: "May 2025", mood: "Tired" },
-        { date: "June 2025", mood: "Focused" },
-        { date: "July 2025", mood: "Happy" },
-        { date: "August 2025", mood: "Low" },
-        { date: "September 2025", mood: "Motivated" },
-        { date: "October 2025", mood: "Calm" },
-        { date: "November 2025", mood: "Anxious" },
-        { date: "December 2025", mood: "Peaceful" },
+        { date: "Jun 2025", mood: "Focused" },
+        { date: "Jul 2025", mood: "Happy" },
+        { date: "Aug 2025", mood: "Low" },
+        { date: "Sep 2025", mood: "Motivated" },
+        { date: "Oct 2025", mood: "Calm" },
+        { date: "Nov 2025", mood: "Anxious" },
+        { date: "Dec 2025", mood: "Peaceful" },
       ];
     }
   }, [rangeTab]);

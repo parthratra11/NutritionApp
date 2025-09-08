@@ -289,19 +289,10 @@ export default function ClientOverview() {
   const formatTodaysDate = () => {
     const today = new Date();
     const day = today.getDate();
-    const month = today.toLocaleString("default", { month: "short" });
+    const month = today.toLocaleDateString("en-US", { month: "short" });
+    const year = today.getFullYear();
 
-    // Add suffix to day number (1st, 2nd, 3rd, etc.)
-    const suffix =
-      day === 1 || day === 21 || day === 31
-        ? "st"
-        : day === 2 || day === 22
-        ? "nd"
-        : day === 3 || day === 23
-        ? "rd"
-        : "th";
-
-    return `${day}${suffix} ${month}`;
+    return `${day} ${month} ${year}`;
   };
 
   useEffect(() => {
@@ -883,7 +874,7 @@ export default function ClientOverview() {
               <div className="text-right">
                 <div className="text-xs text-gray-400">Expires on</div>
                 <div className="text-sm text-white font-medium">
-                  31st Nov 2025
+                  31 Nov 2025
                 </div>
               </div>
             </div>
@@ -945,7 +936,10 @@ export default function ClientOverview() {
           </div>
           <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 py-8 flex flex-col items-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
             <div className="text-xl font-semibold">
-              96.5<span className="text-[10px] ml-0.5 font-normal">cm</span>
+              96.5
+              <span className="text-[10px] ml-0.5 font-normal text-gray-400">
+                cm
+              </span>
             </div>
             <div className="text-xs text-gray-400 text-center">
               Hip Circumference
@@ -953,7 +947,10 @@ export default function ClientOverview() {
           </div>
           <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-3 py-8 flex flex-col items-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
             <div className="text-xl font-semibold">
-              71<span className="text-[10px] ml-0.5 font-normal">cm</span>
+              71
+              <span className="text-[10px] ml-0.5 font-normal text-gray-400">
+                cm
+              </span>
             </div>
             <div className="text-xs text-gray-400 text-center">
               Waist Circumference

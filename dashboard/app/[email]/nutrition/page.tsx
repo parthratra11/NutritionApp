@@ -173,7 +173,7 @@ export default function NutritionPage() {
   const [supplementData, setSupplementData] = useState<{
     [date: string]: SupplementData[];
   }>({
-    "22 July 2025": [
+    "22 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -181,7 +181,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "23 July 2025": [
+    "23 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -189,7 +189,7 @@ export default function NutritionPage() {
       { name: "Multivitamin", dosage: "1 g" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "24 July 2025": [
+    "24 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -197,7 +197,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "25 July 2025": [
+    "25 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -205,7 +205,7 @@ export default function NutritionPage() {
       { name: "Zinc", dosage: "50 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "26 July 2025": [
+    "26 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -213,7 +213,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "27 July 2025": [
+    "27 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -221,7 +221,7 @@ export default function NutritionPage() {
       { name: "Iodized Salt", dosage: "1 g" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "28 July 2025": [
+    "28 Jul 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -243,16 +243,14 @@ export default function NutritionPage() {
   // }>({});
 
   const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-");
-    return new Date(
-      parseInt(year),
-      parseInt(month) - 1,
-      parseInt(day)
-    ).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "2-digit",
-    });
+    const date = new Date(
+      dateStr.includes("-") ? dateStr : dateStr.split("/").reverse().join("-")
+    );
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
   };
 
   const getDayName = (dateStr: string) => {

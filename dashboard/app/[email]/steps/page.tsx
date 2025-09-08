@@ -76,39 +76,49 @@ export default function StepsScreen() {
     return baseData;
   }, [rangeTab, startDate, endDate]);
 
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  };
+
   // Generate table data based on current range
   const getTableData = useMemo(() => {
     if (rangeTab === "weekly") {
       return [
-        { date: "28 July 2025", steps: 9400, change: "+600" },
-        { date: "27 July 2025", steps: 9800, change: "+200" },
-        { date: "26 July 2025", steps: 9000, change: "+450" },
-        { date: "25 July 2025", steps: 8550, change: "+300" },
-        { date: "24 July 2025", steps: 8250, change: "+150" },
-        { date: "23 July 2025", steps: 8100, change: "-300" },
-        { date: "22 July 2025", steps: 8400, change: "+200" },
+        { date: "28 Jul 2025", steps: 9400, change: "+600" },
+        { date: "27 Jul 2025", steps: 9800, change: "+200" },
+        { date: "26 Jul 2025", steps: 9000, change: "+450" },
+        { date: "25 Jul 2025", steps: 8550, change: "+300" },
+        { date: "24 Jul 2025", steps: 8250, change: "+150" },
+        { date: "23 Jul 2025", steps: 8100, change: "-300" },
+        { date: "22 Jul 2025", steps: 8400, change: "+200" },
       ];
     } else if (rangeTab === "monthly") {
       return [
-        { date: "Week 4 July 2025", steps: 63100, change: "+3300" },
-        { date: "Week 3 July 2025", steps: 59800, change: "-1400" },
-        { date: "Week 2 July 2025", steps: 61200, change: "+2700" },
-        { date: "Week 1 July 2025", steps: 58500, change: "+1200" },
+        { date: "Week 4 Jul 2025", steps: 63100, change: "+3300" },
+        { date: "Week 3 Jul 2025", steps: 59800, change: "-1400" },
+        { date: "Week 2 Jul 2025", steps: 61200, change: "+2700" },
+        { date: "Week 1 Jul 2025", steps: 58500, change: "+1200" },
       ];
     } else {
       return [
-        { date: "December 2025", steps: 263000, change: "+15000" },
-        { date: "November 2025", steps: 248000, change: "-23000" },
-        { date: "October 2025", steps: 271000, change: "+16000" },
-        { date: "September 2025", steps: 255000, change: "-13000" },
-        { date: "August 2025", steps: 268000, change: "-14000" },
-        { date: "July 2025", steps: 282000, change: "+23000" },
-        { date: "June 2025", steps: 259000, change: "-15000" },
+        { date: "Dec 2025", steps: 263000, change: "+15000" },
+        { date: "Nov 2025", steps: 248000, change: "-23000" },
+        { date: "Oct 2025", steps: 271000, change: "+16000" },
+        { date: "Sep 2025", steps: 255000, change: "-13000" },
+        { date: "Aug 2025", steps: 268000, change: "-14000" },
+        { date: "Jul 2025", steps: 282000, change: "+23000" },
+        { date: "Jun 2025", steps: 259000, change: "-15000" },
         { date: "May 2025", steps: 274000, change: "+22000" },
-        { date: "April 2025", steps: 252000, change: "-15000" },
-        { date: "March 2025", steps: 267000, change: "+39000" },
-        { date: "February 2025", steps: 228000, change: "-17000" },
-        { date: "January 2025", steps: 245000, change: "+12000" },
+        { date: "Apr 2025", steps: 252000, change: "-15000" },
+        { date: "Mar 2025", steps: 267000, change: "+39000" },
+        { date: "Feb 2025", steps: 228000, change: "-17000" },
+        { date: "Jan 2025", steps: 245000, change: "+12000" },
       ];
     }
   }, [rangeTab]);
@@ -140,15 +150,6 @@ export default function StepsScreen() {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
-
-  // Helper function to format date for display
-  const formatDateForDisplay = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   // Simple calendar component
   const Calendar = ({

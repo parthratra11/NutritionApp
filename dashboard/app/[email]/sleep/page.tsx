@@ -173,10 +173,11 @@ export default function SleepScreen() {
   // Helper function to format date for display
   const formatDateForDisplay = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
   };
 
   // Get current sleep schedule data based on range
@@ -320,49 +321,49 @@ export default function SleepScreen() {
     if (rangeTab === "weekly") {
       return [
         {
-          date: "22 July 2025",
+          date: "22 Jul 2025",
           quality: "Light",
           sleepTime: "11:00 PM",
           wakeTime: "7:00 AM",
           duration: "8h 0m",
         },
         {
-          date: "23 July 2025",
+          date: "23 Jul 2025",
           quality: "Deep",
           sleepTime: "10:00 PM",
           wakeTime: "6:00 AM",
           duration: "8h 0m",
         },
         {
-          date: "24 July 2025",
+          date: "24 Jul 2025",
           quality: "Interrupted",
           sleepTime: "11:30 PM",
           wakeTime: "7:30 AM",
           duration: "8h 0m",
         },
         {
-          date: "25 July 2025",
+          date: "25 Jul 2025",
           quality: "Light",
           sleepTime: "10:30 PM",
           wakeTime: "5:30 AM",
           duration: "7h 0m",
         },
         {
-          date: "26 July 2025",
+          date: "26 Jul 2025",
           quality: "Deep",
           sleepTime: "11:00 PM",
           wakeTime: "7:00 AM",
           duration: "8h 0m",
         },
         {
-          date: "27 July 2025",
+          date: "27 Jul 2025",
           quality: "Light",
           sleepTime: "10:00 PM",
           wakeTime: "7:00 AM",
           duration: "9h 0m",
         },
         {
-          date: "28 July 2025",
+          date: "28 Jul 2025",
           quality: "Deep",
           sleepTime: "9:00 PM",
           wakeTime: "7:00 AM",
@@ -372,28 +373,28 @@ export default function SleepScreen() {
     } else if (rangeTab === "monthly") {
       return [
         {
-          date: "Week 1 July 2025",
+          date: "Week 1 Jul 2025",
           quality: "Light",
           sleepTime: "10:30 PM",
           wakeTime: "6:48 AM",
           duration: "8h 18m",
         },
         {
-          date: "Week 2 July 2025",
+          date: "Week 2 Jul 2025",
           quality: "Deep",
           sleepTime: "11:00 PM",
           wakeTime: "7:12 AM",
           duration: "8h 12m",
         },
         {
-          date: "Week 3 July 2025",
+          date: "Week 3 Jul 2025",
           quality: "Interrupted",
           sleepTime: "10:12 PM",
           wakeTime: "6:30 AM",
           duration: "8h 18m",
         },
         {
-          date: "Week 4 July 2025",
+          date: "Week 4 Jul 2025",
           quality: "Deep",
           sleepTime: "10:42 PM",
           wakeTime: "7:00 AM",
@@ -403,28 +404,28 @@ export default function SleepScreen() {
     } else {
       return [
         {
-          date: "January 2025",
+          date: "Jan 2025",
           quality: "Light",
           sleepTime: "11:00 PM",
           wakeTime: "7:30 AM",
           duration: "8h 30m",
         },
         {
-          date: "February 2025",
+          date: "Feb 2025",
           quality: "Deep",
           sleepTime: "10:30 PM",
           wakeTime: "7:00 AM",
           duration: "8h 30m",
         },
         {
-          date: "March 2025",
+          date: "Mar 2025",
           quality: "Light",
           sleepTime: "10:48 PM",
           wakeTime: "6:48 AM",
           duration: "8h 0m",
         },
         {
-          date: "April 2025",
+          date: "Apr 2025",
           quality: "Deep",
           sleepTime: "10:12 PM",
           wakeTime: "6:30 AM",
@@ -438,49 +439,49 @@ export default function SleepScreen() {
           duration: "8h 18m",
         },
         {
-          date: "June 2025",
+          date: "Jun 2025",
           quality: "Interrupted",
           sleepTime: "11:12 PM",
           wakeTime: "7:12 AM",
           duration: "8h 0m",
         },
         {
-          date: "July 2025",
+          date: "Jul 2025",
           quality: "Deep",
           sleepTime: "10:36 PM",
           wakeTime: "6:54 AM",
           duration: "8h 18m",
         },
         {
-          date: "August 2025",
+          date: "Aug 2025",
           quality: "Light",
           sleepTime: "10:48 PM",
           wakeTime: "7:00 AM",
           duration: "8h 12m",
         },
         {
-          date: "September 2025",
+          date: "Sep 2025",
           quality: "Deep",
           sleepTime: "10:24 PM",
           wakeTime: "6:42 AM",
           duration: "8h 18m",
         },
         {
-          date: "October 2025",
+          date: "Oct 2025",
           quality: "Light",
           sleepTime: "11:00 PM",
           wakeTime: "7:18 AM",
           duration: "8h 18m",
         },
         {
-          date: "November 2025",
+          date: "Nov 2025",
           quality: "Interrupted",
           sleepTime: "11:30 PM",
           wakeTime: "7:30 AM",
           duration: "8h 0m",
         },
         {
-          date: "December 2025",
+          date: "Dec 2025",
           quality: "Deep",
           sleepTime: "11:48 PM",
           wakeTime: "8:00 AM",

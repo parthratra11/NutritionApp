@@ -16,12 +16,12 @@ interface IntakeForm {
   };
 }
 
-// Utility function to format date as DD-MM-YYYY
+// Utility function to format date as "15 Aug 2025"
 const formatDMY = (date: Date): string => {
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate();
+  const month = date.toLocaleDateString("en-US", { month: "short" });
   const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
+  return `${day} ${month} ${year}`;
 };
 
 export default function Home() {

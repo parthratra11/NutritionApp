@@ -115,11 +115,11 @@ export default function WeightScreen() {
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "2-digit",
-    });
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
   };
 
   const getDayName = (timestamp: string) => {
