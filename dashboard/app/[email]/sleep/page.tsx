@@ -166,11 +166,12 @@ export default function SleepScreen() {
   );
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // Pre-fill with last week's date range
+  const [startDate, setStartDate] = useState<string>("2025-07-22");
+  const [endDate, setEndDate] = useState<string>("2025-07-28");
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
-  // Helper function to format date for display
+  // Helper function to format date for display (consistent format)
   const formatDateForDisplay = (dateStr: string) => {
     const date = new Date(dateStr);
     const day = date.getDate();
@@ -178,6 +179,12 @@ export default function SleepScreen() {
     const year = date.getFullYear();
 
     return `${day} ${month} ${year}`;
+  };
+
+  // Helper function to format date input value for display in the date range section
+  const formatDateRangeDisplay = (dateStr: string) => {
+    if (!dateStr) return "";
+    return formatDateForDisplay(dateStr);
   };
 
   // Get current sleep schedule data based on range
@@ -554,11 +561,7 @@ export default function SleepScreen() {
               </label>
               <input
                 type="date"
-                value={
-                  startDate
-                    ? new Date(startDate).toISOString().split("T")[0]
-                    : ""
-                }
+                value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
               />
@@ -569,9 +572,7 @@ export default function SleepScreen() {
               </label>
               <input
                 type="date"
-                value={
-                  endDate ? new Date(endDate).toISOString().split("T")[0] : ""
-                }
+                value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3 py-2 bg-[#0E1F34] border border-[#22364F] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#DD3333]"
               />
@@ -580,17 +581,17 @@ export default function SleepScreen() {
           {startDate && endDate && (
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-gray-400">
-                Selected range: {new Date(startDate).toLocaleDateString()} -{" "}
-                {new Date(endDate).toLocaleDateString()}
+                Selected range: {formatDateRangeDisplay(startDate)} -{" "}
+                {formatDateRangeDisplay(endDate)}
               </span>
               <button
                 onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
+                  setStartDate("2025-07-22");
+                  setEndDate("2025-07-28");
                 }}
                 className="text-sm text-[#DD3333] hover:text-[#FF4444]"
               >
-                Clear dates
+                Reset to default
               </button>
             </div>
           )}

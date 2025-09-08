@@ -11,6 +11,19 @@ export default function EditTemplatePage() {
   const router = useRouter();
   const [userName, setUserName] = useState<string>("User");
   const [loading, setLoading] = useState(true);
+  // Pre-fill with last week's date range for any future date filtering
+  const [startDate, setStartDate] = useState<string>("2025-07-22");
+  const [endDate, setEndDate] = useState<string>("2025-07-28");
+
+  // Helper function to format date for display (consistent format)
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  };
 
   useEffect(() => {
     const fetchClientName = async () => {
@@ -64,6 +77,12 @@ export default function EditTemplatePage() {
           <p className="text-gray-400">
             Template editing functionality coming soon...
           </p>
+
+          {/* Example of date range usage for future features */}
+          <div className="mt-6 text-sm text-gray-500">
+            Current date range: {formatDateForDisplay(startDate)} -{" "}
+            {formatDateForDisplay(endDate)}
+          </div>
         </div>
       </div>
     </div>

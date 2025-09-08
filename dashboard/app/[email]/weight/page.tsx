@@ -45,8 +45,9 @@ export default function WeightScreen() {
   );
   const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // Pre-fill with last week's date range
+  const [startDate, setStartDate] = useState<string>("2025-07-22");
+  const [endDate, setEndDate] = useState<string>("2025-07-28");
   const [userName, setUserName] = useState<string>("User");
   const [measurementType, setMeasurementType] = useState<
     "weight" | "circumference"
@@ -120,6 +121,12 @@ export default function WeightScreen() {
     const year = date.getFullYear();
 
     return `${day} ${month} ${year}`;
+  };
+
+  // Helper function to format date input value for display in the date range section
+  const formatDateRangeDisplay = (dateStr: string) => {
+    if (!dateStr) return "";
+    return formatDate(dateStr);
   };
 
   const getDayName = (timestamp: string) => {
@@ -598,6 +605,23 @@ export default function WeightScreen() {
                 />
               </div>
             </div>
+            {startDate && endDate && (
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm text-gray-400">
+                  Selected range: {formatDateRangeDisplay(startDate)} -{" "}
+                  {formatDateRangeDisplay(endDate)}
+                </span>
+                <button
+                  onClick={() => {
+                    setStartDate("2025-07-22");
+                    setEndDate("2025-07-28");
+                  }}
+                  className="text-sm text-[#DD3333] hover:text-[#FF4444]"
+                >
+                  Reset to default
+                </button>
+              </div>
+            )}
           </div>
         )}
 
