@@ -128,11 +128,11 @@ export default function NutritionPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  // Define target values for each nutrient
+  // Define target values for each nutrient with proper decimal formatting
   const targets = {
-    protein: 150,
-    carbs: 200,
-    fat: 70,
+    protein: 150.0,
+    carbs: 200.0,
+    fat: 70.0,
     calories: 2000,
   };
 
@@ -429,9 +429,9 @@ export default function NutritionPage() {
           month: "short",
           year: "numeric",
         }),
-        protein: Math.round(data.total.protein / data.count),
-        carbs: Math.round(data.total.carbs / data.count),
-        fat: Math.round(data.total.fat / data.count),
+        protein: (data.total.protein / data.count).toFixed(1),
+        carbs: (data.total.carbs / data.count).toFixed(1),
+        fat: (data.total.fat / data.count).toFixed(1),
         calories: Math.round(data.total.calories / data.count),
       }))
       .sort(
@@ -905,7 +905,7 @@ export default function NutritionPage() {
               </div>
             </div>
             <div className="text-3xl font-bold mb-2">
-              {macroData.protein.value}g
+              {macroData.protein.value.toFixed(1)}g
             </div>
             <div className="flex items-center">
               <svg
@@ -940,7 +940,7 @@ export default function NutritionPage() {
               </div>
             </div>
             <div className="text-3xl font-bold mb-2">
-              {macroData.carbs.value}g
+              {macroData.carbs.value.toFixed(1)}g
             </div>
             <div className="flex items-center">
               <svg
@@ -975,7 +975,7 @@ export default function NutritionPage() {
               </div>
             </div>
             <div className="text-3xl font-bold mb-2">
-              {macroData.fats.value}g
+              {macroData.fats.value.toFixed(1)}g
             </div>
             <div className="flex items-center">
               <svg
@@ -1104,21 +1104,25 @@ export default function NutritionPage() {
                               {payload.map((entry) => (
                                 <div key={entry.dataKey} className="mb-1">
                                   <span style={{ color: entry.color }}>
-                                    {entry.name}: {entry.value}g
+                                    {entry.name}:{" "}
+                                    {parseFloat(
+                                      entry.value?.toString() || "0"
+                                    ).toFixed(1)}
+                                    g
                                   </span>
                                   {entry.dataKey === "protein" && (
                                     <span className="text-gray-400 ml-2">
-                                      (Target: {targets.protein}g)
+                                      (Target: {targets.protein.toFixed(1)}g)
                                     </span>
                                   )}
                                   {entry.dataKey === "carbs" && (
                                     <span className="text-gray-400 ml-2">
-                                      (Target: {targets.carbs}g)
+                                      (Target: {targets.carbs.toFixed(1)}g)
                                     </span>
                                   )}
                                   {entry.dataKey === "fats" && (
                                     <span className="text-gray-400 ml-2">
-                                      (Target: {targets.fat}g)
+                                      (Target: {targets.fat.toFixed(1)}g)
                                     </span>
                                   )}
                                   {entry.dataKey === "fiber" && (
@@ -1171,7 +1175,9 @@ export default function NutritionPage() {
                       strokeDasharray="3 3"
                       strokeWidth={2}
                       label={{
-                        value: `Protein Target (${targets.protein}g)`,
+                        value: `Protein Target (${targets.protein.toFixed(
+                          1
+                        )}g)`,
                         position: "insideTopRight",
                         fill: "#F95928",
                         fontSize: 12,
@@ -1183,7 +1189,7 @@ export default function NutritionPage() {
                       strokeDasharray="3 3"
                       strokeWidth={2}
                       label={{
-                        value: `Carbs Target (${targets.carbs}g)`,
+                        value: `Carbs Target (${targets.carbs.toFixed(1)}g)`,
                         position: "insideTopLeft",
                         fill: "#F6A249",
                         fontSize: 12,
@@ -1195,7 +1201,7 @@ export default function NutritionPage() {
                       strokeDasharray="3 3"
                       strokeWidth={2}
                       label={{
-                        value: `Fat Target (${targets.fat}g)`,
+                        value: `Fat Target (${targets.fat.toFixed(1)}g)`,
                         position: "insideBottomRight",
                         fill: "#F03028",
                         fontSize: 12,
@@ -1524,27 +1530,27 @@ export default function NutritionPage() {
                             <td className="py-4 px-4">{item.label}</td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
-                                item.protein,
+                                parseFloat(item.protein),
                                 targets.protein
                               )}`}
                             >
-                              {item.protein}/{targets.protein}
+                              {item.protein} / {targets.protein.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
-                                item.carbs,
+                                parseFloat(item.carbs),
                                 targets.carbs
                               )}`}
                             >
-                              {item.carbs}/{targets.carbs}
+                              {item.carbs} / {targets.carbs.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
-                                item.fat,
+                                parseFloat(item.fat),
                                 targets.fat
                               )}`}
                             >
-                              {item.fat}/{targets.fat}
+                              {item.fat} / {targets.fat.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
@@ -1552,7 +1558,7 @@ export default function NutritionPage() {
                                 targets.calories
                               )}`}
                             >
-                              {item.calories}/{targets.calories}
+                              {item.calories} / {targets.calories}
                             </td>
                           </tr>
                         );
@@ -1584,7 +1590,8 @@ export default function NutritionPage() {
                                 targets.protein
                               )}`}
                             >
-                              {day.protein}/{targets.protein}
+                              {day.protein.toFixed(1)} /{" "}
+                              {targets.protein.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
@@ -1592,7 +1599,8 @@ export default function NutritionPage() {
                                 targets.carbs
                               )}`}
                             >
-                              {day.carbs}/{targets.carbs}
+                              {day.carbs.toFixed(1)} /{" "}
+                              {targets.carbs.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
@@ -1600,7 +1608,7 @@ export default function NutritionPage() {
                                 targets.fat
                               )}`}
                             >
-                              {day.fat}/{targets.fat}
+                              {day.fat.toFixed(1)} / {targets.fat.toFixed(1)}
                             </td>
                             <td
                               className={`py-4 px-4 ${getProgressColor(
@@ -1608,7 +1616,7 @@ export default function NutritionPage() {
                                 targets.calories
                               )}`}
                             >
-                              {day.calories}/{targets.calories}
+                              {day.calories} / {targets.calories}
                             </td>
                             <td className="py-4 px-4">
                               <span
@@ -1789,6 +1797,23 @@ export default function NutritionPage() {
                           color: "#fff",
                         }}
                         cursor={false}
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-gray-900 text-white p-3 rounded-lg shadow-lg border border-gray-700">
+                                <p className="font-medium mb-2">{label}</p>
+                                <span style={{ color: payload[0].color }}>
+                                  Value:{" "}
+                                  {parseFloat(
+                                    payload[0].value?.toString() || "0"
+                                  ).toFixed(1)}
+                                  g
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
                       />
                       <Bar dataKey="value" fill="#DD3333" />
                     </BarChart>

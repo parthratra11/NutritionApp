@@ -135,7 +135,7 @@ export default function WeightScreen() {
     const allDays: {
       date: string;
       formattedDate: string;
-      weight: number | null;
+      weight: string; // Change to string to maintain decimal formatting
       timestamp: string;
       dayName: string;
     }[] = [];
@@ -160,7 +160,7 @@ export default function WeightScreen() {
         allDays.push({
           date: dayData.timestamp,
           formattedDate: formatDate(dayData.timestamp),
-          weight: parseFloat(dayData.weight),
+          weight: parseFloat(dayData.weight).toFixed(1), // Format to 1 decimal place
           timestamp: dayData.timestamp,
           dayName: getDayName(dayData.timestamp),
         });
@@ -324,7 +324,7 @@ export default function WeightScreen() {
           month: "short",
           year: "numeric",
         }),
-        weight: parseFloat((data.total / data.count).toFixed(1)),
+        weight: (data.total / data.count).toFixed(1),
         formattedDate: new Date(monthKey + "-01").toLocaleDateString("en-US", {
           month: "short",
           year: "numeric",
@@ -833,7 +833,10 @@ export default function WeightScreen() {
                         .map((item, index, array) => {
                           const nextItem = array[index + 1];
                           const weightChange = nextItem
-                            ? (item.weight - nextItem.weight).toFixed(1)
+                            ? (
+                                parseFloat(item.weight) -
+                                parseFloat(nextItem.weight)
+                              ).toFixed(1)
                             : null;
 
                           return (
@@ -894,8 +897,12 @@ export default function WeightScreen() {
                                   ? item.label
                                   : item.formattedDate}
                               </td>
-                              <td className="py-3 pr-4">{item.waist} cm</td>
-                              <td className="py-3 pr-4">{item.hip} cm</td>
+                              <td className="py-3 pr-4">
+                                {item.waist.toFixed(1)} cm
+                              </td>
+                              <td className="py-3 pr-4">
+                                {item.hip.toFixed(1)} cm
+                              </td>
                               <td className="py-3 pr-4">
                                 {waistChange ? (
                                   <span

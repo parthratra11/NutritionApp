@@ -594,12 +594,12 @@ export default function ClientOverview() {
               {/* Protein */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  150
+                  150.0
                   <span className="text-base ml-1 font-normal text-gray-400">
                     g
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">165g</div>
+                <div className="text-xs text-gray-400 mb-1">165.0g</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
@@ -615,12 +615,12 @@ export default function ClientOverview() {
               {/* Fat */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  80
+                  80.0
                   <span className="text-base ml-1 font-normal text-gray-400">
                     g
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">73g</div>
+                <div className="text-xs text-gray-400 mb-1">73.0g</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
@@ -636,12 +636,12 @@ export default function ClientOverview() {
               {/* Carbs */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  195
+                  195.0
                   <span className="text-base ml-1 font-normal text-gray-400">
                     g
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">220g</div>
+                <div className="text-xs text-gray-400 mb-1">220.0g</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
