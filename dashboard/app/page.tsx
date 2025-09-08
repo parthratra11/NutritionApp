@@ -10,6 +10,7 @@ interface IntakeForm {
   id: string;
   fullName: string;
   email: string;
+  profile?: string; // Add profile field
   timestamp: {
     toDate: () => Date;
   };
@@ -289,9 +290,9 @@ export default function Home() {
     );
   });
 
-  // Stats calculations
-  const paidCount = intakeForms.filter((f: any) => f?.paid === true).length;
-  const unpaidCount = Math.max(0, intakeForms.length - paidCount);
+  // Stats calculations - consider all students as paid
+  const paidCount = intakeForms.length; // All students are paid
+  const unpaidCount = 0; // No unpaid students
 
   if (loading) return <div className="p-6 text-white">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
@@ -598,7 +599,7 @@ export default function Home() {
             >
               <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
                 <Image
-                  src="/User.png"
+                  src={form.profile || "/User.png"}
                   alt="Profile"
                   fill
                   style={{ objectFit: "cover" }}

@@ -13,6 +13,7 @@ interface IntakeForm {
   weight: string;
   height: string;
   goals: string;
+  profile?: string; // Add profile field
   timestamp: {
     toDate: () => Date;
   };
@@ -827,7 +828,7 @@ export default function ClientOverview() {
           <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl px-4 py-3.5 shadow-[-2px_6px_22.6px_-3px_#00000040]">
             <div className="flex items-center gap-3">
               <img
-                src="/User.png"
+                src={client?.profile || "/User.png"}
                 alt="Profile"
                 className="h-16 w-16 rounded-full object-cover ring-2 ring-[#0E1F34]"
               />
