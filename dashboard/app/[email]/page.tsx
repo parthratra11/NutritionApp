@@ -877,8 +877,16 @@ export default function ClientOverview() {
         {/* Payment Status */}
         <div className="mb-5">
           <div className="text-sm font-medium mb-2">Payment Status</div>
-          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 flex items-center justify-center shadow-[-2px_6px_22.6px_-3px_#00000040]">
-            <span className="text-green-500 font-semibold text-xl">Paid</span>
+          <div className="bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-4 shadow-[-2px_6px_22.6px_-3px_#00000040]">
+            <div className="flex items-center justify-between">
+              <span className="text-green-500 font-semibold text-xl">Paid</span>
+              <div className="text-right">
+                <div className="text-xs text-gray-400">Expires on</div>
+                <div className="text-sm text-white font-medium">
+                  31st Nov 2025
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
