@@ -244,6 +244,29 @@ export default function WorkoutSessionPage() {
     }
   };
 
+  // Function to normalize sets data to ensure consistent number of sets across all days
+  const normalizeSetsData = (exercise: ExerciseHistory) => {
+    // Find the maximum number of sets across all days for this exercise
+    const maxSets = Math.max(
+      ...exercise.history[0].map((dayData) => dayData.sets.length),
+      exercise.standardSets // Ensure we have at least the standard number of sets
+    );
+
+    return exercise.history[0].map((dayData) => {
+      const normalizedSets = [...dayData.sets];
+
+      // Fill missing sets with "0 x 0"
+      while (normalizedSets.length < maxSets) {
+        normalizedSets.push("0×0");
+      }
+
+      return {
+        ...dayData,
+        sets: normalizedSets,
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
@@ -410,22 +433,25 @@ export default function WorkoutSessionPage() {
           </div>
         </div>
 
-        {/* Workout Table - Separate box */}
+        {/* Workout Table - Separate box with fixed column widths */}
         <div className="bg-[#07172C] border border-[#07172C] rounded-lg mt-4 p-4 overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[900px] table-fixed">
+            <colgroup>
+              <col className="w-72" /> {/* Fixed width for exercise column */}
+              {workoutDates.map((_, index) => (
+                <col key={index} className="w-60" />
+              ))}
+            </colgroup>
             <thead>
               <tr className="text-left">
-                <th className="p-3 border-b border-[#22364F] w-36">Exercise</th>
+                <th className="p-3 border-b border-[#22364F]">Exercise</th>
                 {workoutDates.map((date, index) => (
-                  <th
-                    key={index}
-                    className="p-3 border-b border-[#22364F] min-w-[200px]"
-                  >
+                  <th key={index} className="p-3 border-b border-[#22364F]">
                     <div className="font-semibold">{date.date}</div>
                     <div className="text-xs text-gray-400">
                       Time: {date.time}
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-400 truncate">
                       Note: {date.note}
                     </div>
                     <div className="text-xs mt-1 flex items-center">
@@ -465,84 +491,91 @@ export default function WorkoutSessionPage() {
               </tr>
             </thead>
             <tbody>
-              {exercisesData.map((exercise, exIndex) => (
-                <tr key={exIndex} className="border-b border-[#22364F]">
-                  <td className="p-3">
-                    <div className="font-medium">{exercise.name}</div>
-                    <div className="text-xs text-gray-400">
-                      {exercise.standardWeight} × {exercise.standardReps} ×{" "}
-                      {exercise.standardSets} sets
-                      {exercise.perSide ? " (per leg)" : ""}
-                    </div>
-                  </td>
+              {exercisesData.map((exercise, exIndex) => {
+                const normalizedData = normalizeSetsData(exercise);
 
-                  {workoutDates.map((_, dateIndex) => {
-                    const trend = getExerciseTrend(exercise, dateIndex);
-                    const setData = exercise.history[0][dateIndex];
+                return (
+                  <tr key={exIndex} className="border-b border-[#22364F]">
+                    <td className="p-3">
+                      <div className="font-medium">{exercise.name}</div>
+                      <div className="text-xs text-gray-400">
+                        {exercise.standardWeight} × {exercise.standardReps} ×{" "}
+                        {exercise.standardSets} sets
+                        {exercise.perSide ? " (per leg)" : ""}
+                      </div>
+                    </td>
 
-                    return (
-                      <td
-                        key={dateIndex}
-                        className={`p-2 relative ${
-                          !setData.completed
-                            ? "border-2 border-red-500"
-                            : trend === "up"
-                            ? "border-2 border-green-500"
-                            : trend === "down"
-                            ? "border-2 border-red-500"
-                            : ""
-                        }`}
-                      >
-                        <div className="flex flex-col w-full">
-                          {setData.sets.map((set, setIndex) => (
-                            <div
-                              key={setIndex}
-                              className="relative bg-[#FFFFFF80] text-white py-2 px-2 w-full"
-                              style={{
-                                borderRadius:
-                                  setIndex === 0
-                                    ? "0.375rem 0.375rem 0 0"
-                                    : setIndex === setData.sets.length - 1
-                                    ? "0 0 0.375rem 0.375rem"
-                                    : "none",
-                              }}
-                            >
-                              {set}
-                              {setIndex < setData.sets.length - 1 && (
-                                <div className="absolute bottom-0 left-[2%] w-[90%] h-[1px] bg-white/20"></div>
-                              )}
+                    {normalizedData.map((dayData, dateIndex) => {
+                      const trend = getExerciseTrend(exercise, dateIndex);
+
+                      return (
+                        <td
+                          key={dateIndex}
+                          className={`p-2 relative ${
+                            !dayData.completed
+                              ? "border-2 border-red-500"
+                              : trend === "up"
+                              ? "border-2 border-green-500"
+                              : trend === "down"
+                              ? "border-2 border-red-500"
+                              : ""
+                          }`}
+                        >
+                          <div className="flex flex-col w-full">
+                            {dayData.sets.map((set, setIndex) => (
+                              <div
+                                key={setIndex}
+                                className={`relative py-2 px-2 w-full ${
+                                  set === "0×0"
+                                    ? "bg-[#FFFFFF20] text-gray-500"
+                                    : "bg-[#FFFFFF80] text-white"
+                                }`}
+                                style={{
+                                  borderRadius:
+                                    setIndex === 0
+                                      ? "0.375rem 0.375rem 0 0"
+                                      : setIndex === dayData.sets.length - 1
+                                      ? "0 0 0.375rem 0.375rem"
+                                      : "none",
+                                }}
+                              >
+                                {set}
+                                {setIndex < dayData.sets.length - 1 && (
+                                  <div className="absolute bottom-0 left-[2%] w-[90%] h-[1px] bg-white/20"></div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {trend === "up" && (
+                            <div className="absolute -top-3 -right-3 bg-green-500 rounded-full p-1">
+                              <svg
+                                className="w-5 h-5"
+                                fill="white"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M7 14l5-5 5 5H7z"></path>
+                              </svg>
                             </div>
-                          ))}
-                        </div>
+                          )}
 
-                        {trend === "up" && (
-                          <div className="absolute -top-3 -right-3 bg-green-500 rounded-full p-1">
-                            <svg
-                              className="w-5 h-5"
-                              fill="white"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M7 14l5-5 5 5H7z"></path>
-                            </svg>
-                          </div>
-                        )}
-
-                        {trend === "down" && (
-                          <div className="absolute -top-3 -right-3 bg-red-500 rounded-full p-1">
-                            <svg
-                              className="w-5 h-5"
-                              fill="white"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M7 10l5 5 5-5H7z"></path>
-                            </svg>
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                          {trend === "down" && (
+                            <div className="absolute -top-3 -right-3 bg-red-500 rounded-full p-1">
+                              <svg
+                                className="w-5 h-5"
+                                fill="white"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M7 10l5 5 5-5H7z"></path>
+                              </svg>
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
