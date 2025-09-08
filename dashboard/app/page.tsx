@@ -419,9 +419,9 @@ export default function Home() {
               {/* Greeting text - responsive */}
               <div className="mr-3 lg:mr-4 lg:ml-6">
                 <p className="text-lg lg:text-xl font-semibold">Hi, Cymron</p>
-                <p className="text-xs lg:text-sm opacity-80">
+                {/* <p className="text-xs lg:text-sm opacity-80">
                   See their progress!
-                </p>
+                </p> */}
               </div>
             </div>
 
