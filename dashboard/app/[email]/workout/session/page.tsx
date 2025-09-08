@@ -40,19 +40,19 @@ export default function WorkoutSessionPage() {
   // Mock workout dates
   const workoutDates = [
     {
-      date: "1 Jul 2025",
+      date: "1 July 2025",
       time: "08:00 AM - 09:30 AM",
       note: "Shoulder press felt strong today, increased weight",
       warmupCompleted: true,
     },
     {
-      date: "24 Jun 2025",
+      date: "24 June 2025",
       time: "08:00 AM - 09:30 AM",
       note: "Recovery was good since last session",
       warmupCompleted: false,
     },
     {
-      date: "17 Jun 2025",
+      date: "17 June 2025",
       time: "08:00 AM - 09:30 AM",
       note: "Great leg day, focused on hip thrusts and squat form",
       warmupCompleted: true,

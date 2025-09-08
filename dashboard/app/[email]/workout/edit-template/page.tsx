@@ -828,12 +828,12 @@ export default function EditTemplate() {
             <button className="px-4 py-1 rounded bg-[#DD3333] text-white text-sm">
               Edit
             </button>
-            {/* <Link
+            <Link
               href={`/${params.email}/workout/add`}
               className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
             >
               Add/Del
-            </Link> */}
+            </Link>
           </div>
         </div>
 
