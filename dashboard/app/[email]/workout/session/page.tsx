@@ -68,9 +68,9 @@ export default function WorkoutSessionPage() {
       standardSets: 3,
       history: [
         [
-          { sets: ["75×9", "73×8", "71×11"], completed: true },
-          { sets: ["75×9", "73×8", "71×11"], completed: true },
-          { sets: ["75×8", "73×8", "71×11"], completed: true },
+          { sets: ["80×10", "80×9", "80×8"], completed: true },
+          { sets: ["80×10", "75×9", "75×8"], completed: true },
+          { sets: ["80×10", "70×9", "70×8"], completed: true },
         ],
       ],
     },
@@ -78,15 +78,12 @@ export default function WorkoutSessionPage() {
       name: "Cable Overhead Triceps Extension",
       standardWeight: "25 kg",
       standardReps: "12 reps",
-      standardSets: 3,
+      standardSets: 4,
       history: [
         [
-          { sets: ["59×10", "57×10", "55×8"], completed: true },
-          {
-            sets: ["77×8", "69×10", "67×11", "65×9", "63×8"],
-            completed: false,
-          },
-          { sets: ["72×9", "70×9", "68×8"], completed: true },
+          { sets: ["25×12", "25×11", "25×10"], completed: true },
+          { sets: ["25×12", "25×10", "25×10", "25×9", "25×8"], completed: false },
+          { sets: ["20×12", "20×11", "20×10"], completed: true },
         ],
       ],
     },
@@ -97,15 +94,9 @@ export default function WorkoutSessionPage() {
       standardSets: 3,
       history: [
         [
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
-          { sets: ["59×10", "57×10", "55×8"], completed: true },
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
+          { sets: ["60×8", "60×8", "60×7", "60×7", "60×6"], completed: true },
+          { sets: ["55×8", "55×8", "55×7"], completed: true },
+          { sets: ["50×9", "50×8", "50×8", "50×7", "50×7"], completed: true },
         ],
       ],
     },
@@ -117,18 +108,9 @@ export default function WorkoutSessionPage() {
       perSide: true,
       history: [
         [
-          {
-            sets: ["77×10", "75×11", "73×9", "71×10", "69×11"],
-            completed: false,
-          },
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
+          { sets: ["20×15", "20×14", "20×13", "20×12", "20×12"], completed: false },
+          { sets: ["15×15", "15×14", "15×14", "15×13", "15×12"], completed: true },
+          { sets: ["15×15", "15×15", "15×14", "15×13", "15×12"], completed: true },
         ],
       ],
     },
@@ -139,18 +121,9 @@ export default function WorkoutSessionPage() {
       standardSets: 3,
       history: [
         [
-          {
-            sets: ["68×10", "65×11", "64×8", "62×9", "60×8"],
-            completed: false,
-          },
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
-          {
-            sets: ["74×9", "72×10", "70×10", "72×10", "70×10"],
-            completed: true,
-          },
+          { sets: ["40×10", "40×9", "40×8", "40×8", "40×7"], completed: false },
+          { sets: ["35×10", "35×10", "35×9", "35×9", "35×8"], completed: true },
+          { sets: ["30×10", "30×10", "30×10", "30×9", "30×9"], completed: true },
         ],
       ],
     },
@@ -158,13 +131,13 @@ export default function WorkoutSessionPage() {
       name: "Seated DB Lateral Raise",
       standardWeight: "7.5 kg",
       standardReps: "12 reps",
-      standardSets: 3,
+      standardSets: 4,
       perSide: true,
       history: [
         [
-          { sets: ["51×8", "49×11", "47×10", "45×9"], completed: true },
-          { sets: ["48×9", "46×10", "44×10"], completed: true },
-          { sets: ["44×8", "42×8", "40×9", "38×10"], completed: false },
+          { sets: ["10×12", "10×11", "10×10", "10×10"], completed: true },
+          { sets: ["7.5×12", "7.5×12", "7.5×11"], completed: true },
+          { sets: ["5×12", "5×12", "5×11", "5×10"], completed: false },
         ],
       ],
     },
@@ -246,18 +219,25 @@ export default function WorkoutSessionPage() {
 
   // Function to normalize sets data to ensure consistent number of sets across all days
   const normalizeSetsData = (exercise: ExerciseHistory) => {
-    // Find the maximum number of sets across all days for this exercise
-    const maxSets = Math.max(
-      ...exercise.history[0].map((dayData) => dayData.sets.length),
-      exercise.standardSets // Ensure we have at least the standard number of sets
-    );
-
     return exercise.history[0].map((dayData) => {
       const normalizedSets = [...dayData.sets];
-
-      // Fill missing sets with "0 x 0"
-      while (normalizedSets.length < maxSets) {
-        normalizedSets.push("0×0");
+      
+      // Add or remove sets to match the standardSets for this exercise
+      if (normalizedSets.length < exercise.standardSets) {
+        // Need to add more sets
+        const lastSet = normalizedSets[normalizedSets.length - 1] || "";
+        const weightPart = lastSet.split('×')[0];
+        
+        // For each missing set, add a new set with decreasing reps
+        for (let i = normalizedSets.length; i < exercise.standardSets; i++) {
+          const lastReps = parseInt(normalizedSets[i-1]?.split('×')[1] || "5");
+          // Decrease reps slightly for additional sets (but not below 4)
+          const newReps = Math.max(lastReps - 1, 4);
+          normalizedSets.push(`${weightPart}×${newReps}`);
+        }
+      } else if (normalizedSets.length > exercise.standardSets) {
+        // Need to remove extra sets
+        normalizedSets.splice(exercise.standardSets);
       }
 
       return {
@@ -506,30 +486,16 @@ export default function WorkoutSessionPage() {
                     </td>
 
                     {normalizedData.map((dayData, dateIndex) => {
-                      const trend = getExerciseTrend(exercise, dateIndex);
-
                       return (
                         <td
                           key={dateIndex}
-                          className={`p-2 relative ${
-                            !dayData.completed
-                              ? "border-2 border-red-500"
-                              : trend === "up"
-                              ? "border-2 border-green-500"
-                              : trend === "down"
-                              ? "border-2 border-red-500"
-                              : ""
-                          }`}
+                          className="p-2 relative"
                         >
                           <div className="flex flex-col w-full">
                             {dayData.sets.map((set, setIndex) => (
                               <div
                                 key={setIndex}
-                                className={`relative py-2 px-2 w-full ${
-                                  set === "0×0"
-                                    ? "bg-[#FFFFFF20] text-gray-500"
-                                    : "bg-[#FFFFFF80] text-white"
-                                }`}
+                                className="relative py-2 px-2 w-full bg-[#FFFFFF80] text-white"
                                 style={{
                                   borderRadius:
                                     setIndex === 0
@@ -546,30 +512,6 @@ export default function WorkoutSessionPage() {
                               </div>
                             ))}
                           </div>
-
-                          {trend === "up" && (
-                            <div className="absolute -top-3 -right-3 bg-green-500 rounded-full p-1">
-                              <svg
-                                className="w-5 h-5"
-                                fill="white"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M7 14l5-5 5 5H7z"></path>
-                              </svg>
-                            </div>
-                          )}
-
-                          {trend === "down" && (
-                            <div className="absolute -top-3 -right-3 bg-red-500 rounded-full p-1">
-                              <svg
-                                className="w-5 h-5"
-                                fill="white"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M7 10l5 5 5-5H7z"></path>
-                              </svg>
-                            </div>
-                          )}
                         </td>
                       );
                     })}

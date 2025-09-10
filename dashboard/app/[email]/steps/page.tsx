@@ -252,7 +252,7 @@ export default function StepsScreen() {
     <div className="min-h-screen bg-[#07172C] text-white">
       {/* Use the shared Navigation component */}
       <Navigation
-        title="Workout"
+        title="Steps"
         subtitle="Track your steps progress"
         email={decodeURIComponent(email)}
         userName={userName}

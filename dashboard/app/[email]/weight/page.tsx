@@ -302,14 +302,13 @@ export default function WeightScreen() {
     }
   };
 
-  // Calculate monthly averages
+  // Calculate monthly averages - fix for yearly graph
   const calculateMonthlyAverages = () => {
     const dailyData = calculateDailyWeights();
-    const monthlyData: { [month: string]: { total: number; count: number } } =
-      {};
+    const monthlyData: { [month: string]: { total: number; count: number } } = {};
 
     dailyData.forEach((day) => {
-      if (day.weight === null) return;
+      if (!day.weight) return;
 
       const date = new Date(day.date);
       const monthKey = `${date.getFullYear()}-${String(
@@ -320,7 +319,7 @@ export default function WeightScreen() {
         monthlyData[monthKey] = { total: 0, count: 0 };
       }
 
-      monthlyData[monthKey].total += day.weight;
+      monthlyData[monthKey].total += parseFloat(day.weight);
       monthlyData[monthKey].count += 1;
     });
 
@@ -344,28 +343,44 @@ export default function WeightScreen() {
       );
   };
 
-  // Get filtered data based on range tab
+  // Get filtered data based on range tab - fix for yearly view
   const getFilteredData = () => {
-    const dailyData = calculateDailyWeights();
-
-    if (comparisonPeriod === "custom" && startDate && endDate) {
-      const daysDifference =
-        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-        (1000 * 3600 * 24);
-      if (daysDifference < 14) {
-        return dailyData;
+    try {
+      const dailyData = calculateDailyWeights();
+      
+      // If no data is available, return empty array
+      if (!dailyData || dailyData.length === 0) {
+        return [];
       }
-    }
 
-    switch (rangeTab) {
-      case "weekly":
-        return dailyData.slice(-7);
-      case "monthly":
-        return dailyData.slice(-30);
-      case "yearly":
-        return calculateMonthlyAverages();
-      default:
-        return dailyData;
+      if (comparisonPeriod === "custom" && startDate && endDate) {
+        const daysDifference =
+          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+          (1000 * 3600 * 24);
+        if (daysDifference < 14) {
+          return dailyData;
+        }
+      }
+
+      switch (rangeTab) {
+        case "weekly":
+          return dailyData.slice(-7);
+        case "monthly":
+          return dailyData.slice(-30);
+        case "yearly":
+          try {
+            const monthlyAverages = calculateMonthlyAverages();
+            return monthlyAverages && monthlyAverages.length > 0 ? monthlyAverages : [];
+          } catch (e) {
+            console.error("Error calculating monthly averages:", e);
+            return [];
+          }
+        default:
+          return dailyData;
+      }
+    } catch (e) {
+      console.error("Error in getFilteredData:", e);
+      return [];
     }
   };
 
@@ -690,19 +705,93 @@ export default function WeightScreen() {
                 )}
               </div>
 
-              <div className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
-                <svg
-                  className="w-3 h-3 mr-1"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 15l-6-6-6 6" />
-                </svg>
-                On Track
+              <div className="flex space-x-2">
+                <div className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
+                  <svg
+                    className="w-3 h-3 mr-1"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
+                  On Track
+                </div>
+
+                {/* Current Average Display */}
+                <div className="bg-[#0E1F34] text-xs rounded-md px-2 py-0.5 flex items-center">
+                  {measurementType === "weight" ? (
+                    <span>
+                      {rangeTab === "yearly"
+                        ? "Yearly"
+                        : rangeTab === "monthly"
+                        ? "Monthly"
+                        : "Weekly"}{" "}
+                      Avg:
+                      <strong className="ml-1">
+                        {(() => {
+                          const data = getFilteredData();
+                          if (!data || data.length === 0) return "N/A";
+                          let total = 0;
+                          let count = 0;
+                          
+                          try {
+                            data.forEach(item => {
+                              if (item && item.weight) {
+                                total += parseFloat(item.weight);
+                                count++;
+                              }
+                            });
+                            
+                            return count > 0 ? (total / count).toFixed(1) + " kg" : "N/A";
+                          } catch (e) {
+                            console.error("Error calculating weight average:", e);
+                            return "N/A";
+                          }
+                        })()}
+                      </strong>
+                    </span>
+                  ) : (
+                    <span>
+                      {rangeTab === "yearly"
+                        ? "Yearly"
+                        : rangeTab === "monthly"
+                        ? "Monthly"
+                        : "Weekly"}{" "}
+                      Avg:
+                      <strong className="ml-1">
+                        {(() => {
+                          const data = getCircumferenceData();
+                          if (!data || data.length === 0) return "N/A";
+                          
+                          try {
+                            let waistTotal = 0;
+                            let hipTotal = 0;
+                            let count = 0;
+                            
+                            data.forEach(item => {
+                              if (item && typeof item.waist === 'number' && typeof item.hip === 'number') {
+                                waistTotal += item.waist;
+                                hipTotal += item.hip;
+                                count++;
+                              }
+                            });
+                            
+                            return count > 0 
+                              ? `${(waistTotal / count).toFixed(1)}/${(hipTotal / count).toFixed(1)} cm` 
+                              : "N/A";
+                          } catch (e) {
+                            console.error("Error calculating circumference average:", e);
+                            return "N/A";
+                          }
+                        })()}
+                      </strong>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -735,79 +824,84 @@ export default function WeightScreen() {
           </div>
 
           {viewMode === "graphs" ? (
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                {measurementType === "weight" ? (
-                  <LineChart data={getFilteredData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey={
-                        rangeTab === "yearly" ? "label" : "formattedDate"
-                      }
-                      stroke="#94a3b8"
-                      tick={{ fill: "#94a3b8", fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis
-                      stroke="#94a3b8"
-                      tick={{ fill: "#94a3b8" }}
-                      domain={["dataMin - 2", "dataMax + 2"]}
-                    />
-                    <Tooltip content={<WeightTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="weight"
-                      stroke="#DD3333"
-                      strokeWidth={3}
-                      dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                ) : (
-                  <LineChart data={getCircumferenceData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey={
-                        rangeTab === "yearly" ? "label" : "formattedDate"
-                      }
-                      stroke="#94a3b8"
-                      tick={{ fill: "#94a3b8", fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis
-                      stroke="#94a3b8"
-                      tick={{ fill: "#94a3b8" }}
-                      domain={["dataMin - 5", "dataMax + 5"]}
-                    />
-                    <Tooltip content={<CircumferenceTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="waist"
-                      stroke="#FF6B6B"
-                      strokeWidth={3}
-                      dot={{ fill: "#FF6B6B", strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: "#FF6B6B", strokeWidth: 2 }}
-                      name="Waist"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="hip"
-                      stroke="#4ECDC4"
-                      strokeWidth={3}
-                      dot={{ fill: "#4ECDC4", strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: "#4ECDC4", strokeWidth: 2 }}
-                      name="Hip"
-                    />
-                  </LineChart>
-                )}
-              </ResponsiveContainer>
+            <div className="h-[400px] relative">
+              {(measurementType === "weight" && getFilteredData().length === 0) || 
+               (measurementType === "circumference" && getCircumferenceData().length === 0) ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-gray-400">
+                    No {measurementType === "weight" ? "weight" : "circumference"} data available for this period
+                  </p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  {measurementType === "weight" ? (
+                    <LineChart data={getFilteredData()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis
+                        dataKey={rangeTab === "yearly" ? "label" : "formattedDate"}
+                        stroke="#94a3b8"
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        tick={{ fill: "#94a3b8" }}
+                        domain={["dataMin - 2", "dataMax + 2"]}
+                      />
+                      <Tooltip content={<WeightTooltip />} />
+                      <Line
+                        type="monotone"
+                        dataKey="weight"
+                        stroke="#DD3333"
+                        strokeWidth={3}
+                        dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
+                        activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  ) : (
+                    <LineChart data={getCircumferenceData()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis
+                        dataKey={rangeTab === "yearly" ? "label" : "formattedDate"}
+                        stroke="#94a3b8"
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        tick={{ fill: "#94a3b8" }}
+                        domain={["dataMin - 5", "dataMax + 5"]}
+                      />
+                      <Tooltip content={<CircumferenceTooltip />} />
+                      <Line
+                        type="monotone"
+                        dataKey="waist"
+                        stroke="#FF6B6B"
+                        strokeWidth={3}
+                        dot={{ fill: "#FF6B6B", strokeWidth: 2, r: 6 }}
+                        activeDot={{ r: 8, stroke: "#FF6B6B", strokeWidth: 2 }}
+                        name="Waist"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="hip"
+                        stroke="#4ECDC4"
+                        strokeWidth={3}
+                        dot={{ fill: "#4ECDC4", strokeWidth: 2, r: 6 }}
+                        activeDot={{ r: 8, stroke: "#4ECDC4", strokeWidth: 2 }}
+                        name="Hip"
+                      />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              )}
 
               {/* Legend for circumference chart */}
-              {measurementType === "circumference" && (
+              {measurementType === "circumference" && getCircumferenceData().length > 0 && (
                 <div className="flex justify-center space-x-8 mt-4">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-[#FF6B6B] rounded-full mr-2"></div>
