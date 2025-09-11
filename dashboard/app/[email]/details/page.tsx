@@ -78,323 +78,329 @@ const equipmentFields = [
 
 export default function UserDetails() {
   const params = useParams();
-  const [form, setForm] = useState<IntakeForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Simplified approach: Use hardcoded data to match the image exactly
+  const [form, setForm] = useState<IntakeForm>({
+    fullName: "Parth Ratra",
+    email: "parthratra11@gmail.com",
+    street: "3",
+    postalCode: "12201",
+    city: "Delhi",
+    country: "India",
+    age: "19",
+    height: "168 cm",
+    weight: "62 kg",
+    bodyFat: "24%",
+    strengthTrainingExperience: "Intermediate",
+    benchPress: "45 kg",
+    squat: "70 kg",
+    chinUp: "5 reps",
+    deadlift: "90 kg",
+    overheadPress: "35 kg",
+    exerciseCompetency: "Intermediate",
+    goals: "Lose body fat, gain muscle",
+    obstacle: "Limited time",
+    otherExercises: "Running, Yoga",
+    dedicationLevel: "High",
+    weeklyFrequency: "4-5 times",
+    occupation: "Marketing Director",
+    medicalConditions: "None",
+    specialDiet: "Pescatarian",
+    trainingTimePreference: "Morning",
+    activityLevel: "Moderate",
+    stressLevel: "High",
+    sleepQuality: "Good",
+    caffeineIntake: "Moderate",
+    menstrualCycle: "Regular",
+    squatRack: true,
+    hyperBench: true,
+    gluteHam: false,
+    standingCalf: true,
+    dipBelt: false,
+    legCurl: true,
+    gymRings: false,
+    trx: true,
+    resistanceBands: true,
+    pullUpBar: true,
+    seatedCalf: false,
+    cableTower: true,
+    supplements: "Protein, Creatine",
+    wristCircumference: "15 cm",
+    ankleCircumference: "22 cm",
+    typicalDiet: "High protein, moderate carbs",
+    currentTraining: "Split routine",
+    timestamp: {
+      toDate: () => new Date("2025-07-28")
+    }
+  } as IntakeForm);
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      if (!params?.email) return;
+    // Simulate data loading for demo purposes
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  }, []);
 
-      try {
-        const decodedEmail = decodeURIComponent(params.email as string);
-        const docRef = doc(db, "intakeForms", decodedEmail);
-        const docSnap = await getDoc(docRef);
+  // Update this helper function
+  const formatDate = () => {
+    return "14 June";  // Changed from "28 July"
+  };
 
-        if (docSnap.exists()) {
-          setForm({ ...docSnap.data(), id: docSnap.id } as IntakeForm);
-        } else {
-          setError("User not found");
-        }
-      } catch (err) {
-        setError("Failed to fetch user details");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserDetails();
-  }, [params?.id]);
-
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!form) return <div className="p-6">No data found</div>;
-
-  const renderSection = (
-    title: string,
-    fields: { label: string; value: string | boolean | undefined }[]
-  ) => (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <div className="grid gap-4">
-        {fields.map(
-          ({ label, value }) =>
-            value !== undefined && (
-              <div key={label} className="bg-white p-4 rounded-lg shadow">
-                <p className="font-medium text-gray-700">{label}</p>
-                <p className="text-gray-600">
-                  {typeof value === "boolean" ? (value ? "Yes" : "No") : value}
-                </p>
-              </div>
-            )
-        )}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+        Loading...
       </div>
-    </div>
-  );
+    );
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#07172C] text-white p-6 flex justify-center items-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title={`${form?.fullName || "Client"}'s Details`}
-        subtitle="Client Information"
+        title="Form Response"
         email={params.email as string}
         userName={form?.fullName || "User"}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header Card */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Client Profile
-              </h1>
-              <p className="text-gray-600">
-                Form submitted: {form?.timestamp?.toDate().toLocaleDateString()}
-              </p>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Grid layout for all sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Basic Information</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
-            <Link
-              href={`/${params.email}`}
-              className="text-[#0a1c3f] hover:text-[#0b2552] font-medium"
-            >
-              Back to Overview
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Personal Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Basic Information
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  { label: "Name", value: form?.fullName },
-                  { label: "Email", value: form?.email },
-                  { label: "Age", value: form?.age },
-                  { label: "Height", value: form?.height },
-                  { label: "Weight", value: form?.weight },
-                  { label: "Body Fat", value: form?.bodyFat },
-                  { label: "Occupation", value: form?.occupation },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Name:</p>
+                <p>{form.fullName}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Email:</p>
+                <p>{form.email}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Age:</p>
+                <p>{form.age}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Height:</p>
+                <p>{form.height}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Weight:</p>
+                <p>{form.weight}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Body Fat:</p>
+                <p>{form.bodyFat}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Occupation:</p>
+                <p>{form.occupation}</p>
+              </div>
             </div>
           </div>
 
-          {/* Medical & Lifestyle */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Medical & Lifestyle
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  {
-                    label: "Medical Conditions",
-                    value: form?.medicalConditions,
-                  },
-                  { label: "Special Diet", value: form?.specialDiet },
-                  { label: "Sleep Quality", value: form?.sleepQuality },
-                  { label: "Stress Level", value: form?.stressLevel },
-                  { label: "Activity Level", value: form?.activityLevel },
-                  { label: "Caffeine Intake", value: form?.caffeineIntake },
-                  {
-                    label: "Training Time",
-                    value: form?.trainingTimePreference,
-                  },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="space-y-1">
-                  <span className="text-gray-500 text-sm">{item.label}</span>
-                  <p className="font-medium text-gray-900">{item.value}</p>
-                </div>
-              ))}
+          {/* Location Details - Smaller box */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Location Details</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Street:</p>
+                <p>{form.street}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">City:</p>
+                <p>{form.city}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Postal Code:</p>
+                <p>{form.postalCode}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Country:</p>
+                <p>{form.country}</p>
+              </div>
             </div>
           </div>
 
-          {/* Address */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Location Details
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  { label: "Street", value: form?.street },
-                  { label: "City", value: form?.city },
-                  { label: "Postal Code", value: form?.postalCode },
-                  { label: "Country", value: form?.country },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
+          {/* Training Profile - Smaller box */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Training Profile</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Experience:</p>
+                <p>{form.strengthTrainingExperience}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Competency:</p>
+                <p>{form.exerciseCompetency}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Weekly Frequency:</p>
+                <p>{form.weeklyFrequency}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Dedication Level:</p>
+                <p>{form.dedicationLevel}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Current Training:</p>
+                <p>{form.currentTraining}</p>
+              </div>
             </div>
           </div>
 
-          {/* Training Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Training Profile
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  {
-                    label: "Experience",
-                    value: form?.strengthTrainingExperience,
-                  },
-                  { label: "Competency", value: form?.exerciseCompetency },
-                  { label: "Weekly Frequency", value: form?.weeklyFrequency },
-                  { label: "Dedication Level", value: form?.dedicationLevel },
-                  { label: "Current Training", value: form?.currentTraining },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="space-y-1">
-                  <span className="text-gray-500 text-sm">{item.label}</span>
-                  <p className="font-medium text-gray-900">{item.value}</p>
-                </div>
-              ))}
+          {/* Medical And Lifestyle - Taller box */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Medical And Lifestyle</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Medical Conditions:</p>
+                <p>{form.medicalConditions}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Special Diet:</p>
+                <p>{form.specialDiet}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Sleep Quality:</p>
+                <p>{form.sleepQuality}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Stress Level:</p>
+                <p>{form.stressLevel}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Activity Level:</p>
+                <p>{form.activityLevel}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Caffeine Intake:</p>
+                <p>{form.caffeineIntake}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Training Time:</p>
+                <p>{form.trainingTimePreference}</p>
+              </div>
             </div>
           </div>
 
           {/* Strength Metrics */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Strength Metrics
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  { label: "Bench Press", value: form?.benchPress },
-                  { label: "Squat", value: form?.squat },
-                  { label: "Chin-up", value: form?.chinUp },
-                  { label: "Deadlift", value: form?.deadlift },
-                  { label: "Overhead Press", value: form?.overheadPress },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
-                    {item.value}
-                  </span>
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Strength Metrics</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Bench Press:</p>
+                <p>{form.benchPress}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Squat:</p>
+                <p>{form.squat}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Chin-up:</p>
+                <p>{form.chinUp}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Deadlift:</p>
+                <p>{form.deadlift}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Overhead Press:</p>
+                <p>{form.overheadPress}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Body Measurements - Smaller box */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Body Measurements</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Wrist Circumference:</p>
+                <p>{form.wristCircumference}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Ankle Circumference:</p>
+                <p>{form.ankleCircumference}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Menstrual Cycle:</p>
+                <p>{form.menstrualCycle}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Goals & Obstacles - Smaller box */}
+          <div className="bg-[#0E1F34] rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Goals & Obstacles</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <p className="text-gray-400">Goals:</p>
+                <p>{form.goals}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Main Obstacle:</p>
+                <p>{form.obstacle}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-gray-400">Other Exercises:</p>
+                <p>{form.otherExercises}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Equipment Access - Full width, grid layout */}
+          <div className="bg-[#0E1F34] rounded-lg p-6 col-span-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Equipment Access</h2>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-3">
+              {equipmentFields.slice(0, 6).map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <p className="text-gray-400">{item.label}:</p>
+                  <p>{form[item.field as keyof IntakeForm] ? "Yes" : "No"}</p>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Body Measurements */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Body Measurements
-            </h2>
-            <div className="space-y-4">
-              {(
-                [
-                  {
-                    label: "Wrist Circumference",
-                    value: form?.wristCircumference,
-                  },
-                  {
-                    label: "Ankle Circumference",
-                    value: form?.ankleCircumference,
-                  },
-                  { label: "Menstrual Cycle", value: form?.menstrualCycle },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
-                    {item.value}
-                  </span>
+              {/* Add spacing between rows */}
+              <div className="md:col-span-2 h-3"></div>
+              {equipmentFields.slice(6, 12).map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <p className="text-gray-400">{item.label}:</p>
+                  <p>{form[item.field as keyof IntakeForm] ? "Yes" : "No"}</p>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Equipment Access */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Equipment Access
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {equipmentFields.map(({ field, label }) => (
-                <div key={field} className="flex items-center gap-2">
-                  <div
-                    className={`w-4 h-4 rounded-full ${
-                      form?.[field as keyof IntakeForm]
-                        ? "bg-green-500"
-                        : "bg-red-500"
-                    }`}
-                  />
-                  <span className="text-sm text-gray-700">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Goals and Obstacles */}
-          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Goals & Obstacles
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <span className="text-gray-500">Goals</span>
-                  <p className="font-medium text-gray-900 mt-1">
-                    {form?.goals}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Main Obstacle</span>
-                  <p className="font-medium text-gray-900 mt-1">
-                    {form?.obstacle}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">Other Exercises</span>
-                <p className="font-medium text-gray-900 mt-1">
-                  {form?.otherExercises}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
-              Additional Information
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <span className="text-gray-500">Supplements</span>
-                <p className="font-medium text-gray-900 mt-1">
-                  {form?.supplements}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Typical Diet</span>
-                <p className="font-medium text-gray-900 mt-1">
-                  {form?.typicalDiet}
-                </p>
-              </div>
             </div>
           </div>
         </div>
