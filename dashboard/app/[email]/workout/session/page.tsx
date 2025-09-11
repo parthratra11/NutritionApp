@@ -43,6 +43,12 @@ export default function WorkoutSessionPage() {
       case "Session A":
         return [
           {
+            date: "8 July 2025",
+            time: "08:00 AM - 09:30 AM",
+            note: "New PR on hip thrusts, felt amazing",
+            warmupCompleted: true,
+          },
+          {
             date: "1 July 2025",
             time: "08:00 AM - 09:30 AM",
             note: "Shoulder press felt strong today, increased weight",
@@ -60,9 +66,21 @@ export default function WorkoutSessionPage() {
             note: "Great leg day, focused on hip thrusts and squat form",
             warmupCompleted: true,
           },
+          {
+            date: "10 June 2025",
+            time: "08:00 AM - 09:30 AM",
+            note: "First week back, taking it easy",
+            warmupCompleted: true,
+          },
         ];
       case "Session B":
         return [
+          {
+            date: "9 July 2025",
+            time: "06:00 PM - 07:30 PM",
+            note: "Chest and back feeling strong, great session",
+            warmupCompleted: true,
+          },
           {
             date: "2 July 2025",
             time: "06:00 PM - 07:30 PM",
@@ -81,9 +99,21 @@ export default function WorkoutSessionPage() {
             note: "First time doing this routine, felt challenging",
             warmupCompleted: false,
           },
+          {
+            date: "11 June 2025",
+            time: "06:00 PM - 07:30 PM",
+            note: "Getting used to the new upper body routine",
+            warmupCompleted: true,
+          },
         ];
       case "Session C":
         return [
+          {
+            date: "10 July 2025",
+            time: "07:00 AM - 08:15 AM",
+            note: "Deadlifts feeling heavier but form is perfect",
+            warmupCompleted: true,
+          },
           {
             date: "3 July 2025",
             time: "07:00 AM - 08:15 AM",
@@ -101,6 +131,12 @@ export default function WorkoutSessionPage() {
             time: "07:00 AM - 08:15 AM",
             note: "Good session, felt energized throughout",
             warmupCompleted: true,
+          },
+          {
+            date: "12 June 2025",
+            time: "07:00 AM - 08:15 AM",
+            note: "Learning proper Romanian deadlift technique",
+            warmupCompleted: false,
           },
         ];
       default:
@@ -122,9 +158,11 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["85×10", "85×9", "80×8"], completed: true },
                 { sets: ["80×10", "80×9", "80×8"], completed: true },
                 { sets: ["80×10", "75×9", "75×8"], completed: true },
                 { sets: ["80×10", "70×9", "70×8"], completed: true },
+                { sets: ["75×10", "70×9", "65×8"], completed: true },
               ],
             ],
           },
@@ -135,12 +173,14 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                { sets: ["30×12", "30×11", "30×10", "25×10"], completed: true },
                 { sets: ["25×12", "25×11", "25×10"], completed: true },
                 {
                   sets: ["25×12", "25×10", "25×10", "25×9", "25×8"],
                   completed: false,
                 },
                 { sets: ["20×12", "20×11", "20×10"], completed: true },
+                { sets: ["20×12", "20×12", "20×11", "20×10"], completed: true },
               ],
             ],
           },
@@ -151,6 +191,7 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["65×8", "65×7", "60×8"], completed: true },
                 {
                   sets: ["60×8", "60×8", "60×7", "60×7", "60×6"],
                   completed: true,
@@ -160,6 +201,7 @@ export default function WorkoutSessionPage() {
                   sets: ["50×9", "50×8", "50×8", "50×7", "50×7"],
                   completed: true,
                 },
+                { sets: ["45×9", "45×8", "45×8"], completed: false },
               ],
             ],
           },
@@ -171,6 +213,7 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                { sets: ["22.5×15", "22.5×14", "20×13"], completed: true },
                 {
                   sets: ["20×15", "20×14", "20×13", "20×12", "20×12"],
                   completed: false,
@@ -183,6 +226,7 @@ export default function WorkoutSessionPage() {
                   sets: ["15×15", "15×15", "15×14", "15×13", "15×12"],
                   completed: true,
                 },
+                { sets: ["12.5×15", "12.5×15", "12.5×14"], completed: true },
               ],
             ],
           },
@@ -193,6 +237,7 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["45×10", "42.5×9", "40×8"], completed: true },
                 {
                   sets: ["40×10", "40×9", "40×8", "40×8", "40×7"],
                   completed: false,
@@ -205,6 +250,7 @@ export default function WorkoutSessionPage() {
                   sets: ["30×10", "30×10", "30×10", "30×9", "30×9"],
                   completed: true,
                 },
+                { sets: ["27.5×10", "27.5×10", "25×10"], completed: true },
               ],
             ],
           },
@@ -216,9 +262,14 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                {
+                  sets: ["12.5×12", "12.5×11", "10×10", "10×10"],
+                  completed: true,
+                },
                 { sets: ["10×12", "10×11", "10×10", "10×10"], completed: true },
                 { sets: ["7.5×12", "7.5×12", "7.5×11"], completed: true },
                 { sets: ["5×12", "5×12", "5×11", "5×10"], completed: false },
+                { sets: ["5×12", "5×12", "5×12", "5×11"], completed: true },
               ],
             ],
           },
@@ -232,9 +283,11 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                { sets: ["75×8", "75×7", "70×8", "70×7"], completed: true },
                 { sets: ["70×8", "70×7", "65×8", "65×7"], completed: true },
                 { sets: ["65×8", "65×7", "60×8", "60×7"], completed: true },
                 { sets: ["60×8", "60×8", "55×8", "55×7"], completed: true },
+                { sets: ["55×8", "55×8", "50×8", "50×7"], completed: false },
               ],
             ],
           },
@@ -245,9 +298,11 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                { sets: ["70×10", "70×9", "65×9", "65×8"], completed: true },
                 { sets: ["65×10", "65×9", "65×8", "60×8"], completed: true },
                 { sets: ["60×10", "60×9", "55×10", "55×9"], completed: true },
                 { sets: ["55×10", "55×10", "50×10", "50×9"], completed: false },
+                { sets: ["50×10", "50×10", "45×10", "45×9"], completed: true },
               ],
             ],
           },
@@ -259,9 +314,11 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                { sets: ["27.5×12", "27.5×10", "25×10"], completed: true },
                 { sets: ["25×12", "25×10", "22.5×10"], completed: true },
                 { sets: ["22.5×12", "22.5×11", "20×12"], completed: true },
                 { sets: ["20×12", "20×12", "17.5×12"], completed: true },
+                { sets: ["17.5×12", "17.5×11", "15×12"], completed: true },
               ],
             ],
           },
@@ -272,9 +329,11 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["60×12", "60×11", "55×10"], completed: true },
                 { sets: ["55×12", "55×11", "55×10"], completed: true },
                 { sets: ["50×12", "50×12", "50×11"], completed: true },
                 { sets: ["45×12", "45×12", "45×12"], completed: true },
+                { sets: ["40×12", "40×12", "40×12"], completed: false },
               ],
             ],
           },
@@ -285,9 +344,11 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["32.5×15", "32.5×14", "30×13"], completed: true },
                 { sets: ["30×15", "30×14", "27.5×13"], completed: false },
                 { sets: ["27.5×15", "27.5×14", "25×15"], completed: true },
                 { sets: ["25×15", "25×15", "22.5×15"], completed: true },
+                { sets: ["22.5×15", "22.5×14", "20×15"], completed: true },
               ],
             ],
           },
@@ -298,9 +359,11 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["40×15", "40×14", "37.5×12"], completed: true },
                 { sets: ["35×15", "35×14", "35×12"], completed: true },
                 { sets: ["30×15", "30×15", "30×14"], completed: true },
                 { sets: ["25×15", "25×15", "25×15"], completed: true },
+                { sets: ["22.5×15", "22.5×15", "20×15"], completed: false },
               ],
             ],
           },
@@ -314,9 +377,11 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                { sets: ["95×6", "95×5", "90×6", "90×5"], completed: true },
                 { sets: ["90×6", "90×5", "85×6", "85×5"], completed: true },
                 { sets: ["85×6", "85×6", "80×6", "80×6"], completed: true },
                 { sets: ["80×6", "80×6", "75×6", "75×6"], completed: true },
+                { sets: ["75×6", "75×6", "70×6", "70×5"], completed: false },
               ],
             ],
           },
@@ -328,9 +393,11 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                { sets: ["22.5×12", "22.5×11", "20×12"], completed: true },
                 { sets: ["20×12", "20×11", "17.5×12"], completed: true },
                 { sets: ["17.5×12", "17.5×12", "15×12"], completed: true },
                 { sets: ["15×12", "15×12", "12.5×12"], completed: false },
+                { sets: ["12.5×12", "12.5×12", "10×12"], completed: true },
               ],
             ],
           },
@@ -342,9 +409,11 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                { sets: ["17.5×20", "17.5×18", "15×16"], completed: true },
                 { sets: ["15×20", "15×18", "15×16"], completed: true },
                 { sets: ["12.5×20", "12.5×20", "12.5×18"], completed: true },
                 { sets: ["10×20", "10×20", "10×20"], completed: true },
+                { sets: ["7.5×20", "7.5×20", "7.5×19"], completed: true },
               ],
             ],
           },
@@ -355,9 +424,14 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                { sets: ["50×20", "50×18", "45×16", "45×15"], completed: true },
                 { sets: ["45×20", "45×18", "45×16", "40×15"], completed: true },
                 { sets: ["40×20", "40×20", "40×18", "35×18"], completed: true },
                 { sets: ["35×20", "35×20", "35×20", "30×20"], completed: true },
+                {
+                  sets: ["30×20", "30×20", "30×19", "25×20"],
+                  completed: false,
+                },
               ],
             ],
           },
@@ -368,6 +442,10 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
+                {
+                  sets: ["130×15", "130×14", "125×12", "120×12"],
+                  completed: true,
+                },
                 {
                   sets: ["120×15", "120×14", "120×12", "115×12"],
                   completed: false,
@@ -380,6 +458,10 @@ export default function WorkoutSessionPage() {
                   sets: ["110×15", "110×15", "110×15", "105×15"],
                   completed: true,
                 },
+                {
+                  sets: ["105×15", "105×15", "100×15", "100×14"],
+                  completed: true,
+                },
               ],
             ],
           },
@@ -390,9 +472,11 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                { sets: ["BW×12", "BW×11", "BW×10"], completed: true },
                 { sets: ["BW×10", "BW×9", "BW×8"], completed: true },
                 { sets: ["BW×8", "BW×8", "BW×7"], completed: true },
                 { sets: ["BW×6", "BW×6", "BW×5"], completed: false },
+                { sets: ["BW×5", "BW×5", "BW×4"], completed: true },
               ],
             ],
           },
@@ -547,7 +631,7 @@ export default function WorkoutSessionPage() {
     // Compare total volume (weight × reps)
     if (currentFirstSet.total > previousFirstSet.total) {
       return (
-        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-10">
+        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
           <svg
             className="w-5 h-5 text-white"
             fill="currentColor"
@@ -559,7 +643,7 @@ export default function WorkoutSessionPage() {
       );
     } else {
       return (
-        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-10">
+        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
           <svg
             className="w-5 h-5 text-white"
             fill="currentColor"
@@ -775,25 +859,30 @@ export default function WorkoutSessionPage() {
           </div>
         </div>
 
-        {/* Workout Table - Separate box with fixed column widths */}
+        {/* Workout Table - Separate box with fixed exercise column and scrollable dates */}
         <div className="bg-[#07172C] border border-[#07172C] rounded-lg mt-4 p-4 overflow-x-auto">
-          <table className="w-full min-w-[900px] table-fixed">
+          <table className="w-full min-w-[1200px] table-fixed">
             <colgroup>
-              <col className="w-72" />
+              <col className="w-80" />
               {workoutDates.map((_, index) => (
                 <col key={index} className="w-60" />
               ))}
             </colgroup>
             <thead>
               <tr className="text-left">
-                <th className="p-3 border-b border-[#22364F]">Exercise</th>
+                <th className="p-3 border-b border-[#22364F] sticky left-0 bg-[#07172C] z-20">
+                  Exercise
+                </th>
                 {workoutDates.map((date, index) => (
                   <th key={index} className="p-3 border-b border-[#22364F]">
                     <div className="font-semibold">{date.date}</div>
                     <div className="text-xs text-gray-400">
                       Time: {date.time}
                     </div>
-                    <div className="text-xs text-gray-400 truncate">
+                    <div
+                      className="text-xs text-gray-400 truncate cursor-help"
+                      title={date.note}
+                    >
                       Note: {date.note}
                     </div>
                     <div className="text-xs mt-1 flex items-center">
@@ -838,7 +927,7 @@ export default function WorkoutSessionPage() {
 
                 return (
                   <tr key={exIndex} className="border-b border-[#22364F]">
-                    <td className="p-3">
+                    <td className="p-3 sticky left-0 bg-[#07172C] z-20">
                       <div className="font-medium">{exercise.name}</div>
                       <div className="text-xs text-gray-400">
                         {exercise.standardWeight} × {exercise.standardReps} ×{" "}
