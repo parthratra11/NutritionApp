@@ -82,7 +82,10 @@ export default function WorkoutSessionPage() {
       history: [
         [
           { sets: ["25×12", "25×11", "25×10"], completed: true },
-          { sets: ["25×12", "25×10", "25×10", "25×9", "25×8"], completed: false },
+          {
+            sets: ["25×12", "25×10", "25×10", "25×9", "25×8"],
+            completed: false,
+          },
           { sets: ["20×12", "20×11", "20×10"], completed: true },
         ],
       ],
@@ -108,9 +111,18 @@ export default function WorkoutSessionPage() {
       perSide: true,
       history: [
         [
-          { sets: ["20×15", "20×14", "20×13", "20×12", "20×12"], completed: false },
-          { sets: ["15×15", "15×14", "15×14", "15×13", "15×12"], completed: true },
-          { sets: ["15×15", "15×15", "15×14", "15×13", "15×12"], completed: true },
+          {
+            sets: ["20×15", "20×14", "20×13", "20×12", "20×12"],
+            completed: false,
+          },
+          {
+            sets: ["15×15", "15×14", "15×14", "15×13", "15×12"],
+            completed: true,
+          },
+          {
+            sets: ["15×15", "15×15", "15×14", "15×13", "15×12"],
+            completed: true,
+          },
         ],
       ],
     },
@@ -123,7 +135,10 @@ export default function WorkoutSessionPage() {
         [
           { sets: ["40×10", "40×9", "40×8", "40×8", "40×7"], completed: false },
           { sets: ["35×10", "35×10", "35×9", "35×9", "35×8"], completed: true },
-          { sets: ["30×10", "30×10", "30×10", "30×9", "30×9"], completed: true },
+          {
+            sets: ["30×10", "30×10", "30×10", "30×9", "30×9"],
+            completed: true,
+          },
         ],
       ],
     },
@@ -221,16 +236,18 @@ export default function WorkoutSessionPage() {
   const normalizeSetsData = (exercise: ExerciseHistory) => {
     return exercise.history[0].map((dayData) => {
       const normalizedSets = [...dayData.sets];
-      
+
       // Add or remove sets to match the standardSets for this exercise
       if (normalizedSets.length < exercise.standardSets) {
         // Need to add more sets
         const lastSet = normalizedSets[normalizedSets.length - 1] || "";
-        const weightPart = lastSet.split('×')[0];
-        
+        const weightPart = lastSet.split("×")[0];
+
         // For each missing set, add a new set with decreasing reps
         for (let i = normalizedSets.length; i < exercise.standardSets; i++) {
-          const lastReps = parseInt(normalizedSets[i-1]?.split('×')[1] || "5");
+          const lastReps = parseInt(
+            normalizedSets[i - 1]?.split("×")[1] || "5"
+          );
           // Decrease reps slightly for additional sets (but not below 4)
           const newReps = Math.max(lastReps - 1, 4);
           normalizedSets.push(`${weightPart}×${newReps}`);
@@ -280,7 +297,12 @@ export default function WorkoutSessionPage() {
             <button className="px-4 py-1 rounded bg-[#DD3333] text-white text-sm">
               View
             </button>
-            <button className="px-4 py-1 rounded bg-[#142437] text-white text-sm">
+            <button
+              onClick={() =>
+                router.push(`/${params.email}/workout/edit-template`)
+              }
+              className="px-4 py-1 rounded bg-[#142437] hover:bg-[#1D325A] text-white text-sm transition-colors"
+            >
               Edit
             </button>
           </div>
@@ -417,7 +439,7 @@ export default function WorkoutSessionPage() {
         <div className="bg-[#07172C] border border-[#07172C] rounded-lg mt-4 p-4 overflow-x-auto">
           <table className="w-full min-w-[900px] table-fixed">
             <colgroup>
-              <col className="w-72" /> {/* Fixed width for exercise column */}
+              <col className="w-72" />
               {workoutDates.map((_, index) => (
                 <col key={index} className="w-60" />
               ))}
@@ -487,10 +509,7 @@ export default function WorkoutSessionPage() {
 
                     {normalizedData.map((dayData, dateIndex) => {
                       return (
-                        <td
-                          key={dateIndex}
-                          className="p-2 relative"
-                        >
+                        <td key={dateIndex} className="p-2 relative">
                           <div className="flex flex-col w-full">
                             {dayData.sets.map((set, setIndex) => (
                               <div

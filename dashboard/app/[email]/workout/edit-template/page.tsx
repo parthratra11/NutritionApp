@@ -225,15 +225,35 @@ const defaultTemplate: WorkoutTemplate = {
 
 // Default warm-up exercises
 const defaultWarmUpExercises: WarmUpExercise[] = [
-  { name: "Foam Roller Walkover", sets: "1", reps: "8 Reps", link: "" },
-  { name: "Hooklying Low Reach", sets: "1", reps: "8 Reps", link: "" },
-  { name: "Side-Lying Split Squat", sets: "1", reps: "8 Reps", link: "" },
-  { name: "1/4 Wall Squat w/Reach", sets: "1", reps: "8 Reps", link: "" },
+  {
+    name: "Foam Roller Walkover",
+    sets: "1",
+    reps: "8 Reps",
+    link: "https://www.youtube.com/watch?v=example1",
+  },
+  {
+    name: "Hooklying Low Reach",
+    sets: "1",
+    reps: "8 Reps",
+    link: "https://www.youtube.com/watch?v=example2",
+  },
+  {
+    name: "Side-Lying Split Squat",
+    sets: "1",
+    reps: "8 Reps",
+    link: "https://www.youtube.com/watch?v=example3",
+  },
+  {
+    name: "1/4 Wall Squat w/Reach",
+    sets: "1",
+    reps: "8 Reps",
+    link: "https://www.youtube.com/watch?v=example4",
+  },
   {
     name: "Toe Touch to Bench (Heels Elevated)",
     sets: "1",
     reps: "8 Reps",
-    link: "",
+    link: "https://www.youtube.com/watch?v=example5",
   },
 ];
 
@@ -342,42 +362,8 @@ export default function EditTemplate() {
     try {
       setLoading(true);
 
-      // Fetch warm-up exercise links
-      try {
-        const warmUpSnapshot = await getDocs(
-          collection(db, "exerciseLinks", "warmUp", "exercises")
-        );
-        const warmUpLinks: { [key: string]: string } = {};
-        const warmUpNames: string[] = [];
-
-        warmUpSnapshot.forEach((doc) => {
-          warmUpLinks[doc.id] = doc.data().link || "";
-          warmUpNames.push(doc.id);
-        });
-
-        // Sort exercise names alphabetically
-        warmUpNames.sort((a, b) => a.localeCompare(b));
-        setWarmUpOptions(
-          warmUpNames.length > 0 ? warmUpNames : warmUpExerciseOptions
-        );
-
-        // Update warm-up exercises with links from database
-        setWarmUpExercises((prev) =>
-          prev.map((exercise) => ({
-            ...exercise,
-            link: warmUpLinks[exercise.name] || exercise.link,
-          }))
-        );
-
-        // Add warm up links to the exercise links map
-        setExerciseLinks((prevLinks) => ({
-          ...prevLinks,
-          ...warmUpLinks,
-        }));
-      } catch (e) {
-        console.log("No warm-up exercises found in database, using defaults");
-        setWarmUpOptions(warmUpExerciseOptions);
-      }
+      // Skip warm-up exercise fetching - use frontend only
+      setWarmUpOptions(warmUpExerciseOptions);
 
       // Fetch workout exercise links
       try {
@@ -432,13 +418,7 @@ export default function EditTemplate() {
         if (docSnap.exists()) {
           const fetchedTemplate = docSnap.data() as ExtendedWorkoutTemplate;
 
-          // Apply any matching links from our exercise links database
-          if (fetchedTemplate.warmUp) {
-            fetchedTemplate.warmUp = fetchedTemplate.warmUp.map((exercise) => ({
-              ...exercise,
-              link: exerciseLinks[exercise.name] || exercise.link,
-            }));
-          }
+          // Don't apply database links to warm-up exercises - keep them as is
 
           // Apply links to workout exercises
           Object.keys(fetchedTemplate).forEach((sessionKey) => {
@@ -458,10 +438,8 @@ export default function EditTemplate() {
           setTemplate(fetchedTemplate);
           setOrderedTemplate(convertToOrderedTemplate(fetchedTemplate));
 
-          // Load warm-up exercises if they exist
-          if (fetchedTemplate.warmUp) {
-            setWarmUpExercises(fetchedTemplate.warmUp);
-          }
+          // ALWAYS use frontend defaults for warm-up exercises - ignore database
+          setWarmUpExercises(defaultWarmUpExercises);
 
           // Load daily steps if they exist
           if (fetchedTemplate.dailySteps) {
@@ -629,7 +607,7 @@ export default function EditTemplate() {
         name: defaultName,
         sets: "1",
         reps: "8 Reps",
-        link: exerciseLinks[defaultName] || "",
+        link: "", // Don't try to get link from exerciseLinks for warmup
       },
     ]);
   };
@@ -647,16 +625,8 @@ export default function EditTemplate() {
   ) => {
     const updated = [...warmUpExercises];
 
-    if (field === "name") {
-      // If changing name, update the link if we have it in the database
-      updated[index] = {
-        ...updated[index],
-        name: value,
-        link: exerciseLinks[value] || "", // Apply link from our database if it exists
-      };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
+    // Don't try to apply links from database for warm-up exercises
+    updated[index] = { ...updated[index], [field]: value };
 
     setWarmUpExercises(updated);
   };
@@ -930,12 +900,13 @@ export default function EditTemplate() {
                           {exercise.reps}
                         </div>
                         <div className="col-span-2 flex justify-end space-x-2">
-                          {exercise.link && (
+                          {exercise.link && exercise.link.trim() !== "" && (
                             <a
                               href={exercise.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-400"
+                              className="text-blue-400 hover:text-blue-300"
+                              title="View exercise video"
                             >
                               <svg
                                 className="h-4 w-4"
@@ -951,6 +922,7 @@ export default function EditTemplate() {
                           <button
                             onClick={() => handleEditWarmUp(index)}
                             className="text-gray-400 hover:text-white"
+                            title="Edit exercise"
                           >
                             <svg
                               className="h-4 w-4"
@@ -965,6 +937,7 @@ export default function EditTemplate() {
                           <button
                             onClick={() => deleteWarmUpExercise(index)}
                             className="text-red-400 hover:text-red-300"
+                            title="Delete exercise"
                           >
                             <svg
                               className="h-4 w-4"
