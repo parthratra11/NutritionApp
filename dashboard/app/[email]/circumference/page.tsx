@@ -15,27 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Backend data interfaces
-interface DayData {
-  weight: string;
-  email: string;
-  timestamp: string;
-  Mood: { value: number; color: string };
-  "Sleep Quality": { value: number; color: string };
-  "Hunger Level": { value: number; color: string };
-}
-
-interface WeekData {
-  [day: string]: DayData;
-  waist?: string;
-  hip?: string;
-}
-
-interface WeeklyForms {
-  [week: string]: WeekData;
-}
-
-export default function WeightScreen() {
+export default function CircumferenceScreen() {
   const params = useParams();
   const router = useRouter();
   const email = params.email as string;
@@ -49,13 +29,60 @@ export default function WeightScreen() {
   const [startDate, setStartDate] = useState<string>("2025-07-22");
   const [endDate, setEndDate] = useState<string>("2025-07-28");
   const [userName, setUserName] = useState<string>("User");
+  const [loading, setLoading] = useState(false);
 
-  // Backend data states
-  const [weeklyData, setWeeklyData] = useState<WeeklyForms | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Dummy data for waist/hip circumference - REMOVED (moved to circumference page)
+  // Dummy data for waist/hip circumference
+  const dummyCircumferenceData = [
+    {
+      date: "2025-07-22",
+      formattedDate: "22 Jul 2025",
+      dayName: "Mon",
+      waist: 85.2,
+      hip: 95.8,
+    },
+    {
+      date: "2025-07-23",
+      formattedDate: "23 Jul 2025",
+      dayName: "Tue",
+      waist: 85.0,
+      hip: 95.6,
+    },
+    {
+      date: "2025-07-24",
+      formattedDate: "24 Jul 2025",
+      dayName: "Wed",
+      waist: 84.8,
+      hip: 95.4,
+    },
+    {
+      date: "2025-07-25",
+      formattedDate: "25 Jul 2025",
+      dayName: "Thu",
+      waist: 84.6,
+      hip: 95.2,
+    },
+    {
+      date: "2025-07-26",
+      formattedDate: "26 Jul 2025",
+      dayName: "Fri",
+      waist: 84.4,
+      hip: 95.0,
+    },
+    {
+      date: "2025-07-27",
+      formattedDate: "27 Jul 2025",
+      dayName: "Sat",
+      waist: 84.2,
+      hip: 94.8,
+    },
+    {
+      date: "2025-07-28",
+      formattedDate: "28 Jul 2025",
+      dayName: "Sun",
+      waist: 84.0,
+      hip: 94.6,
+    },
+  ];
 
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
@@ -79,54 +106,16 @@ export default function WeightScreen() {
     return date.toLocaleDateString("en-US", { weekday: "short" });
   };
 
-  // Calculate daily weight data
-  const calculateDailyWeights = () => {
-    if (!weeklyData) return [];
-
-    const allDays: {
-      date: string;
-      formattedDate: string;
-      weight: string; // Change to string to maintain decimal formatting
-      timestamp: string;
-      dayName: string;
-    }[] = [];
-
-    const days = [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ];
-
-    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
-      if (weekKey === "firstEntryDate") return;
-
-      days.forEach((day) => {
-        const dayData = weekData[day];
-        if (!dayData || !dayData.timestamp || !dayData.weight) return;
-
-        allDays.push({
-          date: dayData.timestamp,
-          formattedDate: formatDate(dayData.timestamp),
-          weight: parseFloat(dayData.weight).toFixed(1), // Format to 1 decimal place
-          timestamp: dayData.timestamp,
-          dayName: getDayName(dayData.timestamp),
-        });
-      });
-    });
-
-    // Apply date filtering
-    let filteredDays = allDays;
+  // Calculate circumference data with filtering
+  const getCircumferenceData = () => {
+    let filteredData = [...dummyCircumferenceData];
 
     if (comparisonPeriod === "custom" && startDate && endDate) {
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
       endDateObj.setHours(23, 59, 59, 999);
 
-      filteredDays = allDays.filter((day) => {
+      filteredData = dummyCircumferenceData.filter((day) => {
         const dayDate = new Date(day.date);
         return dayDate >= startDateObj && dayDate <= endDateObj;
       });
@@ -149,101 +138,65 @@ export default function WeightScreen() {
           break;
       }
 
-      filteredDays = allDays.filter((day) => new Date(day.date) >= cutoffDate);
-    }
-
-    return filteredDays.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-  };
-
-  // Calculate monthly averages - fix for yearly graph
-  const calculateMonthlyAverages = () => {
-    const dailyData = calculateDailyWeights();
-    const monthlyData: { [month: string]: { total: number; count: number } } =
-      {};
-
-    dailyData.forEach((day) => {
-      if (!day.weight) return;
-
-      const date = new Date(day.date);
-      const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { total: 0, count: 0 };
-      }
-
-      monthlyData[monthKey].total += parseFloat(day.weight);
-      monthlyData[monthKey].count += 1;
-    });
-
-    return Object.entries(monthlyData)
-      .map(([monthKey, data]) => ({
-        month: monthKey,
-        label: new Date(monthKey + "-01").toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        }),
-        weight: (data.total / data.count).toFixed(1),
-        formattedDate: new Date(monthKey + "-01").toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        }),
-      }))
-      .sort(
-        (a, b) =>
-          new Date(a.month + "-01").getTime() -
-          new Date(b.month + "-01").getTime()
+      filteredData = dummyCircumferenceData.filter(
+        (day) => new Date(day.date) >= cutoffDate
       );
-  };
+    }
 
-  // Get filtered data based on range tab - fix for yearly view
-  const getFilteredData = () => {
-    try {
-      const dailyData = calculateDailyWeights();
+    // Apply range filtering
+    switch (rangeTab) {
+      case "weekly":
+        return filteredData.slice(-7);
+      case "monthly":
+        return filteredData.slice(-30);
+      case "yearly":
+        // For yearly, create monthly averages
+        const monthlyData: {
+          [month: string]: {
+            waistTotal: number;
+            hipTotal: number;
+            count: number;
+          };
+        } = {};
 
-      // If no data is available, return empty array
-      if (!dailyData || dailyData.length === 0) {
-        return [];
-      }
+        filteredData.forEach((day) => {
+          const date = new Date(day.date);
+          const monthKey = `${date.getFullYear()}-${String(
+            date.getMonth() + 1
+          ).padStart(2, "0")}`;
 
-      if (comparisonPeriod === "custom" && startDate && endDate) {
-        const daysDifference =
-          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-          (1000 * 3600 * 24);
-        if (daysDifference < 14) {
-          return dailyData;
-        }
-      }
-
-      switch (rangeTab) {
-        case "weekly":
-          return dailyData.slice(-7);
-        case "monthly":
-          return dailyData.slice(-30);
-        case "yearly":
-          try {
-            const monthlyAverages = calculateMonthlyAverages();
-            return monthlyAverages && monthlyAverages.length > 0
-              ? monthlyAverages
-              : [];
-          } catch (e) {
-            console.error("Error calculating monthly averages:", e);
-            return [];
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { waistTotal: 0, hipTotal: 0, count: 0 };
           }
-        default:
-          return dailyData;
-      }
-    } catch (e) {
-      console.error("Error in getFilteredData:", e);
-      return [];
+
+          monthlyData[monthKey].waistTotal += day.waist;
+          monthlyData[monthKey].hipTotal += day.hip;
+          monthlyData[monthKey].count += 1;
+        });
+
+        return Object.entries(monthlyData).map(([monthKey, data]) => ({
+          month: monthKey,
+          label: new Date(monthKey + "-01").toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          }),
+          waist: parseFloat((data.waistTotal / data.count).toFixed(1)),
+          hip: parseFloat((data.hipTotal / data.count).toFixed(1)),
+          formattedDate: new Date(monthKey + "-01").toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              year: "numeric",
+            }
+          ),
+        }));
+      default:
+        return filteredData;
     }
   };
 
-  // Custom tooltip for weight chart
-  const WeightTooltip = ({ active, payload, label }: any) => {
+  // Custom tooltip for circumference chart
+  const CircumferenceTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -253,9 +206,12 @@ export default function WeightScreen() {
               ? data.label
               : `${data.dayName} - ${data.formattedDate}`}
           </p>
-          <p style={{ color: payload[0].color }}>
-            <strong>Weight:</strong> {payload[0].value} kg
-          </p>
+          {payload.map((entry: any) => (
+            <p key={entry.dataKey} style={{ color: entry.color }}>
+              <strong>{entry.dataKey === "waist" ? "Waist" : "Hip"}:</strong>{" "}
+              {entry.value} cm
+            </p>
+          ))}
         </div>
       );
     }
@@ -276,21 +232,8 @@ export default function WeightScreen() {
           const clientData = clientDocSnap.data();
           setUserName(clientData.fullName || "User");
         }
-
-        // Fetch weekly data
-        const weeklyDocRef = doc(db, "weeklyForms", decodedEmail);
-        const weeklyDocSnap = await getDoc(weeklyDocRef);
-
-        if (weeklyDocSnap.exists()) {
-          const data = weeklyDocSnap.data();
-          const { firstEntryDate, ...weekData } = data;
-          setWeeklyData(weekData as WeeklyForms);
-        } else {
-          setError("No weight data found");
-        }
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError("Failed to fetch weight data");
       } finally {
         setLoading(false);
       }
@@ -303,29 +246,13 @@ export default function WeightScreen() {
     return (
       <div className="min-h-screen bg-[#07172C] text-white">
         <Navigation
-          title="Weight"
-          subtitle="Track your weight progress"
+          title="Circumference"
+          subtitle="Track your body measurements"
           email={decodeURIComponent(email)}
           userName={userName}
         />
         <div className="px-4 py-6 flex justify-center items-center h-64">
-          <p>Loading weight data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#07172C] text-white">
-        <Navigation
-          title="Weight"
-          subtitle="Track your weight progress"
-          email={decodeURIComponent(email)}
-          userName={userName}
-        />
-        <div className="px-4 py-6 flex justify-center items-center h-64">
-          <p className="text-red-400">{error}</p>
+          <p>Loading circumference data...</p>
         </div>
       </div>
     );
@@ -334,8 +261,8 @@ export default function WeightScreen() {
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
-        title="Weight"
-        subtitle="Track your weight progress"
+        title="Circumference"
+        subtitle="Track your waist and hip measurements"
         email={decodeURIComponent(email)}
         userName={userName}
       />
@@ -475,11 +402,13 @@ export default function WeightScreen() {
           </div>
         )}
 
-        {/* Body Metrics Graph or Table */}
+        {/* Circumference Measurements Graph or Table */}
         <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-4">
-              <h2 className="text-xl font-semibold">Weight Progress</h2>
+              <h2 className="text-xl font-semibold">
+                Waist / Hip Circumference
+              </h2>
 
               <div className="flex space-x-2">
                 <div className="bg-[#4CAF50] text-xs rounded-md px-2 py-0.5 flex items-center">
@@ -508,24 +437,36 @@ export default function WeightScreen() {
                     Avg:
                     <strong className="ml-1">
                       {(() => {
-                        const data = getFilteredData();
+                        const data = getCircumferenceData();
                         if (!data || data.length === 0) return "N/A";
-                        let total = 0;
-                        let count = 0;
 
                         try {
+                          let waistTotal = 0;
+                          let hipTotal = 0;
+                          let count = 0;
+
                           data.forEach((item) => {
-                            if (item && item.weight) {
-                              total += parseFloat(item.weight);
+                            if (
+                              item &&
+                              typeof item.waist === "number" &&
+                              typeof item.hip === "number"
+                            ) {
+                              waistTotal += item.waist;
+                              hipTotal += item.hip;
                               count++;
                             }
                           });
 
                           return count > 0
-                            ? (total / count).toFixed(1) + " kg"
+                            ? `${(waistTotal / count).toFixed(1)}/${(
+                                hipTotal / count
+                              ).toFixed(1)} cm`
                             : "N/A";
                         } catch (e) {
-                          console.error("Error calculating weight average:", e);
+                          console.error(
+                            "Error calculating circumference average:",
+                            e
+                          );
                           return "N/A";
                         }
                       })()}
@@ -565,15 +506,15 @@ export default function WeightScreen() {
 
           {viewMode === "graphs" ? (
             <div className="h-[400px] relative">
-              {getFilteredData().length === 0 ? (
+              {getCircumferenceData().length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <p className="text-gray-400">
-                    No weight data available for this period
+                    No circumference data available for this period
                   </p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getFilteredData()}>
+                  <LineChart data={getCircumferenceData()}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis
                       dataKey={
@@ -588,19 +529,43 @@ export default function WeightScreen() {
                     <YAxis
                       stroke="#94a3b8"
                       tick={{ fill: "#94a3b8" }}
-                      domain={["dataMin - 2", "dataMax + 2"]}
+                      domain={["dataMin - 5", "dataMax + 5"]}
                     />
-                    <Tooltip content={<WeightTooltip />} />
+                    <Tooltip content={<CircumferenceTooltip />} />
                     <Line
                       type="monotone"
-                      dataKey="weight"
-                      stroke="#DD3333"
+                      dataKey="waist"
+                      stroke="#FF6B6B"
                       strokeWidth={3}
-                      dot={{ fill: "#DD3333", strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: "#DD3333", strokeWidth: 2 }}
+                      dot={{ fill: "#FF6B6B", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#FF6B6B", strokeWidth: 2 }}
+                      name="Waist"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="hip"
+                      stroke="#4ECDC4"
+                      strokeWidth={3}
+                      dot={{ fill: "#4ECDC4", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#4ECDC4", strokeWidth: 2 }}
+                      name="Hip"
                     />
                   </LineChart>
                 </ResponsiveContainer>
+              )}
+
+              {/* Legend for circumference chart */}
+              {getCircumferenceData().length > 0 && (
+                <div className="flex justify-center space-x-8 mt-4">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-[#FF6B6B] rounded-full mr-2"></div>
+                    <span className="text-sm">Waist (cm)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-[#4ECDC4] rounded-full mr-2"></div>
+                    <span className="text-sm">Hip (cm)</span>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
@@ -612,22 +577,26 @@ export default function WeightScreen() {
                       {rangeTab === "yearly" ? "Month" : "Date"}
                     </th>
                     <th className="py-3 pr-4 font-medium">
-                      {rangeTab === "yearly" ? "Avg Weight" : "Weight"}
+                      {rangeTab === "yearly" ? "Avg Waist" : "Waist"}
                     </th>
-                    <th className="py-3 pr-4 font-medium">Change</th>
+                    <th className="py-3 pr-4 font-medium">
+                      {rangeTab === "yearly" ? "Avg Hip" : "Hip"}
+                    </th>
+                    <th className="py-3 pr-4 font-medium">Waist Change</th>
+                    <th className="py-3 pr-4 font-medium">Hip Change</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredData()
+                  {getCircumferenceData()
                     .slice()
                     .reverse()
                     .map((item, index, array) => {
                       const nextItem = array[index + 1];
-                      const weightChange = nextItem
-                        ? (
-                            parseFloat(item.weight) -
-                            parseFloat(nextItem.weight)
-                          ).toFixed(1)
+                      const waistChange = nextItem
+                        ? (item.waist - nextItem.waist).toFixed(1)
+                        : null;
+                      const hipChange = nextItem
+                        ? (item.hip - nextItem.hip).toFixed(1)
                         : null;
 
                       return (
@@ -640,20 +609,43 @@ export default function WeightScreen() {
                               ? item.label
                               : item.formattedDate}
                           </td>
-                          <td className="py-3 pr-4">{item.weight} kg</td>
                           <td className="py-3 pr-4">
-                            {weightChange ? (
+                            {item.waist.toFixed(1)} cm
+                          </td>
+                          <td className="py-3 pr-4">
+                            {item.hip.toFixed(1)} cm
+                          </td>
+                          <td className="py-3 pr-4">
+                            {waistChange ? (
                               <span
                                 className={
-                                  parseFloat(weightChange) > 0
+                                  parseFloat(waistChange) > 0
                                     ? "text-red-500"
-                                    : parseFloat(weightChange) < 0
+                                    : parseFloat(waistChange) < 0
                                     ? "text-green-500"
                                     : "text-gray-400"
                                 }
                               >
-                                {parseFloat(weightChange) > 0 ? "+" : ""}
-                                {weightChange} kg
+                                {parseFloat(waistChange) > 0 ? "+" : ""}
+                                {waistChange} cm
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {hipChange ? (
+                              <span
+                                className={
+                                  parseFloat(hipChange) > 0
+                                    ? "text-red-500"
+                                    : parseFloat(hipChange) < 0
+                                    ? "text-green-500"
+                                    : "text-gray-400"
+                                }
+                              >
+                                {parseFloat(hipChange) > 0 ? "+" : ""}
+                                {hipChange} cm
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
