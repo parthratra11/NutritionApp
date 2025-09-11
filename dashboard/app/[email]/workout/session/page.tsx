@@ -232,6 +232,100 @@ export default function WorkoutSessionPage() {
     }
   };
 
+  // Function to compare progress between days based on first set
+  const getProgressOutline = (
+    exercise: ExerciseHistory,
+    currentDateIndex: number
+  ): string => {
+    if (currentDateIndex === workoutDates.length - 1) {
+      // This is the earliest date (rightmost), no comparison needed
+      return "";
+    }
+
+    const normalizedData = normalizeSetsData(exercise);
+    const currentDay = normalizedData[currentDateIndex];
+    const previousDay = normalizedData[currentDateIndex + 1]; // Next index is previous date
+
+    if (!currentDay.sets[0] || !previousDay.sets[0]) {
+      return "";
+    }
+
+    // Parse first set: "weight×reps" format
+    const parseSet = (setString: string) => {
+      const [weightStr, repsStr] = setString.split("×");
+      const weight = parseFloat(weightStr);
+      const reps = parseInt(repsStr);
+      return { weight, reps, total: weight * reps };
+    };
+
+    const currentFirstSet = parseSet(currentDay.sets[0]);
+    const previousFirstSet = parseSet(previousDay.sets[0]);
+
+    // Compare total volume (weight × reps)
+    if (currentFirstSet.total > previousFirstSet.total) {
+      return "border-4 border-green-500"; // Improved
+    } else {
+      return "border-4 border-red-500"; // Declined or same performance
+    }
+  };
+
+  // Function to get progress arrow icon
+  const getProgressArrow = (
+    exercise: ExerciseHistory,
+    currentDateIndex: number
+  ): React.ReactElement | null => {
+    if (currentDateIndex === workoutDates.length - 1) {
+      // This is the earliest date (rightmost), no comparison needed
+      return null;
+    }
+
+    const normalizedData = normalizeSetsData(exercise);
+    const currentDay = normalizedData[currentDateIndex];
+    const previousDay = normalizedData[currentDateIndex + 1]; // Next index is previous date
+
+    if (!currentDay.sets[0] || !previousDay.sets[0]) {
+      return null;
+    }
+
+    // Parse first set: "weight×reps" format
+    const parseSet = (setString: string) => {
+      const [weightStr, repsStr] = setString.split("×");
+      const weight = parseFloat(weightStr);
+      const reps = parseInt(repsStr);
+      return { weight, reps, total: weight * reps };
+    };
+
+    const currentFirstSet = parseSet(currentDay.sets[0]);
+    const previousFirstSet = parseSet(previousDay.sets[0]);
+
+    // Compare total volume (weight × reps)
+    if (currentFirstSet.total > previousFirstSet.total) {
+      return (
+        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-10">
+          <svg
+            className="w-5 h-5 text-white"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M7 14l5-5 5 5H7z" />
+          </svg>
+        </div>
+      );
+    } else {
+      return (
+        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-10">
+          <svg
+            className="w-5 h-5 text-white"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M7 10l5 5 5-5H7z" />
+          </svg>
+        </div>
+      );
+    }
+  };
+
   // Function to normalize sets data to ensure consistent number of sets across all days
   const normalizeSetsData = (exercise: ExerciseHistory) => {
     return exercise.history[0].map((dayData) => {
@@ -508,21 +602,32 @@ export default function WorkoutSessionPage() {
                     </td>
 
                     {normalizedData.map((dayData, dateIndex) => {
+                      const progressOutline = getProgressOutline(
+                        exercise,
+                        dateIndex
+                      );
+                      const progressArrow = getProgressArrow(
+                        exercise,
+                        dateIndex
+                      );
+
                       return (
-                        <td key={dateIndex} className="p-2 relative">
-                          <div className="flex flex-col w-full">
+                        <td
+                          key={dateIndex}
+                          className="p-2 relative"
+                          style={{ padding: "12px" }}
+                        >
+                          <div
+                            className={`flex flex-col w-full ${progressOutline} relative`}
+                            style={{
+                              borderRadius: "0.375rem",
+                            }}
+                          >
+                            {progressArrow}
                             {dayData.sets.map((set, setIndex) => (
                               <div
                                 key={setIndex}
                                 className="relative py-2 px-2 w-full bg-[#FFFFFF80] text-white"
-                                style={{
-                                  borderRadius:
-                                    setIndex === 0
-                                      ? "0.375rem 0.375rem 0 0"
-                                      : setIndex === dayData.sets.length - 1
-                                      ? "0 0 0.375rem 0.375rem"
-                                      : "none",
-                                }}
                               >
                                 {set}
                                 {setIndex < dayData.sets.length - 1 && (
