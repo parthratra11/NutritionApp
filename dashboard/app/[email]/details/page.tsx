@@ -143,9 +143,9 @@ export default function UserDetails() {
     }, 1000);
   }, []);
 
-  // Helper function to format date - simplified for the design
+  // Update this helper function
   const formatDate = () => {
-    return "28 July";  // Match the date format in the image
+    return "14 June";  // Changed from "28 July"
   };
 
   if (loading) {
@@ -178,7 +178,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Basic Information</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -216,7 +216,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Location Details</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -242,7 +242,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Training Profile</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -272,7 +272,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Medical And Lifestyle</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -310,7 +310,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Strength Metrics</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -340,7 +340,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Body Measurements</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -362,7 +362,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Goals & Obstacles</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -384,7 +384,7 @@ export default function UserDetails() {
           <div className="bg-[#0E1F34] rounded-lg p-6 col-span-full">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Equipment Access</h2>
-              <span className="text-xs text-gray-400">28 July</span>
+              <span className="text-xs text-gray-400">14 June</span> {/* Changed from 28 July */}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-3">
               {equipmentFields.slice(0, 6).map((item, index) => (
