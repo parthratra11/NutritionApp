@@ -37,126 +37,372 @@ export default function WorkoutSessionPage() {
   const [sessionName, setSessionName] = useState<string>(sessionType);
   const email = params.email as string;
 
-  // Mock workout dates
-  const workoutDates = [
-    {
-      date: "1 July 2025",
-      time: "08:00 AM - 09:30 AM",
-      note: "Shoulder press felt strong today, increased weight",
-      warmupCompleted: true,
-    },
-    {
-      date: "24 June 2025",
-      time: "08:00 AM - 09:30 AM",
-      note: "Recovery was good since last session",
-      warmupCompleted: false,
-    },
-    {
-      date: "17 June 2025",
-      time: "08:00 AM - 09:30 AM",
-      note: "Great leg day, focused on hip thrusts and squat form",
-      warmupCompleted: true,
-    },
-  ];
+  // Mock workout dates - different for each session type
+  const getWorkoutDates = (sessionType: string) => {
+    switch (sessionType) {
+      case "Session A":
+        return [
+          {
+            date: "1 July 2025",
+            time: "08:00 AM - 09:30 AM",
+            note: "Shoulder press felt strong today, increased weight",
+            warmupCompleted: true,
+          },
+          {
+            date: "24 June 2025",
+            time: "08:00 AM - 09:30 AM",
+            note: "Recovery was good since last session",
+            warmupCompleted: false,
+          },
+          {
+            date: "17 June 2025",
+            time: "08:00 AM - 09:30 AM",
+            note: "Great leg day, focused on hip thrusts and squat form",
+            warmupCompleted: true,
+          },
+        ];
+      case "Session B":
+        return [
+          {
+            date: "2 July 2025",
+            time: "06:00 PM - 07:30 PM",
+            note: "Upper body focus, good pump today",
+            warmupCompleted: true,
+          },
+          {
+            date: "25 June 2025",
+            time: "06:00 PM - 07:30 PM",
+            note: "Felt tired but pushed through all sets",
+            warmupCompleted: true,
+          },
+          {
+            date: "18 June 2025",
+            time: "06:00 PM - 07:30 PM",
+            note: "First time doing this routine, felt challenging",
+            warmupCompleted: false,
+          },
+        ];
+      case "Session C":
+        return [
+          {
+            date: "3 July 2025",
+            time: "07:00 AM - 08:15 AM",
+            note: "Perfect form on all movements today",
+            warmupCompleted: true,
+          },
+          {
+            date: "26 June 2025",
+            time: "07:00 AM - 08:15 AM",
+            note: "Lower body strength improving consistently",
+            warmupCompleted: true,
+          },
+          {
+            date: "19 June 2025",
+            time: "07:00 AM - 08:15 AM",
+            note: "Good session, felt energized throughout",
+            warmupCompleted: true,
+          },
+        ];
+      default:
+        return [];
+    }
+  };
 
-  // Mock exercise data
-  const exercisesData: ExerciseHistory[] = [
-    {
-      name: "Barbell Hip Thrust",
-      standardWeight: "80 kg",
-      standardReps: "10 reps",
-      standardSets: 3,
-      history: [
-        [
-          { sets: ["80×10", "80×9", "80×8"], completed: true },
-          { sets: ["80×10", "75×9", "75×8"], completed: true },
-          { sets: ["80×10", "70×9", "70×8"], completed: true },
-        ],
-      ],
-    },
-    {
-      name: "Cable Overhead Triceps Extension",
-      standardWeight: "25 kg",
-      standardReps: "12 reps",
-      standardSets: 4,
-      history: [
-        [
-          { sets: ["25×12", "25×11", "25×10"], completed: true },
+  const workoutDates = getWorkoutDates(sessionType);
+
+  // Mock exercise data - different for each session type
+  const getExercisesData = (sessionType: string): ExerciseHistory[] => {
+    switch (sessionType) {
+      case "Session A":
+        return [
           {
-            sets: ["25×12", "25×10", "25×10", "25×9", "25×8"],
-            completed: false,
-          },
-          { sets: ["20×12", "20×11", "20×10"], completed: true },
-        ],
-      ],
-    },
-    {
-      name: "Heels Elevated Zercher Squat",
-      standardWeight: "60 kg",
-      standardReps: "8 reps",
-      standardSets: 3,
-      history: [
-        [
-          { sets: ["60×8", "60×8", "60×7", "60×7", "60×6"], completed: true },
-          { sets: ["55×8", "55×8", "55×7"], completed: true },
-          { sets: ["50×9", "50×8", "50×8", "50×7", "50×7"], completed: true },
-        ],
-      ],
-    },
-    {
-      name: "One-leg Leg Extension",
-      standardWeight: "20 kg",
-      standardReps: "15 reps",
-      standardSets: 3,
-      perSide: true,
-      history: [
-        [
-          {
-            sets: ["20×15", "20×14", "20×13", "20×12", "20×12"],
-            completed: false,
+            name: "Barbell Hip Thrust",
+            standardWeight: "80 kg",
+            standardReps: "10 reps",
+            standardSets: 3,
+            history: [
+              [
+                { sets: ["80×10", "80×9", "80×8"], completed: true },
+                { sets: ["80×10", "75×9", "75×8"], completed: true },
+                { sets: ["80×10", "70×9", "70×8"], completed: true },
+              ],
+            ],
           },
           {
-            sets: ["15×15", "15×14", "15×14", "15×13", "15×12"],
-            completed: true,
+            name: "Cable Overhead Triceps Extension",
+            standardWeight: "25 kg",
+            standardReps: "12 reps",
+            standardSets: 4,
+            history: [
+              [
+                { sets: ["25×12", "25×11", "25×10"], completed: true },
+                {
+                  sets: ["25×12", "25×10", "25×10", "25×9", "25×8"],
+                  completed: false,
+                },
+                { sets: ["20×12", "20×11", "20×10"], completed: true },
+              ],
+            ],
           },
           {
-            sets: ["15×15", "15×15", "15×14", "15×13", "15×12"],
-            completed: true,
+            name: "Heels Elevated Zercher Squat",
+            standardWeight: "60 kg",
+            standardReps: "8 reps",
+            standardSets: 3,
+            history: [
+              [
+                {
+                  sets: ["60×8", "60×8", "60×7", "60×7", "60×6"],
+                  completed: true,
+                },
+                { sets: ["55×8", "55×8", "55×7"], completed: true },
+                {
+                  sets: ["50×9", "50×8", "50×8", "50×7", "50×7"],
+                  completed: true,
+                },
+              ],
+            ],
           },
-        ],
-      ],
-    },
-    {
-      name: "Scrape Rack L-Seated Shoulder Press",
-      standardWeight: "40 kg",
-      standardReps: "10 reps",
-      standardSets: 3,
-      history: [
-        [
-          { sets: ["40×10", "40×9", "40×8", "40×8", "40×7"], completed: false },
-          { sets: ["35×10", "35×10", "35×9", "35×9", "35×8"], completed: true },
           {
-            sets: ["30×10", "30×10", "30×10", "30×9", "30×9"],
-            completed: true,
+            name: "One-leg Leg Extension",
+            standardWeight: "20 kg",
+            standardReps: "15 reps",
+            standardSets: 3,
+            perSide: true,
+            history: [
+              [
+                {
+                  sets: ["20×15", "20×14", "20×13", "20×12", "20×12"],
+                  completed: false,
+                },
+                {
+                  sets: ["15×15", "15×14", "15×14", "15×13", "15×12"],
+                  completed: true,
+                },
+                {
+                  sets: ["15×15", "15×15", "15×14", "15×13", "15×12"],
+                  completed: true,
+                },
+              ],
+            ],
           },
-        ],
-      ],
-    },
-    {
-      name: "Seated DB Lateral Raise",
-      standardWeight: "7.5 kg",
-      standardReps: "12 reps",
-      standardSets: 4,
-      perSide: true,
-      history: [
-        [
-          { sets: ["10×12", "10×11", "10×10", "10×10"], completed: true },
-          { sets: ["7.5×12", "7.5×12", "7.5×11"], completed: true },
-          { sets: ["5×12", "5×12", "5×11", "5×10"], completed: false },
-        ],
-      ],
-    },
-  ];
+          {
+            name: "Scrape Rack L-Seated Shoulder Press",
+            standardWeight: "40 kg",
+            standardReps: "10 reps",
+            standardSets: 3,
+            history: [
+              [
+                {
+                  sets: ["40×10", "40×9", "40×8", "40×8", "40×7"],
+                  completed: false,
+                },
+                {
+                  sets: ["35×10", "35×10", "35×9", "35×9", "35×8"],
+                  completed: true,
+                },
+                {
+                  sets: ["30×10", "30×10", "30×10", "30×9", "30×9"],
+                  completed: true,
+                },
+              ],
+            ],
+          },
+          {
+            name: "Seated DB Lateral Raise",
+            standardWeight: "7.5 kg",
+            standardReps: "12 reps",
+            standardSets: 4,
+            perSide: true,
+            history: [
+              [
+                { sets: ["10×12", "10×11", "10×10", "10×10"], completed: true },
+                { sets: ["7.5×12", "7.5×12", "7.5×11"], completed: true },
+                { sets: ["5×12", "5×12", "5×11", "5×10"], completed: false },
+              ],
+            ],
+          },
+        ];
+      case "Session B":
+        return [
+          {
+            name: "Incline Barbell Bench Press",
+            standardWeight: "70 kg",
+            standardReps: "8 reps",
+            standardSets: 4,
+            history: [
+              [
+                { sets: ["70×8", "70×7", "65×8", "65×7"], completed: true },
+                { sets: ["65×8", "65×7", "60×8", "60×7"], completed: true },
+                { sets: ["60×8", "60×8", "55×8", "55×7"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Bent-Over Barbell Row",
+            standardWeight: "65 kg",
+            standardReps: "10 reps",
+            standardSets: 4,
+            history: [
+              [
+                { sets: ["65×10", "65×9", "65×8", "60×8"], completed: true },
+                { sets: ["60×10", "60×9", "55×10", "55×9"], completed: true },
+                { sets: ["55×10", "55×10", "50×10", "50×9"], completed: false },
+              ],
+            ],
+          },
+          {
+            name: "Dumbbell Shoulder Press",
+            standardWeight: "25 kg",
+            standardReps: "12 reps",
+            standardSets: 3,
+            perSide: true,
+            history: [
+              [
+                { sets: ["25×12", "25×10", "22.5×10"], completed: true },
+                { sets: ["22.5×12", "22.5×11", "20×12"], completed: true },
+                { sets: ["20×12", "20×12", "17.5×12"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Cable Lat Pulldown",
+            standardWeight: "55 kg",
+            standardReps: "12 reps",
+            standardSets: 3,
+            history: [
+              [
+                { sets: ["55×12", "55×11", "55×10"], completed: true },
+                { sets: ["50×12", "50×12", "50×11"], completed: true },
+                { sets: ["45×12", "45×12", "45×12"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Barbell Bicep Curls",
+            standardWeight: "30 kg",
+            standardReps: "15 reps",
+            standardSets: 3,
+            history: [
+              [
+                { sets: ["30×15", "30×14", "27.5×13"], completed: false },
+                { sets: ["27.5×15", "27.5×14", "25×15"], completed: true },
+                { sets: ["25×15", "25×15", "22.5×15"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Overhead Cable Extension",
+            standardWeight: "35 kg",
+            standardReps: "15 reps",
+            standardSets: 3,
+            history: [
+              [
+                { sets: ["35×15", "35×14", "35×12"], completed: true },
+                { sets: ["30×15", "30×15", "30×14"], completed: true },
+                { sets: ["25×15", "25×15", "25×15"], completed: true },
+              ],
+            ],
+          },
+        ];
+      case "Session C":
+        return [
+          {
+            name: "Romanian Deadlift",
+            standardWeight: "90 kg",
+            standardReps: "6 reps",
+            standardSets: 4,
+            history: [
+              [
+                { sets: ["90×6", "90×5", "85×6", "85×5"], completed: true },
+                { sets: ["85×6", "85×6", "80×6", "80×6"], completed: true },
+                { sets: ["80×6", "80×6", "75×6", "75×6"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Bulgarian Split Squats",
+            standardWeight: "20 kg",
+            standardReps: "12 reps",
+            standardSets: 3,
+            perSide: true,
+            history: [
+              [
+                { sets: ["20×12", "20×11", "17.5×12"], completed: true },
+                { sets: ["17.5×12", "17.5×12", "15×12"], completed: true },
+                { sets: ["15×12", "15×12", "12.5×12"], completed: false },
+              ],
+            ],
+          },
+          {
+            name: "Walking Lunges",
+            standardWeight: "15 kg",
+            standardReps: "20 reps",
+            standardSets: 3,
+            perSide: true,
+            history: [
+              [
+                { sets: ["15×20", "15×18", "15×16"], completed: true },
+                { sets: ["12.5×20", "12.5×20", "12.5×18"], completed: true },
+                { sets: ["10×20", "10×20", "10×20"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Calf Raises",
+            standardWeight: "45 kg",
+            standardReps: "20 reps",
+            standardSets: 4,
+            history: [
+              [
+                { sets: ["45×20", "45×18", "45×16", "40×15"], completed: true },
+                { sets: ["40×20", "40×20", "40×18", "35×18"], completed: true },
+                { sets: ["35×20", "35×20", "35×20", "30×20"], completed: true },
+              ],
+            ],
+          },
+          {
+            name: "Leg Press",
+            standardWeight: "120 kg",
+            standardReps: "15 reps",
+            standardSets: 4,
+            history: [
+              [
+                {
+                  sets: ["120×15", "120×14", "120×12", "115×12"],
+                  completed: false,
+                },
+                {
+                  sets: ["115×15", "115×15", "115×14", "110×14"],
+                  completed: true,
+                },
+                {
+                  sets: ["110×15", "110×15", "110×15", "105×15"],
+                  completed: true,
+                },
+              ],
+            ],
+          },
+          {
+            name: "Glute Ham Raises",
+            standardWeight: "Bodyweight",
+            standardReps: "10 reps",
+            standardSets: 3,
+            history: [
+              [
+                { sets: ["BW×10", "BW×9", "BW×8"], completed: true },
+                { sets: ["BW×8", "BW×8", "BW×7"], completed: true },
+                { sets: ["BW×6", "BW×6", "BW×5"], completed: false },
+              ],
+            ],
+          },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const exercisesData = getExercisesData(sessionType);
 
   useEffect(() => {
     const fetchClientName = async () => {
