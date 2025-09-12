@@ -291,8 +291,8 @@ export default function Home() {
   });
 
   // Stats calculations - consider all students as paid
-  const paidCount = intakeForms.length; // All students are paid
-  const unpaidCount = 0; // No unpaid students
+  const paidCount = intakeForms.length - 1; // All students are paid
+  const unpaidCount = 1; // No unpaid students
 
   if (loading) return <div className="p-6 text-white">Loading...</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
@@ -380,7 +380,6 @@ export default function Home() {
                   />
                 </svg>
               </button>
-
               {/* Theme Toggle Pill - responsive */}
               <div className="flex items-center bg-[#0F1D3C] border border-white/10 rounded-full px-1 lg:px-1.5 mr-3 lg:mx-6">
                 <button
@@ -416,7 +415,6 @@ export default function Home() {
                   </svg>
                 </button>
               </div>
-
               {/* Greeting text - responsive */}
               <div className="mr-3 lg:mr-4 lg:ml-6">
                 <p className="text-lg lg:text-xl font-semibold">Hi, Cymron</p>
@@ -491,7 +489,7 @@ export default function Home() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search Students..."
+              placeholder="Search Clients..."
               className="bg-transparent outline-none placeholder-white/50 text-sm text-white ml-2 w-full"
             />
           </div>
@@ -501,7 +499,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-5 mt-6 lg:mt-8">
           <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
-              Total Students
+              Total Clients
             </div>
             <div className="text-xl lg:text-2xl font-semibold">
               {intakeForms.length}
@@ -509,13 +507,13 @@ export default function Home() {
           </div>
           <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
-              Paid Students
+              Paid Clients
             </div>
             <div className="text-xl lg:text-2xl font-semibold">{paidCount}</div>
           </div>
           <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
             <div className="text-[12px] lg:text-[14px] text-white/70">
-              Unpaid Students
+              Unpaid Clients
             </div>
             <div className="text-xl lg:text-2xl font-semibold">
               {unpaidCount}
@@ -564,7 +562,7 @@ export default function Home() {
               }}
               className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
             >
-              Join Date
+              Joining Date
             </button>
             <button
               onClick={() => {
@@ -610,7 +608,7 @@ export default function Home() {
                   {form.fullName}
                 </div>
                 <div className="text-[11px] lg:text-[12px] text-white/60 truncate">
-                  Submitted:{" "}
+                  Onboarded:{" "}
                   {form.timestamp?.toDate
                     ? formatDMY(form.timestamp.toDate())
                     : "No date"}
@@ -620,7 +618,7 @@ export default function Home() {
           ))}
           {visibleForms.length === 0 && (
             <p className="text-gray-400 col-span-full text-center text-sm">
-              No students found.
+              No Clients found.
             </p>
           )}
         </div>

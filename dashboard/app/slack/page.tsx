@@ -202,7 +202,7 @@ const SlackPage = () => {
             </div>
             <div className="h-12 w-12 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
               <Image
-                src="/User.png"
+                src="/Cymron.png"
                 alt="Profile"
                 fill
                 style={{ objectFit: "cover" }}
