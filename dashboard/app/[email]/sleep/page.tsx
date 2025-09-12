@@ -588,23 +588,29 @@ export default function SleepScreen() {
 
             {isPeriodDropdownOpen && (
               <div className="absolute z-10 mt-1 w-full bg-[#142437] border border-[#22364F] rounded-lg shadow-lg overflow-hidden">
-                {/*
-                  Dropdown options for period selection
-                */}
-                {/*
-                  - All Time
-                  - Past Year
-                  - Past Quarter
-                  - Past Month
-                  - Past Week
-                  - Custom
-                */}
-                {/*
-                  Map through period options and render buttons
-                */}
-                {/*
-                  On button click, set the comparison period and close the dropdown
-                */}
+                {[
+                  { id: "all", label: "All Time" },
+                  { id: "yearly", label: "Past Year" },
+                  { id: "quarterly", label: "Past Quarter" },
+                  { id: "monthly", label: "Past Month" },
+                  { id: "weekly", label: "Past Week" },
+                  { id: "custom", label: "Custom" },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => {
+                      setComparisonPeriod(option.id);
+                      setIsPeriodDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-[#22364F] transition-colors ${
+                      comparisonPeriod === option.id
+                        ? "bg-[#22364F] text-white"
+                        : "text-gray-300"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>

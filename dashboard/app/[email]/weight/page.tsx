@@ -51,7 +51,7 @@ export default function WeightScreen() {
   const [userName, setUserName] = useState<string>("User");
 
   // Backend data states
-  const [weeklyData, setWeeklyData] = useState<WeeklyForms | null>(null);
+  const [weeklyData, setWeeklyData] = useState<weeklyForms | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

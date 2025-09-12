@@ -19,6 +19,40 @@ interface IntakeForm {
   };
 }
 
+// Add temporary data interfaces
+interface SleepData {
+  hours: number;
+  minutes: number;
+  quality: string;
+}
+
+interface WeightData {
+  weight: number;
+  unit: string;
+}
+
+interface NutritionData {
+  protein: { actual: number, target: number, unit: string };
+  fat: { actual: number, target: number, unit: string };
+  carbs: { actual: number, target: number, unit: string };
+  calories: { actual: number, unit: string };
+}
+
+interface StepsData {
+  actual: number;
+  target: number;
+}
+
+interface MoodData {
+  mood: string;
+  time: string;
+  color: string;
+}
+
+interface ExerciseData {
+  exercises: string[];
+}
+
 export default function ClientOverview() {
   const params = useParams();
   const router = useRouter();
@@ -29,6 +63,52 @@ export default function ClientOverview() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [userName, setUserName] = useState<string>("Aria Michele");
   const [showNav, setShowNav] = useState(false);
+  
+  // New state for dynamic data
+  const [sleepData, setSleepData] = useState<SleepData>({ hours: 6, minutes: 42, quality: "Restful" });
+  const [weightData, setWeightData] = useState<WeightData>({ weight: 74.2, unit: "Kg" });
+  const [nutritionData, setNutritionData] = useState<NutritionData>({
+    protein: { actual: 150.0, target: 165.0, unit: "g" },
+    fat: { actual: 80.0, target: 73.0, unit: "g" },
+    carbs: { actual: 195.0, target: 220.0, unit: "g" },
+    calories: { actual: 2150, unit: "Kcal" }
+  });
+  const [stepsData, setStepsData] = useState<StepsData>({ actual: 5000, target: 10000 });
+  const [moodData, setMoodData] = useState<MoodData>({ mood: "Calm", time: "16:28pm", color: "#BFD8E9" });
+  const [exerciseData, setExerciseData] = useState<ExerciseData>({
+    exercises: [
+      "Barbell Hip Thrust",
+      "Heels Elevated Zercher Squat",
+      "Scrape Rack L-Seated Shoulder Press",
+      "Seated DB Lateral Raise"
+    ]
+  });
+  useEffect(() => {
+  const fetchClientData = async () => {
+    if (!params?.email) return;
+
+    try {
+      const decodedEmail = decodeURIComponent(params.email as string);
+      const clientDocRef = doc(db, "intakeForms", decodedEmail);
+      const clientDocSnap = await getDoc(clientDocRef);
+
+      if (clientDocSnap.exists()) {
+        const clientData = clientDocSnap.data() as IntakeForm;
+        setClient(clientData);
+        setUserName(clientData.fullName || "Aria Michele");
+      } else {
+        setError("Client not found");
+      }
+    } catch (err) {
+      setError("Failed to fetch client data");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchClientData();
+}, [params?.email]);
 
   // Side menu items
   const menuItems = [
@@ -312,6 +392,7 @@ export default function ClientOverview() {
       ),
     },
   ];
+  // ...existing code...
 
   const generateDateStrip = () => {
     const days = ["S", "M", "T", "W", "Th", "F", "S"];
@@ -343,41 +424,153 @@ export default function ClientOverview() {
 
     return `${day} ${month} ${year}`;
   };
+  
+  // Format selected date
+  const formatSelectedDate = () => {
+    const day = selectedDate.getDate();
+    const month = selectedDate.toLocaleDateString("en-US", { month: "short" });
+    const year = selectedDate.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  };
+
+  // Generate mock data based on selected date
+  useEffect(() => {
+    // Use the date to seed our random data (same date will produce same "random" data)
+    const dateValue = selectedDate.getDate() + selectedDate.getMonth() * 31;
+    
+    // Sleep data - varies between 5h30m and 8h15m
+    const baseHours = 6;
+    const hourVariance = ((dateValue % 7) - 3) / 2; // Range -1.5 to +1.5
+    const newHours = Math.max(5, Math.min(8, Math.floor(baseHours + hourVariance)));
+    
+    const baseMinutes = 30;
+    const minuteVariance = (dateValue % 60) - 30; // Range -30 to +30
+    const newMinutes = Math.max(0, Math.min(59, Math.floor(baseMinutes + minuteVariance)));
+    
+    // Sleep quality based on hours
+    let quality = "Restful";
+    if (newHours < 6) quality = "Poor";
+    else if (newHours === 6) quality = "Fair";
+    else if (newHours > 7) quality = "Deep";
+    
+    setSleepData({
+      hours: newHours,
+      minutes: newMinutes,
+      quality
+    });
+    
+    // Weight data - subtle variations (±0.5kg)
+    const baseWeight = 74.2;
+    const weightVariance = ((dateValue % 11) - 5) / 10; // Range -0.5 to +0.5
+    setWeightData({
+      weight: parseFloat((baseWeight + weightVariance).toFixed(1)),
+      unit: "Kg"
+    });
+    
+    // Nutrition data - varies day to day
+    const proteinBase = 150;
+    const proteinVariance = (dateValue % 41) - 20; // Range -20 to +20
+    
+    const fatBase = 80;
+    const fatVariance = (dateValue % 21) - 10; // Range -10 to +10
+    
+    const carbsBase = 195;
+    const carbsVariance = (dateValue % 61) - 30; // Range -30 to +30
+    
+    setNutritionData({
+      protein: {
+        actual: Math.max(100, Math.round(proteinBase + proteinVariance)),
+        target: 165.0,
+        unit: "g"
+      },
+      fat: {
+        actual: Math.max(50, Math.round(fatBase + fatVariance)),
+        target: 73.0,
+        unit: "g"
+      },
+      carbs: {
+        actual: Math.max(140, Math.round(carbsBase + carbsVariance)),
+        target: 220.0,
+        unit: "g"
+      },
+      calories: {
+        actual: Math.round((proteinBase + proteinVariance) * 4 + 
+                          (fatBase + fatVariance) * 9 + 
+                          (carbsBase + carbsVariance) * 4),
+        unit: "Kcal"
+      }
+    });
+    
+    // Steps data - varies between 3,000 and 12,000
+const dayOfYear = Math.floor((selectedDate.getTime() - new Date(selectedDate.getFullYear(), 0, 0).getTime()) / (24 * 60 * 60 * 1000));
+const seedValue = selectedDate.getFullYear() * 10000 + dayOfYear;
+const stepsBase = 7000;
+// Use a simpler calculation with better distribution
+const stepsVariance = ((seedValue * 13) % 18001) - 4500; // Range -4500 to +4500
+setStepsData({
+  actual: Math.max(1000, Math.min(12000, Math.round(stepsBase + stepsVariance))),
+  target: 10000
+});
+    
+    // Mood data - cycles through different moods
+    const moods = [
+      { mood: "Energetic", color: "#FFC107" },
+      { mood: "Happy", color: "#8BC34A" },
+      { mood: "Calm", color: "#BFD8E9" },
+      { mood: "Tired", color: "#9C27B0" },
+      { mood: "Focused", color: "#2196F3" },
+      { mood: "Stressed", color: "#FF5722" },
+      { mood: "Relaxed", color: "#4CAF50" }
+    ];
+    
+    const moodIndex = dateValue % moods.length;
+    const hours = 8 + (dateValue % 12); // Range 8-19 (8am to 7pm)
+    const minutes = dateValue % 60;
+    
+    setMoodData({
+      mood: moods[moodIndex].mood,
+      time: `${hours > 12 ? hours - 12 : hours}:${minutes < 10 ? '0' + minutes : minutes}${hours >= 12 ? 'pm' : 'am'}`,
+      color: moods[moodIndex].color
+    });
+    
+    // Exercise data - different routines for different days
+    const routines = [
+      ["Barbell Hip Thrust", "Heels Elevated Zercher Squat", "Scrape Rack L-Seated Shoulder Press", "Seated DB Lateral Raise"],
+      ["Deadlift", "Pull-ups", "Dumbbell Rows", "Face Pulls"],
+      ["Bench Press", "Incline Press", "Tricep Pushdowns", "Chest Flyes"],
+      ["Bulgarian Split Squats", "Romanian Deadlifts", "Leg Extensions", "Calf Raises"],
+  
+      ["Deadlift", "Pull-ups", "Dumbbell Rows", "Face Pulls"],
+      ["Bench Press", "Incline Press", "Tricep Pushdowns", "Chest Flyes"],
+      ["Bulgarian Split Squats", "Romanian Deadlifts", "Leg Extensions", "Calf Raises"],
+      ["Rest Day"],
+    ];
+    
+    const routineIndex = selectedDate.getDay(); // 0-6 (Sunday-Saturday)
+    setExerciseData({
+      exercises: routines[routineIndex]
+    });
+    
+  }, [selectedDate]);
 
   useEffect(() => {
     const fetchClientData = async () => {
-      if (!params?.email) return;
-
-      try {
-        const decodedEmail = decodeURIComponent(params.email as string);
-        const clientDocRef = doc(db, "intakeForms", decodedEmail);
-        const clientDocSnap = await getDoc(clientDocRef);
-
-        if (clientDocSnap.exists()) {
-          const clientData = clientDocSnap.data() as IntakeForm;
-          setClient(clientData);
-          setUserName(clientData.fullName || "Aria Michele");
-        } else {
-          setError("Client not found");
-        }
-      } catch (err) {
-        setError("Failed to fetch client data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      // ...existing code...
     };
 
     fetchClientData();
   }, [params?.email]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#07172C] text-white flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
+    // ...existing code...
   }
+
+  // Calculate percentages for nutrition
+  const proteinPercentage = Math.round((nutritionData.protein.actual / nutritionData.protein.target) * 100);
+  const fatPercentage = Math.round((nutritionData.fat.actual / nutritionData.fat.target) * 100);
+  const carbsPercentage = Math.round((nutritionData.carbs.actual / nutritionData.carbs.target) * 100);
+  const caloriesPercentage = Math.min(100, Math.round((nutritionData.calories.actual / 2200) * 100));
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
@@ -525,17 +718,17 @@ export default function ClientOverview() {
             </div>
 
             <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatTodaysDate()}
+              {formatSelectedDate()}
             </div>
 
             <div className="flex justify-between mt-1.5 w-full h-full items-center">
               {/* Sleep Hours - Left Side */}
               <div>
                 <div className="flex items-end">
-                  <span className="text-3xl leading-none font-semibold">6</span>
+                  <span className="text-3xl leading-none font-semibold">{sleepData.hours}</span>
                   <span className="text-xs mb-1 ml-1">hr</span>
                   <span className="text-3xl leading-none font-semibold ml-1">
-                    42
+                    {sleepData.minutes}
                   </span>
                   <span className="text-xs mb-1 ml-1">min</span>
                 </div>
@@ -544,7 +737,7 @@ export default function ClientOverview() {
 
               {/* Sleep Quality - Right Side */}
               <div className="text-right">
-                <div className="text-xl font-semibold">Restful</div>
+                <div className="text-xl font-semibold">{sleepData.quality}</div>
                 <div className="text-[9px] text-gray-400">Sleep Quality</div>
               </div>
             </div>
@@ -584,12 +777,12 @@ export default function ClientOverview() {
             </div>
 
             <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatTodaysDate()}
+              {formatSelectedDate()}
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <span className="text-3xl leading-none font-semibold">74.2</span>
-              <span className="text-xs mb-1 ml-1">Kg</span>
+              <span className="text-3xl leading-none font-semibold">{weightData.weight}</span>
+              <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
             </div>
           </div>
 
@@ -627,91 +820,91 @@ export default function ClientOverview() {
             </div>
 
             <div className="absolute top-4 right-4 text-sm text-gray-400">
-              {formatTodaysDate()}
+              {formatSelectedDate()}
             </div>
 
             <div className="grid grid-cols-4 gap-4 mt-2 w-full h-full items-center">
               {/* Protein */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  150.0
+                  {nutritionData.protein.actual.toFixed(1)}
                   <span className="text-base ml-1 font-normal text-gray-400">
-                    g
+                    {nutritionData.protein.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">165.0g</div>
+                <div className="text-xs text-gray-400 mb-1">{nutritionData.protein.target.toFixed(1)}{nutritionData.protein.unit}</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
-                    style={{ width: "91%" }}
+                    style={{ width: `${proteinPercentage}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Protein</span>
-                  <span className="text-gray-400">91%</span>
+                  <span className="text-gray-400">{proteinPercentage}%</span>
                 </div>
               </div>
 
               {/* Fat */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  80.0
+                  {nutritionData.fat.actual.toFixed(1)}
                   <span className="text-base ml-1 font-normal text-gray-400">
-                    g
+                    {nutritionData.fat.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">73.0g</div>
+                <div className="text-xs text-gray-400 mb-1">{nutritionData.fat.target.toFixed(1)}{nutritionData.fat.unit}</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
-                    style={{ width: "110%" }}
+                    style={{ width: `${fatPercentage}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Fat</span>
-                  <span className="text-gray-400">110%</span>
+                  <span className="text-gray-400">{fatPercentage}%</span>
                 </div>
               </div>
 
               {/* Carbs */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  195.0
+                  {nutritionData.carbs.actual.toFixed(1)}
                   <span className="text-base ml-1 font-normal text-gray-400">
-                    g
+                    {nutritionData.carbs.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">220.0g</div>
+                <div className="text-xs text-gray-400 mb-1">{nutritionData.carbs.target.toFixed(1)}{nutritionData.carbs.unit}</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
-                    style={{ width: "89%" }}
+                    style={{ width: `${carbsPercentage}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Carbs</span>
-                  <span className="text-gray-400">89%</span>
+                  <span className="text-gray-400">{carbsPercentage}%</span>
                 </div>
               </div>
 
               {/* Calories */}
               <div>
                 <div className="text-4xl font-semibold mb-1">
-                  2,150
+                  {nutritionData.calories.actual.toLocaleString()}
                   <span className="text-base ml-1 font-normal text-gray-400">
-                    Kcal
+                    {nutritionData.calories.unit}
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
-                    style={{ width: "98%" }}
+                    style={{ width: `${caloriesPercentage}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between w-3/4 text-xs mt-1">
                   <span>Calories</span>
-                  <span className="text-gray-400">98%</span>
+                  <span className="text-gray-400">{caloriesPercentage}%</span>
                 </div>
               </div>
             </div>
@@ -751,12 +944,12 @@ export default function ClientOverview() {
             </div>
 
             <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatTodaysDate()}
+              {formatSelectedDate()}
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <div className="text-3xl font-semibold">5,000</div>
-              <div className="text-[10px] text-gray-400 mt-1">10,000 Steps</div>
+              <div className="text-3xl font-semibold">{stepsData.actual.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-400 mt-1">{stepsData.target.toLocaleString()} Steps</div>
             </div>
           </div>
 
@@ -794,11 +987,11 @@ export default function ClientOverview() {
             </div>
 
             <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatTodaysDate()}
+              {formatSelectedDate()}
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <div className="w-12 h-12 rounded-lg bg-[#BFD8E9] flex items-center justify-center mr-4">
+              <div className="w-12 h-12 rounded-lg" style={{backgroundColor: moodData.color}} className="flex items-center justify-center mr-4">
                 <svg
                   className="w-8 h-8 text-[#07172C]"
                   viewBox="0 0 20 20"
@@ -812,8 +1005,8 @@ export default function ClientOverview() {
                 </svg>
               </div>
               <div>
-                <div className="text-xl font-semibold">Calm</div>
-                <div className="text-[10px] text-gray-400">16:28pm</div>
+                <div className="text-xl font-semibold">{moodData.mood}</div>
+                <div className="text-[10px] text-gray-400">{moodData.time}</div>
               </div>
             </div>
           </div>
@@ -851,17 +1044,24 @@ export default function ClientOverview() {
               </svg>
             </div>
 
+            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
+              {formatSelectedDate()}
+            </div>
+
             <ul className="text-xs space-y-1 pt-2">
-              <li>Barbell Hip Thrust</li>
-              <li>Heels Elevated Zercher Squat</li>
-              <li>Scrape Rack L-Seated Shoulder Press</li>
-              <li>Seated DB Lateral Raise</li>
+              {exerciseData.exercises.map((exercise, idx) => (
+                <li key={idx}>{exercise}</li>
+              ))}
+              {exerciseData.exercises.length === 0 && (
+                <li className="italic text-gray-400">Rest day</li>
+              )}
             </ul>
           </div>
         </div>
       </div>
 
       {/* Right Panel */}
+      {/* ...existing code - keep unchanged... */}
       <div className="fixed top-0 right-0 h-full w-[500px] bg-[#FFFFFF1A] border-l border-[#1F3247] pt-4 px-5 overflow-y-auto shadow-[-2px_6px_22.6px_-3px_#00000040]">
         {/* User Profile - Top of Panel */}
         <div className="mb-5">
@@ -1044,8 +1244,9 @@ export default function ClientOverview() {
           </div>
         </div>
       </div>
-
+      
       {/* Side Navigation - styled exactly like Navigation component */}
+      {/* ...existing code... */}
       {showNav && (
         <>
           <div

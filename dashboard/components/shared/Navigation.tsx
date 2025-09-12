@@ -6,11 +6,13 @@ import { doc, getDoc } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 
+// Update the NavigationProps interface to include onDateSelect
 interface NavigationProps {
   title?: string;
   subtitle?: string;
   email: string;
-  userName?: string; // Add userName prop
+  userName?: string;
+  onDateSelect?: (date: Date) => void; // Add optional callback for date selection
 }
 
 interface IntakeForm {
@@ -30,7 +32,8 @@ export default function Navigation({
   title = "Dashboard",
   subtitle,
   email,
-  userName = "User", // Default fallback
+  userName = "User",
+  onDateSelect, // Add the callback prop
 }: NavigationProps) {
   const [showNav, setShowNav] = useState(false);
   const params = useParams();
@@ -101,6 +104,7 @@ export default function Navigation({
     };
   });
 
+  // Modify the date selection function to call the callback if provided
   const generateDateStrip = () => {
     const days = ["S", "M", "T", "W", "Th", "F", "S"];
     const today = new Date();
@@ -119,6 +123,15 @@ export default function Navigation({
       });
     }
     return dates;
+  };
+
+  // Update the date selection handler to call the callback
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    // If callback is provided, call it with the selected date
+    if (onDateSelect) {
+      onDateSelect(date);
+    }
   };
 
   // Sidebar menu items updated to include User Dashboard
@@ -517,7 +530,7 @@ export default function Navigation({
               {generateDateStrip().map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedDate(item.fullDate)}
+                  onClick={() => handleDateSelect(item.fullDate)}
                   className={`flex flex-col items-center justify-center w-[28px] lg:w-[30px] h-[48px] lg:h-[58px] rounded-full ${
                     item.isSelected
                       ? "bg-[#616A77]/50"
@@ -662,7 +675,7 @@ export default function Navigation({
               {generateDateStrip().map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedDate(item.fullDate)}
+                  onClick={() => handleDateSelect(item.fullDate)}
                   className={`flex flex-col items-center justify-center w-[26px] h-[40px] rounded-full ${
                     item.isSelected
                       ? "bg-[#616A77]/50"
