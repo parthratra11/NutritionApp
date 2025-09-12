@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { db } from "../../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 
 interface NavigationProps {
@@ -11,6 +13,19 @@ interface NavigationProps {
   userName?: string; // Add userName prop
 }
 
+interface IntakeForm {
+  fullName: string;
+  email: string;
+  age: string;
+  weight: string;
+  height: string;
+  goals: string;
+  profile?: string; // Add profile field
+  timestamp: {
+    toDate: () => Date;
+  };
+}
+
 export default function Navigation({
   title = "Dashboard",
   subtitle,
@@ -18,10 +33,14 @@ export default function Navigation({
   userName = "User", // Default fallback
 }: NavigationProps) {
   const [showNav, setShowNav] = useState(false);
+  const params = useParams();
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [client, setClient] = useState<IntakeForm | null>(null);
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   // Check screen size on mount and when window resizes
   useEffect(() => {
@@ -38,6 +57,33 @@ export default function Navigation({
     // Clean up
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
+
+  useEffect(() => {
+    const fetchClientData = async () => {
+      if (!params?.email) return;
+
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", decodedEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data() as IntakeForm;
+          setClient(clientData);
+          // setUserName(clientData.fullName || "Aria Michele");
+        } else {
+          setError("Client not found");
+        }
+      } catch (err) {
+        setError("Failed to fetch client data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClientData();
+  }, [params?.email]);
 
   // Current week days
   const days = ["S", "M", "T", "W", "Th", "F", "S"];
@@ -111,6 +157,55 @@ export default function Navigation({
         >
           <path
             d="M4 13h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM4 22h6a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM14 13h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2zM14 22h6a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      label: "Details",
+      path: "/details",
+      icon: (
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M14 2V8H20"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M16 13H8"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M16 17H8"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M10 9H9H8"
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
@@ -456,7 +551,7 @@ export default function Navigation({
           <div className="flex items-center space-x-2">
             <div className="h-14 w-14 lg:h-16 lg:w-16 rounded-full overflow-hidden relative flex-shrink-0">
               <Image
-                src="/User.png"
+                src={client?.profile || "/User.png"}
                 alt="Profile"
                 fill
                 style={{ objectFit: "cover" }}

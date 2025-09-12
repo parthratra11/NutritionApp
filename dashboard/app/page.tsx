@@ -291,6 +291,7 @@ export default function Home() {
   });
 
   // Stats calculations - consider all students as paid
+
   const paidCount = intakeForms.length - 1; // All students are paid
   const unpaidCount = 1; // No unpaid students
 
@@ -298,17 +299,29 @@ export default function Home() {
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-[#0B1F35]">
+    <div
+      className={`min-h-screen ${isDarkMode ? "bg-[#0B1F35]" : "bg-gray-50"}`}
+    >
       {/* Side Navigation - updated to match Navigation.tsx */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           showNav ? "translate-x-0" : "-translate-x-full"
-        } bg-[#0B1F35]/90 backdrop-blur-md border-r border-white/10 text-white w-[240px] z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
+        } ${
+          isDarkMode ? "bg-[#0B1F35]/90" : "bg-white/95"
+        } backdrop-blur-md border-r ${
+          isDarkMode ? "border-white/10" : "border-gray-200"
+        } ${
+          isDarkMode ? "text-white" : "text-gray-900"
+        } w-[240px] z-30 overflow-y-auto transition-transform duration-300 ease-in-out`}
       >
         <div className="flex justify-end p-6">
           <button
             onClick={() => setShowNav(false)}
-            className="text-white/60 hover:text-white hover:cursor-pointer"
+            className={`${
+              isDarkMode
+                ? "text-white/60 hover:text-white"
+                : "text-gray-400 hover:text-gray-600"
+            } hover:cursor-pointer`}
             aria-label="Close menu"
           >
             <svg
@@ -332,15 +345,28 @@ export default function Home() {
         <nav className="mt-8">
           <ul>
             {menuItems.map((item, i) => (
-              <li key={i} className="border-b border-[#1e3252]/60">
+              <li
+                key={i}
+                className={`border-b ${
+                  isDarkMode ? "border-[#1e3252]/60" : "border-gray-200"
+                }`}
+              >
                 <button
                   onClick={() => {
                     router.push(item.path);
                     setShowNav(false);
                   }}
-                  className="flex items-center w-full py-6 px-8 text-white/80 hover:text-white hover:bg-[#1e3252]/50 transition-colors"
+                  className={`flex items-center w-full py-6 px-8 ${
+                    isDarkMode
+                      ? "text-white/80 hover:text-white hover:bg-[#1e3252]/50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  } transition-colors`}
                 >
-                  <div className="w-8 h-8 flex items-center justify-center mr-4 text-white/80">
+                  <div
+                    className={`w-8 h-8 flex items-center justify-center mr-4 ${
+                      isDarkMode ? "text-white/80" : "text-gray-600"
+                    }`}
+                  >
                     {item.icon}
                   </div>
                   <span className="text-lg">{item.label}</span>
@@ -360,8 +386,16 @@ export default function Home() {
       />
 
       {/* Header - made responsive */}
-      <div className="bg-[#0B1F35] text-white px-4 md:px-6 pt-4 pb-3 ">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-b-gray-500/50 pb-4">
+      <div
+        className={`${
+          isDarkMode ? "bg-[#0B1F35] text-white" : "bg-white text-gray-900"
+        } px-4 md:px-6 pt-4 pb-3`}
+      >
+        <div
+          className={`flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b ${
+            isDarkMode ? "border-b-gray-500/50" : "border-b-gray-300"
+          } pb-4`}
+        >
           {/* Top row on mobile: hamburger + theme + greeting + avatar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -381,12 +415,21 @@ export default function Home() {
                 </svg>
               </button>
               {/* Theme Toggle Pill - responsive */}
-              <div className="flex items-center bg-[#0F1D3C] border border-white/10 rounded-full px-1 lg:px-1.5 mr-3 lg:mx-6">
+              <div
+                className={`flex items-center ${
+                  isDarkMode ? "bg-[#0F1D3C]" : "bg-gray-200"
+                } border ${
+                  isDarkMode ? "border-white/10" : "border-gray-300"
+                } rounded-full px-1 lg:px-1.5 mr-3 lg:mx-6`}
+              >
                 <button
                   onClick={() => setIsDarkMode(true)}
                   className={`p-1 lg:p-1 rounded-full transition-colors ${
-                    isDarkMode ? "bg-white text-gray-800" : "text-white/60"
+                    isDarkMode
+                      ? "bg-white text-gray-800"
+                      : "text-gray-500 hover:bg-gray-300"
                   }`}
+                  aria-label="Dark mode"
                 >
                   <svg
                     className="w-3 h-3 lg:w-4 lg:h-4"
@@ -399,8 +442,11 @@ export default function Home() {
                 <button
                   onClick={() => setIsDarkMode(false)}
                   className={`p-1 lg:p-2 rounded-full transition-colors ${
-                    !isDarkMode ? "bg-white text-gray-800" : "text-white/60"
+                    !isDarkMode
+                      ? "bg-white text-gray-800"
+                      : "text-white/60 hover:bg-white/10"
                   }`}
+                  aria-label="Light mode"
                 >
                   <svg
                     className="w-3 h-3 lg:w-4 lg:h-4"
@@ -445,11 +491,19 @@ export default function Home() {
                     onClick={() => setSelectedDate(item.fullDate)}
                     className={`flex flex-col items-center justify-center w-[28px] lg:w-[30px] h-[48px] lg:h-[58px] rounded-full ${
                       item.isSelected
-                        ? "bg-[#616A77]/50"
-                        : "bg-transparent border border-white/20"
+                        ? isDarkMode
+                          ? "bg-[#616A77]/50"
+                          : "bg-gray-300"
+                        : isDarkMode
+                        ? "bg-transparent border border-white/20"
+                        : "bg-transparent border border-gray-400"
                     }`}
                   >
-                    <span className="text-[10px] lg:text-[12px] font-medium text-white/80">
+                    <span
+                      className={`text-[10px] lg:text-[12px] font-medium ${
+                        isDarkMode ? "text-white/80" : "text-gray-600"
+                      }`}
+                    >
                       {item.day}
                     </span>
                     <div
@@ -459,7 +513,11 @@ export default function Home() {
                     >
                       <span
                         className={`text-xs lg:text-sm ${
-                          item.isSelected ? "font-bold text-white" : ""
+                          item.isSelected
+                            ? "font-bold text-white"
+                            : isDarkMode
+                            ? "text-white"
+                            : "text-gray-800"
                         }`}
                       >
                         {item.date}
@@ -472,9 +530,15 @@ export default function Home() {
           </div>
 
           {/* Search box - responsive */}
-          <div className="flex items-center w-full md:w-[280px] lg:w-[360px] bg-white/10 rounded-full px-3 py-2">
+          <div
+            className={`flex items-center w-full md:w-[280px] lg:w-[360px] ${
+              isDarkMode ? "bg-white/10" : "bg-gray-200"
+            } rounded-full px-3 py-2`}
+          >
             <svg
-              className="w-4 h-4 text-white/60"
+              className={`w-4 h-4 ${
+                isDarkMode ? "text-white/60" : "text-gray-500"
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -490,32 +554,80 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search Clients..."
-              className="bg-transparent outline-none placeholder-white/50 text-sm text-white ml-2 w-full"
+              className={`bg-transparent outline-none ${
+                isDarkMode
+                  ? "placeholder-white/50 text-white"
+                  : "placeholder-gray-500 text-gray-900"
+              } text-sm ml-2 w-full`}
             />
           </div>
         </div>
 
         {/* Stats cards - responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-5 mt-6 lg:mt-8">
-          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
-            <div className="text-[12px] lg:text-[14px] text-white/70">
+          <div
+            className={`${
+              isDarkMode
+                ? "bg-gray-700/50 border-white/10"
+                : "bg-white border-gray-200"
+            } md:mx-6 border rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between shadow-sm`}
+          >
+            <div
+              className={`text-[12px] lg:text-[14px] ${
+                isDarkMode ? "text-white/70" : "text-gray-600"
+              }`}
+            >
               Total Clients
             </div>
-            <div className="text-xl lg:text-2xl font-semibold">
+            <div
+              className={`text-xl lg:text-2xl font-semibold ${
+                isDarkMode ? "text-white" : "text-gray-900"
+              }`}
+            >
               {intakeForms.length}
             </div>
           </div>
-          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
-            <div className="text-[12px] lg:text-[14px] text-white/70">
+          <div
+            className={`${
+              isDarkMode
+                ? "bg-gray-700/50 border-white/10"
+                : "bg-white border-gray-200"
+            } md:mx-6 border rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between shadow-sm`}
+          >
+            <div
+              className={`text-[12px] lg:text-[14px] ${
+                isDarkMode ? "text-white/70" : "text-gray-600"
+              }`}
+            >
               Paid Clients
             </div>
-            <div className="text-xl lg:text-2xl font-semibold">{paidCount}</div>
+            <div
+              className={`text-xl lg:text-2xl font-semibold ${
+                isDarkMode ? "text-white" : "text-gray-900"
+              }`}
+            >
+              {paidCount}
+            </div>
           </div>
-          <div className="bg-gray-700/50 md:mx-6 border border-white/10 rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between">
-            <div className="text-[12px] lg:text-[14px] text-white/70">
+          <div
+            className={`${
+              isDarkMode
+                ? "bg-gray-700/50 border-white/10"
+                : "bg-white border-gray-200"
+            } md:mx-6 border rounded-xl px-4 py-4 lg:py-5 flex items-center justify-between shadow-sm`}
+          >
+            <div
+              className={`text-[12px] lg:text-[14px] ${
+                isDarkMode ? "text-white/70" : "text-gray-600"
+              }`}
+            >
               Unpaid Clients
             </div>
-            <div className="text-xl lg:text-2xl font-semibold">
+            <div
+              className={`text-xl lg:text-2xl font-semibold ${
+                isDarkMode ? "text-white" : "text-gray-900"
+              }`}
+            >
               {unpaidCount}
             </div>
           </div>
@@ -526,7 +638,11 @@ export default function Home() {
       <div className="flex justify-end px-4 md:px-6 py-4 lg:py-8 relative">
         <button
           onClick={() => setShowSortDropdown(!showSortDropdown)}
-          className="flex items-center gap-2 text-sm text-white/80 hover:text-white hover:cursor-pointer"
+          className={`flex items-center gap-2 text-sm ${
+            isDarkMode
+              ? "text-white/80 hover:text-white"
+              : "text-gray-600 hover:text-gray-800"
+          } hover:cursor-pointer`}
         >
           <svg
             className="w-4 h-4"
@@ -545,13 +661,23 @@ export default function Home() {
         </button>
 
         {showSortDropdown && (
-          <div className="absolute top-4/5 right-4 md:right-6 bg-white rounded-2xl shadow-xl py-2 w-40 border z-10">
+          <div
+            className={`absolute top-4/5 right-4 md:right-6 ${
+              isDarkMode
+                ? "bg-[#142437] border-[#22364F]"
+                : "bg-white border-gray-200"
+            } rounded-2xl shadow-xl py-2 w-40 border z-10`}
+          >
             <button
               onClick={() => {
                 setSortBy("name");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
+              className={`block w-full text-center px-4 py-2 text-sm border-b ${
+                isDarkMode
+                  ? "border-b-[#22364F] text-white hover:bg-[#22364F]"
+                  : "border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              } hover:cursor-pointer`}
             >
               Alphabetically
             </button>
@@ -560,7 +686,11 @@ export default function Home() {
                 setSortBy("date");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
+              className={`block w-full text-center px-4 py-2 text-sm border-b ${
+                isDarkMode
+                  ? "border-b-[#22364F] text-white hover:bg-[#22364F]"
+                  : "border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              } hover:cursor-pointer`}
             >
               Joining Date
             </button>
@@ -569,7 +699,11 @@ export default function Home() {
                 setSortBy("active");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-center px-4 py-2 text-sm border-b border-b-gray-300 text-gray-700 hover:cursor-pointer"
+              className={`block w-full text-center px-4 py-2 text-sm border-b ${
+                isDarkMode
+                  ? "border-b-[#22364F] text-white hover:bg-[#22364F]"
+                  : "border-b-gray-300 text-gray-700 hover:bg-gray-100"
+              } hover:cursor-pointer`}
             >
               Active/Inactive
             </button>
@@ -578,7 +712,11 @@ export default function Home() {
                 setSortBy("age");
                 setShowSortDropdown(false);
               }}
-              className="block w-full text-center px-4 py-2 text-sm text-gray-700 hover:cursor-pointer"
+              className={`block w-full text-center px-4 py-2 text-sm ${
+                isDarkMode
+                  ? "text-white hover:bg-[#22364F]"
+                  : "text-gray-700 hover:bg-gray-100"
+              } hover:cursor-pointer`}
             >
               Age
             </button>
@@ -592,7 +730,11 @@ export default function Home() {
           {visibleForms.map((form) => (
             <div
               key={form.email}
-              className="bg-gray-700/50 border border-white/10 rounded-3xl px-4 py-4 lg:py-5 text-white hover:shadow-lg transition-shadow cursor-pointer flex items-center"
+              className={`${
+                isDarkMode
+                  ? "bg-gray-700/50 border-white/10 text-white"
+                  : "bg-white border-gray-200 text-gray-900"
+              } border rounded-3xl px-4 py-4 lg:py-5 hover:shadow-lg transition-shadow cursor-pointer flex items-center`}
               onClick={() => router.push(`/${encodeURIComponent(form.email)}`)}
             >
               <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full mr-3 overflow-hidden flex-shrink-0 relative">
@@ -604,10 +746,18 @@ export default function Home() {
                 />
               </div>
               <div className="min-w-0">
-                <div className="text-[16px] lg:text-[18px] font-semibold text-[#CFE0FF] truncate">
+                <div
+                  className={`text-[16px] lg:text-[18px] font-semibold ${
+                    isDarkMode ? "text-[#CFE0FF]" : "text-gray-900"
+                  } truncate`}
+                >
                   {form.fullName}
                 </div>
-                <div className="text-[11px] lg:text-[12px] text-white/60 truncate">
+                <div
+                  className={`text-[11px] lg:text-[12px] ${
+                    isDarkMode ? "text-white/60" : "text-gray-500"
+                  } truncate`}
+                >
                   Onboarded:{" "}
                   {form.timestamp?.toDate
                     ? formatDMY(form.timestamp.toDate())
@@ -617,7 +767,11 @@ export default function Home() {
             </div>
           ))}
           {visibleForms.length === 0 && (
-            <p className="text-gray-400 col-span-full text-center text-sm">
+            <p
+              className={`${
+                isDarkMode ? "text-gray-400" : "text-gray-600"
+              } col-span-full text-center text-sm`}
+            >
               No Clients found.
             </p>
           )}
