@@ -174,7 +174,7 @@ export default function NutritionPage() {
   const [supplementData, setSupplementData] = useState<{
     [date: string]: SupplementData[];
   }>({
-    "22 Jul 2025": [
+    "6 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -182,7 +182,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "23 Jul 2025": [
+    "7 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -190,7 +190,7 @@ export default function NutritionPage() {
       { name: "Multivitamin", dosage: "1 g" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "24 Jul 2025": [
+    "8 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -198,7 +198,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "25 Jul 2025": [
+    "9 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -206,7 +206,7 @@ export default function NutritionPage() {
       { name: "Zinc", dosage: "50 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "26 Jul 2025": [
+    "10 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -214,7 +214,7 @@ export default function NutritionPage() {
       { name: "Magnesium", dosage: "400 mg" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "27 Jul 2025": [
+    "11 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -222,7 +222,7 @@ export default function NutritionPage() {
       { name: "Iodized Salt", dosage: "1 g" },
       { name: "Protein Powder", dosage: "25 g" },
     ],
-    "28 Jul 2025": [
+    "12 Sept 2025": [
       { name: "Omega-3", dosage: "1g" },
       { name: "Creatine Monohydrate", dosage: "5g" },
       { name: "Vitamin D", dosage: "125 mg" },
@@ -1425,7 +1425,7 @@ export default function NutritionPage() {
                 >
                   <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4" />
                 </svg>
-                <h3 className="text-xl font-semibold">Supplement Tracking</h3>
+                <h3 className="text-xl font-semibold">Supplement Intake</h3>
               </div>
 
               <div className="overflow-x-auto">
