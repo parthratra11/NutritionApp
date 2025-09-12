@@ -158,11 +158,14 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
+                // Most recent (leftmost) - progression from previous
+                { sets: ["90×10", "90×9", "85×8"], completed: true },
+                // Previous session - base line
                 { sets: ["85×10", "85×9", "80×8"], completed: true },
-                { sets: ["80×10", "80×9", "80×8"], completed: true },
+                // Older sessions with clear progression
                 { sets: ["80×10", "75×9", "75×8"], completed: true },
-                { sets: ["80×10", "70×9", "70×8"], completed: true },
-                { sets: ["75×10", "70×9", "65×8"], completed: true },
+                { sets: ["75×10", "70×9", "70×8"], completed: true },
+                { sets: ["70×10", "65×9", "65×8"], completed: true },
               ],
             ],
           },
@@ -173,11 +176,14 @@ export default function WorkoutSessionPage() {
             standardSets: 4,
             history: [
               [
-                { sets: ["30×12", "30×11", "30×10", "25×10"], completed: true },
-                { sets: ["25×12", "25×11", "25×10"], completed: true },
+                // Regression example - fewer reps/sets
+                { sets: ["25×11", "25×10", "25×9"], completed: false },
+                // Previous was better
+                { sets: ["25×12", "25×11", "25×10", "25×10"], completed: true },
+                // Clear progression in earlier sessions
                 {
-                  sets: ["25×12", "25×10", "25×10", "25×9", "25×8"],
-                  completed: false,
+                  sets: ["22.5×12", "22.5×11", "22.5×10", "22.5×9"],
+                  completed: true,
                 },
                 { sets: ["20×12", "20×11", "20×10"], completed: true },
                 { sets: ["20×12", "20×12", "20×11", "20×10"], completed: true },
@@ -191,17 +197,14 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
-                { sets: ["65×8", "65×7", "60×8"], completed: true },
-                {
-                  sets: ["60×8", "60×8", "60×7", "60×7", "60×6"],
-                  completed: true,
-                },
-                { sets: ["55×8", "55×8", "55×7"], completed: true },
-                {
-                  sets: ["50×9", "50×8", "50×8", "50×7", "50×7"],
-                  completed: true,
-                },
-                { sets: ["45×9", "45×8", "45×8"], completed: false },
+                // Progression - higher weight
+                { sets: ["70×8", "70×7", "65×8"], completed: true },
+                // Previous session
+                { sets: ["65×8", "65×8", "60×7"], completed: true },
+                // Earlier progression
+                { sets: ["60×8", "60×8", "55×7"], completed: true },
+                { sets: ["55×9", "55×8", "55×8"], completed: true },
+                { sets: ["50×9", "50×8", "50×8"], completed: false },
               ],
             ],
           },
@@ -213,19 +216,13 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
-                { sets: ["22.5×15", "22.5×14", "20×13"], completed: true },
-                {
-                  sets: ["20×15", "20×14", "20×13", "20×12", "20×12"],
-                  completed: false,
-                },
-                {
-                  sets: ["15×15", "15×14", "15×14", "15×13", "15×12"],
-                  completed: true,
-                },
-                {
-                  sets: ["15×15", "15×15", "15×14", "15×13", "15×12"],
-                  completed: true,
-                },
+                // Same performance - should be red
+                { sets: ["20×15", "20×14", "20×13"], completed: true },
+                // Previous session - exactly the same
+                { sets: ["20×15", "20×14", "20×13"], completed: true },
+                // Earlier progression
+                { sets: ["17.5×15", "17.5×14", "17.5×13"], completed: true },
+                { sets: ["15×15", "15×15", "15×14"], completed: true },
                 { sets: ["12.5×15", "12.5×15", "12.5×14"], completed: true },
               ],
             ],
@@ -237,20 +234,14 @@ export default function WorkoutSessionPage() {
             standardSets: 3,
             history: [
               [
-                { sets: ["45×10", "42.5×9", "40×8"], completed: true },
-                {
-                  sets: ["40×10", "40×9", "40×8", "40×8", "40×7"],
-                  completed: false,
-                },
-                {
-                  sets: ["35×10", "35×10", "35×9", "35×9", "35×8"],
-                  completed: true,
-                },
-                {
-                  sets: ["30×10", "30×10", "30×10", "30×9", "30×9"],
-                  completed: true,
-                },
-                { sets: ["27.5×10", "27.5×10", "25×10"], completed: true },
+                // Mixed results - some better, some worse
+                { sets: ["45×10", "40×9", "40×8"], completed: true },
+                // Previous session
+                { sets: ["42.5×10", "42.5×9", "40×8"], completed: true },
+                // Earlier sessions
+                { sets: ["40×10", "40×9", "35×8"], completed: false },
+                { sets: ["35×10", "35×10", "35×9"], completed: true },
+                { sets: ["30×10", "30×10", "25×10"], completed: true },
               ],
             ],
           },
@@ -262,14 +253,17 @@ export default function WorkoutSessionPage() {
             perSide: true,
             history: [
               [
+                // Clear regression
+                { sets: ["10×11", "10×10", "7.5×10"], completed: true },
+                // Previous was better
                 {
                   sets: ["12.5×12", "12.5×11", "10×10", "10×10"],
                   completed: true,
                 },
+                // Earlier progression
                 { sets: ["10×12", "10×11", "10×10", "10×10"], completed: true },
                 { sets: ["7.5×12", "7.5×12", "7.5×11"], completed: true },
                 { sets: ["5×12", "5×12", "5×11", "5×10"], completed: false },
-                { sets: ["5×12", "5×12", "5×12", "5×11"], completed: true },
               ],
             ],
           },
@@ -562,7 +556,7 @@ export default function WorkoutSessionPage() {
     }
   };
 
-  // Function to compare progress between days based on first set
+  // Enhanced function to compare progress - prioritize first set, then total volume
   const getProgressOutline = (
     exercise: ExerciseHistory,
     currentDateIndex: number
@@ -576,30 +570,81 @@ export default function WorkoutSessionPage() {
     const currentDay = normalizedData[currentDateIndex];
     const previousDay = normalizedData[currentDateIndex + 1]; // Next index is previous date
 
-    if (!currentDay.sets[0] || !previousDay.sets[0]) {
+    if (!currentDay.sets.length || !previousDay.sets.length) {
       return "";
     }
 
-    // Parse first set: "weight×reps" format
+    // Parse set: "weight×reps" format, handle "BW" (bodyweight)
     const parseSet = (setString: string) => {
+      if (!setString) return { weight: 0, reps: 0, total: 0 };
+
       const [weightStr, repsStr] = setString.split("×");
-      const weight = parseFloat(weightStr);
-      const reps = parseInt(repsStr);
+      let weight = 0;
+
+      if (weightStr === "BW") {
+        weight = 70; // Assume 70kg bodyweight for calculation
+      } else {
+        weight = parseFloat(weightStr) || 0;
+      }
+
+      const reps = parseInt(repsStr) || 0;
       return { weight, reps, total: weight * reps };
     };
 
+    // First, compare the first sets specifically
     const currentFirstSet = parseSet(currentDay.sets[0]);
     const previousFirstSet = parseSet(previousDay.sets[0]);
 
-    // Compare total volume (weight × reps)
-    if (currentFirstSet.total > previousFirstSet.total) {
-      return "border-4 border-green-500"; // Improved
-    } else {
-      return "border-4 border-red-500"; // Declined or same performance
+    // If first set has improvement in weight OR reps, it's green regardless of other sets
+    if (
+      currentFirstSet.weight > previousFirstSet.weight ||
+      (currentFirstSet.weight === previousFirstSet.weight &&
+        currentFirstSet.reps > previousFirstSet.reps)
+    ) {
+      return "border-4 border-green-500";
     }
+
+    // If first set has regression (lower weight or same weight but fewer reps), it's red
+    if (
+      currentFirstSet.weight < previousFirstSet.weight ||
+      (currentFirstSet.weight === previousFirstSet.weight &&
+        currentFirstSet.reps < previousFirstSet.reps)
+    ) {
+      return "border-4 border-red-500";
+    }
+
+    // If first set is exactly the same (same weight AND same reps), then check total volume across all sets
+    if (
+      currentFirstSet.weight === previousFirstSet.weight &&
+      currentFirstSet.reps === previousFirstSet.reps
+    ) {
+      let currentTotalVolume = 0;
+      let previousTotalVolume = 0;
+
+      // Calculate total volume for all sets
+      currentDay.sets.forEach((set) => {
+        const parsed = parseSet(set);
+        currentTotalVolume += parsed.total;
+      });
+
+      previousDay.sets.forEach((set) => {
+        const parsed = parseSet(set);
+        previousTotalVolume += parsed.total;
+      });
+
+      if (currentTotalVolume > previousTotalVolume) {
+        return "border-4 border-green-500";
+      } else if (currentTotalVolume < previousTotalVolume) {
+        return "border-4 border-red-500";
+      } else {
+        return "border-4 border-red-500"; // No progress = red
+      }
+    }
+
+    return "border-4 border-yellow-500"; // Fallback for mixed/unclear results
   };
 
-  // Function to get progress arrow icon
+  // Enhanced function to get progress arrow with the same logic
   const getProgressArrow = (
     exercise: ExerciseHistory,
     currentDateIndex: number
@@ -613,23 +658,37 @@ export default function WorkoutSessionPage() {
     const currentDay = normalizedData[currentDateIndex];
     const previousDay = normalizedData[currentDateIndex + 1]; // Next index is previous date
 
-    if (!currentDay.sets[0] || !previousDay.sets[0]) {
+    if (!currentDay.sets.length || !previousDay.sets.length) {
       return null;
     }
 
-    // Parse first set: "weight×reps" format
+    // Parse set: "weight×reps" format, handle "BW" (bodyweight)
     const parseSet = (setString: string) => {
+      if (!setString) return { weight: 0, reps: 0, total: 0 };
+
       const [weightStr, repsStr] = setString.split("×");
-      const weight = parseFloat(weightStr);
-      const reps = parseInt(repsStr);
+      let weight = 0;
+
+      if (weightStr === "BW") {
+        weight = 70; // Assume 70kg bodyweight for calculation
+      } else {
+        weight = parseFloat(weightStr) || 0;
+      }
+
+      const reps = parseInt(repsStr) || 0;
       return { weight, reps, total: weight * reps };
     };
 
+    // First, compare the first sets specifically
     const currentFirstSet = parseSet(currentDay.sets[0]);
     const previousFirstSet = parseSet(previousDay.sets[0]);
 
-    // Compare total volume (weight × reps)
-    if (currentFirstSet.total > previousFirstSet.total) {
+    // If first set has improvement in weight OR reps, show green arrow
+    if (
+      currentFirstSet.weight > previousFirstSet.weight ||
+      (currentFirstSet.weight === previousFirstSet.weight &&
+        currentFirstSet.reps > previousFirstSet.reps)
+    ) {
       return (
         <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
           <svg
@@ -641,7 +700,14 @@ export default function WorkoutSessionPage() {
           </svg>
         </div>
       );
-    } else {
+    }
+
+    // If first set has regression, show red arrow
+    if (
+      currentFirstSet.weight < previousFirstSet.weight ||
+      (currentFirstSet.weight === previousFirstSet.weight &&
+        currentFirstSet.reps < previousFirstSet.reps)
+    ) {
       return (
         <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
           <svg
@@ -654,6 +720,64 @@ export default function WorkoutSessionPage() {
         </div>
       );
     }
+
+    // If first set is exactly the same, check total volume
+    if (
+      currentFirstSet.weight === previousFirstSet.weight &&
+      currentFirstSet.reps === previousFirstSet.reps
+    ) {
+      let currentTotalVolume = 0;
+      let previousTotalVolume = 0;
+
+      currentDay.sets.forEach((set) => {
+        const parsed = parseSet(set);
+        currentTotalVolume += parsed.total;
+      });
+
+      previousDay.sets.forEach((set) => {
+        const parsed = parseSet(set);
+        previousTotalVolume += parsed.total;
+      });
+
+      if (currentTotalVolume > previousTotalVolume) {
+        return (
+          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
+            <svg
+              className="w-5 h-5 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M7 14l5-5 5 5H7z" />
+            </svg>
+          </div>
+        );
+      } else {
+        return (
+          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
+            <svg
+              className="w-5 h-5 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M7 10l5 5 5-5H7z" />
+            </svg>
+          </div>
+        );
+      }
+    }
+
+    // Mixed results - show neutral indicator
+    return (
+      <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center absolute -top-4 -right-4 z-[5]">
+        <svg
+          className="w-5 h-5 text-white"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path d="M5 12h14" />
+        </svg>
+      </div>
+    );
   };
 
   // Function to normalize sets data to ensure consistent number of sets across all days
@@ -859,7 +983,7 @@ export default function WorkoutSessionPage() {
           </div>
         </div>
 
-        {/* Workout Table - Separate box with fixed exercise column and scrollable dates */}
+        {/* Workout Table - with improved progress detection */}
         <div className="bg-[#07172C] border border-[#07172C] rounded-lg mt-4 p-4 overflow-x-auto">
           <table className="w-full min-w-[1200px] table-fixed">
             <colgroup>
@@ -922,61 +1046,63 @@ export default function WorkoutSessionPage() {
               </tr>
             </thead>
             <tbody>
-              {exercisesData.map((exercise, exIndex) => {
-                const normalizedData = normalizeSetsData(exercise);
+              {getExercisesData(sessionType || "Session A").map(
+                (exercise, exIndex) => {
+                  const normalizedData = normalizeSetsData(exercise);
 
-                return (
-                  <tr key={exIndex} className="border-b border-[#22364F]">
-                    <td className="p-3 sticky left-0 bg-[#07172C] z-20">
-                      <div className="font-medium">{exercise.name}</div>
-                      <div className="text-xs text-gray-400">
-                        {exercise.standardWeight} × {exercise.standardReps} ×{" "}
-                        {exercise.standardSets} sets
-                        {exercise.perSide ? " (per leg)" : ""}
-                      </div>
-                    </td>
+                  return (
+                    <tr key={exIndex} className="border-b border-[#22364F]">
+                      <td className="p-3 sticky left-0 bg-[#07172C] z-20">
+                        <div className="font-medium">{exercise.name}</div>
+                        <div className="text-xs text-gray-400">
+                          {exercise.standardWeight} × {exercise.standardReps} ×{" "}
+                          {exercise.standardSets} sets
+                          {exercise.perSide ? " (per leg)" : ""}
+                        </div>
+                      </td>
 
-                    {normalizedData.map((dayData, dateIndex) => {
-                      const progressOutline = getProgressOutline(
-                        exercise,
-                        dateIndex
-                      );
-                      const progressArrow = getProgressArrow(
-                        exercise,
-                        dateIndex
-                      );
+                      {normalizedData.map((dayData, dateIndex) => {
+                        const progressOutline = getProgressOutline(
+                          exercise,
+                          dateIndex
+                        );
+                        const progressArrow = getProgressArrow(
+                          exercise,
+                          dateIndex
+                        );
 
-                      return (
-                        <td
-                          key={dateIndex}
-                          className="p-2 relative"
-                          style={{ padding: "12px" }}
-                        >
-                          <div
-                            className={`flex flex-col w-full ${progressOutline} relative`}
-                            style={{
-                              borderRadius: "0.375rem",
-                            }}
+                        return (
+                          <td
+                            key={dateIndex}
+                            className="p-2 relative"
+                            style={{ padding: "12px" }}
                           >
-                            {progressArrow}
-                            {dayData.sets.map((set, setIndex) => (
-                              <div
-                                key={setIndex}
-                                className="relative py-2 px-2 w-full bg-[#FFFFFF80] text-white"
-                              >
-                                {set}
-                                {setIndex < dayData.sets.length - 1 && (
-                                  <div className="absolute bottom-0 left-[2%] w-[90%] h-[1px] bg-white/20"></div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
+                            <div
+                              className={`flex flex-col w-full ${progressOutline} relative`}
+                              style={{
+                                borderRadius: "0.375rem",
+                              }}
+                            >
+                              {progressArrow}
+                              {dayData.sets.map((set, setIndex) => (
+                                <div
+                                  key={setIndex}
+                                  className="relative py-2 px-2 w-full bg-[#FFFFFF80] text-white"
+                                >
+                                  {set}
+                                  {setIndex < dayData.sets.length - 1 && (
+                                    <div className="absolute bottom-0 left-[2%] w-[90%] h-[1px] bg-white/20"></div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                }
+              )}
             </tbody>
           </table>
         </div>
