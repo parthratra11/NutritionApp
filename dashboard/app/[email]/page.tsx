@@ -70,15 +70,17 @@ export default function ClientOverview() {
     minutes: 42,
     quality: "Restful",
   });
-  const [weightData, setWeightData] = useState<WeightData>({
-    weight: 74.2,
+  const [weightData, setWeightData] = useState<WeightData & { isLoading?: boolean }>({
+    weight: 0,  // Start with 0 instead of mock data
     unit: "Kg",
+    isLoading: true
   });
-  const [nutritionData, setNutritionData] = useState<NutritionData>({
-    protein: { actual: 150.0, target: 165.0, unit: "g" },
-    fat: { actual: 80.0, target: 73.0, unit: "g" },
-    carbs: { actual: 195.0, target: 220.0, unit: "g" },
-    calories: { actual: 2150, unit: "Kcal" },
+  const [nutritionData, setNutritionData] = useState<NutritionData & { isLoading?: boolean }>({
+    protein: { actual: 0, target: 165.0, unit: "g" },
+    fat: { actual: 0, target: 73.0, unit: "g" },
+    carbs: { actual: 0, target: 220.0, unit: "g" },
+    calories: { actual: 0, unit: "Kcal" },
+    isLoading: true
   });
   const [stepsData, setStepsData] = useState<StepsData>({
     actual: 5000,
@@ -97,6 +99,21 @@ export default function ClientOverview() {
       "Seated DB Lateral Raise",
     ],
   });
+
+  // Add new state for weight and nutrition from Firebase
+  const [weightFromFirebase, setWeightFromFirebase] = useState<{
+    weight: string;
+    timestamp: string;
+  } | null>(null);
+  
+  const [nutritionFromFirebase, setNutritionFromFirebase] = useState<{
+    protein: number;
+    carbs: number;
+    fat: number;
+    calories: number;
+    dayType: string;
+  } | null>(null);
+
   useEffect(() => {
     const fetchClientData = async () => {
       if (!params?.email) return;
@@ -123,6 +140,200 @@ export default function ClientOverview() {
 
     fetchClientData();
   }, [params?.email]);
+
+  // 1. First, optimize the useEffect hooks for data fetching
+  useEffect(() => {
+    // Clear previous data and set loading state when date changes
+    setWeightFromFirebase(null);
+    setNutritionFromFirebase(null);
+    
+    setWeightData({
+      weight: 0,
+      unit: "Kg",
+      isLoading: true
+    });
+    
+    setNutritionData({
+      protein: { actual: 0, target: 165.0, unit: "g" },
+      fat: { actual: 0, target: 73.0, unit: "g" },
+      carbs: { actual: 0, target: 220.0, unit: "g" },
+      calories: { actual: 0, unit: "Kcal" },
+      isLoading: true
+    });
+    
+    const fetchData = async () => {
+      if (!params?.email) return;
+      
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        // Convert selectedDate to YYYY-MM-DD format for comparison
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        
+        // Run both fetch operations concurrently with Promise.all
+        const [weeklyDocSnap, nutritionDocSnap] = await Promise.all([
+          getDoc(doc(db, "weeklyForms", decodedEmail)),
+          getDoc(doc(db, "nutrition", decodedEmail))
+        ]);
+        
+        let weightFound = false;
+        let nutritionFound = false;
+        
+        // Process weight data
+        if (weeklyDocSnap.exists()) {
+          const data = weeklyDocSnap.data();
+          let foundWeight = null;
+          
+          Object.entries(data).forEach(([weekKey, weekData]) => {
+            if (weekKey === "firstEntryDate") return;
+            
+            const weekObj = weekData as any;
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            
+            days.forEach(day => {
+              const dayData = weekObj[day];
+              if (dayData && dayData.timestamp && dayData.timestamp.includes(dateStr)) {
+                foundWeight = {
+                  weight: dayData.weight,
+                  timestamp: dayData.timestamp
+                };
+              }
+            });
+          });
+          
+          if (foundWeight) {
+            weightFound = true;
+            setWeightFromFirebase(foundWeight);
+            setWeightData({
+              weight: parseFloat(foundWeight.weight),
+              unit: "Kg",
+              isLoading: false
+            });
+          }
+        }
+        
+        // Process nutrition data
+        if (nutritionDocSnap.exists()) {
+          const data = nutritionDocSnap.data();
+          let foundNutrition = null;
+          
+          Object.entries(data).forEach(([key, value]) => {
+            if (key === "firstEntryDate") return;
+            
+            const weekData = value as any;
+            if (!weekData) return;
+            
+            Object.entries(weekData).forEach(([day, dayData]) => {
+              if (!dayData) return;
+              if (dayData.date && dayData.date.includes(dateStr)) {
+                foundNutrition = {
+                  protein: dayData.totals["Protein (g)"],
+                  carbs: dayData.totals["Carbohydrate (g)"],
+                  fat: dayData.totals["Fat (g)"],
+                  calories: dayData.totals.Kcal,
+                  dayType: dayData.dayType
+                };
+              }
+            });
+          });
+          
+          if (foundNutrition) {
+            nutritionFound = true;
+            setNutritionFromFirebase(foundNutrition);
+            setNutritionData({
+              protein: { 
+                actual: foundNutrition.protein, 
+                target: 165.0, 
+                unit: "g" 
+              },
+              fat: { 
+                actual: foundNutrition.fat, 
+                target: 73.0, 
+                unit: "g" 
+              },
+              carbs: { 
+                actual: foundNutrition.carbs, 
+                target: 220.0, 
+                unit: "g" 
+              },
+              calories: { 
+                actual: foundNutrition.calories, 
+                unit: "Kcal" 
+              },
+              isLoading: false
+            });
+          }
+        }
+        
+        // Generate fallback data only if we couldn't find real data
+        if (!weightFound || !nutritionFound) {
+          generateMockData(weightFound, nutritionFound);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        // On error, generate mock data
+        generateMockData(false, false);
+      }
+    };
+    
+    // Function to generate mock data
+    const generateMockData = (weightFound: boolean, nutritionFound: boolean) => {
+      const dateValue = selectedDate.getDate() + selectedDate.getMonth() * 31;
+      
+      // Generate weight data if needed
+      if (!weightFound) {
+        const baseWeight = 74.2;
+        const weightVariance = ((dateValue % 11) - 5) / 10; // Range -0.5 to +0.5
+        setWeightData({
+          weight: parseFloat((baseWeight + weightVariance).toFixed(1)),
+          unit: "Kg",
+          isLoading: false
+        });
+      }
+      
+      // Generate nutrition data if needed
+      if (!nutritionFound) {
+        const proteinBase = 150;
+        const proteinVariance = (dateValue % 41) - 20; // Range -20 to +20
+        
+        const fatBase = 80;
+        const fatVariance = (dateValue % 21) - 10; // Range -10 to +10
+        
+        const carbsBase = 195;
+        const carbsVariance = (dateValue % 61) - 30; // Range -30 to +30
+        
+        setNutritionData({
+          protein: {
+            actual: Math.max(100, Math.round(proteinBase + proteinVariance)),
+            target: 165.0,
+            unit: "g",
+          },
+          fat: {
+            actual: Math.max(50, Math.round(fatBase + fatVariance)),
+            target: 73.0,
+            unit: "g",
+          },
+          carbs: {
+            actual: Math.max(140, Math.round(carbsBase + carbsVariance)),
+            target: 220.0,
+            unit: "g",
+          },
+          calories: {
+            actual: Math.round(
+              (proteinBase + proteinVariance) * 4 +
+              (fatBase + fatVariance) * 9 +
+              (carbsBase + carbsVariance) * 4
+            ),
+            unit: "Kcal",
+          },
+          isLoading: false
+        });
+      }
+    };
+    
+    // Start fetching immediately
+    fetchData();
+    
+  }, [selectedDate, params?.email]);
 
   // Side menu items
   const menuItems = [
@@ -517,8 +728,8 @@ export default function ClientOverview() {
       calories: {
         actual: Math.round(
           (proteinBase + proteinVariance) * 4 +
-            (fatBase + fatVariance) * 9 +
-            (carbsBase + carbsVariance) * 4
+          (fatBase + fatVariance) * 9 +
+          (carbsBase + carbsVariance) * 4
         ),
         unit: "Kcal",
       },
@@ -601,7 +812,26 @@ export default function ClientOverview() {
 
   useEffect(() => {
     const fetchClientData = async () => {
-      // ...existing code...
+      if (!params?.email) return;
+
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", decodedEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data() as IntakeForm;
+          setClient(clientData);
+          setUserName(clientData.fullName || "Aria Michele");
+        } else {
+          setError("Client not found");
+        }
+      } catch (err) {
+        setError("Failed to fetch client data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchClientData();
@@ -771,11 +1001,7 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
-            <div className="flex justify-between mt-1.5 w-full h-full items-center">
+            <div className="mt-1.5 flex w-full h-full items-center">
               {/* Sleep Hours - Left Side */}
               <div>
                 <div className="flex items-end">
@@ -792,14 +1018,14 @@ export default function ClientOverview() {
               </div>
 
               {/* Sleep Quality - Right Side */}
-              <div className="text-right">
+              <div className="text-right ml-auto">
                 <div className="text-xl font-semibold">{sleepData.quality}</div>
                 <div className="text-[9px] text-gray-400">Sleep Quality</div>
               </div>
             </div>
           </div>
 
-          {/* Weight Card */}
+          {/* Weight Card - Updated to show Firebase data when available */}
           <div
             className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-2.5 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/weight`)}
@@ -832,19 +1058,24 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
             <div className="mt-2 flex w-full h-full items-center">
-              <span className="text-3xl leading-none font-semibold">
-                {weightData.weight}
-              </span>
-              <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
+              {weightData.isLoading ? (
+                <div className="animate-pulse flex space-x-2 items-center">
+                  <div className="h-8 w-16 bg-gray-700/50 rounded"></div>
+                  <div className="h-4 w-6 bg-gray-700/50 rounded"></div>
+                </div>
+              ) : (
+                <>
+                  <span className="text-3xl leading-none font-semibold">
+                    {weightData.weight}
+                  </span>
+                  <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Nutrition Card */}
+          {/* Nutrition Card - Updated to show Firebase data when available */}
           <div
             className="col-span-12 bg-[#FFFFFF1A]  backdrop-blur-xl rounded-xl p-4 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/nutrition`)}
@@ -877,102 +1108,154 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-4 right-4 text-sm text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
             <div className="grid grid-cols-4 gap-4 mt-2 w-full h-full items-center">
               {/* Protein */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.protein.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.protein.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.protein.target.toFixed(1)}
-                  {nutritionData.protein.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${proteinPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Protein</span>
-                  <span className="text-gray-400">{proteinPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.protein.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.protein.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.protein.target.toFixed(1)}
+                      {nutritionData.protein.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${proteinPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Protein</span>
+                      <span className="text-gray-400">{proteinPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Fat */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.fat.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.fat.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.fat.target.toFixed(1)}
-                  {nutritionData.fat.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${fatPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Fat</span>
-                  <span className="text-gray-400">{fatPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.fat.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.fat.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.fat.target.toFixed(1)}
+                      {nutritionData.fat.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${fatPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Fat</span>
+                      <span className="text-gray-400">{fatPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Carbs */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.carbs.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.carbs.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.carbs.target.toFixed(1)}
-                  {nutritionData.carbs.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${carbsPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Carbs</span>
-                  <span className="text-gray-400">{carbsPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.carbs.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.carbs.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.carbs.target.toFixed(1)}
+                      {nutritionData.carbs.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${carbsPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Carbs</span>
+                      <span className="text-gray-400">{carbsPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Calories */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.calories.actual.toLocaleString()}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.calories.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${caloriesPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Calories</span>
-                  <span className="text-gray-400">{caloriesPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.calories.actual.toLocaleString()}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.calories.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${caloriesPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Calories</span>
+                      <span className="text-gray-400">{caloriesPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1010,15 +1293,11 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
             <div className="mt-2 flex w-full h-full items-center">
               <div className="text-3xl font-semibold">
                 {stepsData.actual.toLocaleString()}
               </div>
-              <div className="text-[10px] text-gray-400 mt-1">
+              <div className="text-[10px] text-gray-400 mt-1 ml-2">
                 {stepsData.target.toLocaleString()} Steps
               </div>
             </div>
@@ -1055,10 +1334,6 @@ export default function ClientOverview() {
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
-
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
@@ -1117,10 +1392,6 @@ export default function ClientOverview() {
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
-
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
             </div>
 
             <ul className="text-xs space-y-1 pt-2">
@@ -1238,7 +1509,9 @@ export default function ClientOverview() {
                   cm
                 </span>
               </div>
-              <div className="text-xs text-gray-400">Height</div>
+              <div className="text-xs text-gray-400 text-center">
+                Height
+              </div>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="text-2xl font-semibold">29</div>
