@@ -447,7 +447,7 @@ const DMsContent = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-4 mt-4">
+      <div className="max-w-6xl mx-auto p-4">
         {/* Back to Channel Link */}
         <div className="mb-4">
           <button

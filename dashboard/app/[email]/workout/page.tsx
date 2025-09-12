@@ -74,7 +74,7 @@ export default function WorkoutDashboard() {
     "Monthly"
   );
 
-  // Extended mock data for the workout history - now includes data up to Sep 12th
+  // Updated mock data for the workout history with correct date format
   const workoutHistory = [
     {
       date: "7 Jul 2025",
@@ -208,7 +208,7 @@ export default function WorkoutDashboard() {
       duration: "84 min",
       completed: true,
     },
-    // Added Aug 2025 workout history
+    // Added August 2025 workout history
     {
       date: "29 Jul 2025",
       session: "Session B",
@@ -413,7 +413,7 @@ export default function WorkoutDashboard() {
       duration: "82 min",
       completed: true,
     },
-    // Added Sep 2025 workout history (up to 12th)
+    // Added September 2025 workout history (up to 12th)
     {
       date: "1 Sep 2025",
       session: "Session C",
