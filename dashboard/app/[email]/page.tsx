@@ -32,10 +32,10 @@ interface WeightData {
 }
 
 interface NutritionData {
-  protein: { actual: number, target: number, unit: string };
-  fat: { actual: number, target: number, unit: string };
-  carbs: { actual: number, target: number, unit: string };
-  calories: { actual: number, unit: string };
+  protein: { actual: number; target: number; unit: string };
+  fat: { actual: number; target: number; unit: string };
+  carbs: { actual: number; target: number; unit: string };
+  calories: { actual: number; unit: string };
 }
 
 interface StepsData {
@@ -63,52 +63,66 @@ export default function ClientOverview() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [userName, setUserName] = useState<string>("Aria Michele");
   const [showNav, setShowNav] = useState(false);
-  
+
   // New state for dynamic data
-  const [sleepData, setSleepData] = useState<SleepData>({ hours: 6, minutes: 42, quality: "Restful" });
-  const [weightData, setWeightData] = useState<WeightData>({ weight: 74.2, unit: "Kg" });
+  const [sleepData, setSleepData] = useState<SleepData>({
+    hours: 6,
+    minutes: 42,
+    quality: "Restful",
+  });
+  const [weightData, setWeightData] = useState<WeightData>({
+    weight: 74.2,
+    unit: "Kg",
+  });
   const [nutritionData, setNutritionData] = useState<NutritionData>({
     protein: { actual: 150.0, target: 165.0, unit: "g" },
     fat: { actual: 80.0, target: 73.0, unit: "g" },
     carbs: { actual: 195.0, target: 220.0, unit: "g" },
-    calories: { actual: 2150, unit: "Kcal" }
+    calories: { actual: 2150, unit: "Kcal" },
   });
-  const [stepsData, setStepsData] = useState<StepsData>({ actual: 5000, target: 10000 });
-  const [moodData, setMoodData] = useState<MoodData>({ mood: "Calm", time: "16:28pm", color: "#BFD8E9" });
+  const [stepsData, setStepsData] = useState<StepsData>({
+    actual: 5000,
+    target: 10000,
+  });
+  const [moodData, setMoodData] = useState<MoodData>({
+    mood: "Calm",
+    time: "16:28pm",
+    color: "#BFD8E9",
+  });
   const [exerciseData, setExerciseData] = useState<ExerciseData>({
     exercises: [
       "Barbell Hip Thrust",
       "Heels Elevated Zercher Squat",
       "Scrape Rack L-Seated Shoulder Press",
-      "Seated DB Lateral Raise"
-    ]
+      "Seated DB Lateral Raise",
+    ],
   });
   useEffect(() => {
-  const fetchClientData = async () => {
-    if (!params?.email) return;
+    const fetchClientData = async () => {
+      if (!params?.email) return;
 
-    try {
-      const decodedEmail = decodeURIComponent(params.email as string);
-      const clientDocRef = doc(db, "intakeForms", decodedEmail);
-      const clientDocSnap = await getDoc(clientDocRef);
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", decodedEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
 
-      if (clientDocSnap.exists()) {
-        const clientData = clientDocSnap.data() as IntakeForm;
-        setClient(clientData);
-        setUserName(clientData.fullName || "Aria Michele");
-      } else {
-        setError("Client not found");
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data() as IntakeForm;
+          setClient(clientData);
+          setUserName(clientData.fullName || "Aria Michele");
+        } else {
+          setError("Client not found");
+        }
+      } catch (err) {
+        setError("Failed to fetch client data");
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError("Failed to fetch client data");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchClientData();
-}, [params?.email]);
+    fetchClientData();
+  }, [params?.email]);
 
   // Side menu items
   const menuItems = [
@@ -424,7 +438,7 @@ export default function ClientOverview() {
 
     return `${day} ${month} ${year}`;
   };
-  
+
   // Format selected date
   const formatSelectedDate = () => {
     const day = selectedDate.getDate();
@@ -438,81 +452,96 @@ export default function ClientOverview() {
   useEffect(() => {
     // Use the date to seed our random data (same date will produce same "random" data)
     const dateValue = selectedDate.getDate() + selectedDate.getMonth() * 31;
-    
+
     // Sleep data - varies between 5h30m and 8h15m
     const baseHours = 6;
     const hourVariance = ((dateValue % 7) - 3) / 2; // Range -1.5 to +1.5
-    const newHours = Math.max(5, Math.min(8, Math.floor(baseHours + hourVariance)));
-    
+    const newHours = Math.max(
+      5,
+      Math.min(8, Math.floor(baseHours + hourVariance))
+    );
+
     const baseMinutes = 30;
     const minuteVariance = (dateValue % 60) - 30; // Range -30 to +30
-    const newMinutes = Math.max(0, Math.min(59, Math.floor(baseMinutes + minuteVariance)));
-    
+    const newMinutes = Math.max(
+      0,
+      Math.min(59, Math.floor(baseMinutes + minuteVariance))
+    );
+
     // Sleep quality based on hours
     let quality = "Restful";
     if (newHours < 6) quality = "Poor";
     else if (newHours === 6) quality = "Fair";
     else if (newHours > 7) quality = "Deep";
-    
+
     setSleepData({
       hours: newHours,
       minutes: newMinutes,
-      quality
+      quality,
     });
-    
+
     // Weight data - subtle variations (±0.5kg)
     const baseWeight = 74.2;
     const weightVariance = ((dateValue % 11) - 5) / 10; // Range -0.5 to +0.5
     setWeightData({
       weight: parseFloat((baseWeight + weightVariance).toFixed(1)),
-      unit: "Kg"
+      unit: "Kg",
     });
-    
+
     // Nutrition data - varies day to day
     const proteinBase = 150;
     const proteinVariance = (dateValue % 41) - 20; // Range -20 to +20
-    
+
     const fatBase = 80;
     const fatVariance = (dateValue % 21) - 10; // Range -10 to +10
-    
+
     const carbsBase = 195;
     const carbsVariance = (dateValue % 61) - 30; // Range -30 to +30
-    
+
     setNutritionData({
       protein: {
         actual: Math.max(100, Math.round(proteinBase + proteinVariance)),
         target: 165.0,
-        unit: "g"
+        unit: "g",
       },
       fat: {
         actual: Math.max(50, Math.round(fatBase + fatVariance)),
         target: 73.0,
-        unit: "g"
+        unit: "g",
       },
       carbs: {
         actual: Math.max(140, Math.round(carbsBase + carbsVariance)),
         target: 220.0,
-        unit: "g"
+        unit: "g",
       },
       calories: {
-        actual: Math.round((proteinBase + proteinVariance) * 4 + 
-                          (fatBase + fatVariance) * 9 + 
-                          (carbsBase + carbsVariance) * 4),
-        unit: "Kcal"
-      }
+        actual: Math.round(
+          (proteinBase + proteinVariance) * 4 +
+            (fatBase + fatVariance) * 9 +
+            (carbsBase + carbsVariance) * 4
+        ),
+        unit: "Kcal",
+      },
     });
-    
+
     // Steps data - varies between 3,000 and 12,000
-const dayOfYear = Math.floor((selectedDate.getTime() - new Date(selectedDate.getFullYear(), 0, 0).getTime()) / (24 * 60 * 60 * 1000));
-const seedValue = selectedDate.getFullYear() * 10000 + dayOfYear;
-const stepsBase = 7000;
-// Use a simpler calculation with better distribution
-const stepsVariance = ((seedValue * 13) % 18001) - 4500; // Range -4500 to +4500
-setStepsData({
-  actual: Math.max(1000, Math.min(12000, Math.round(stepsBase + stepsVariance))),
-  target: 10000
-});
-    
+    const dayOfYear = Math.floor(
+      (selectedDate.getTime() -
+        new Date(selectedDate.getFullYear(), 0, 0).getTime()) /
+        (24 * 60 * 60 * 1000)
+    );
+    const seedValue = selectedDate.getFullYear() * 10000 + dayOfYear;
+    const stepsBase = 7000;
+    // Use a simpler calculation with better distribution
+    const stepsVariance = ((seedValue * 13) % 18001) - 4500; // Range -4500 to +4500
+    setStepsData({
+      actual: Math.max(
+        1000,
+        Math.min(12000, Math.round(stepsBase + stepsVariance))
+      ),
+      target: 10000,
+    });
+
     // Mood data - cycles through different moods
     const moods = [
       { mood: "Energetic", color: "#FFC107" },
@@ -521,37 +550,53 @@ setStepsData({
       { mood: "Tired", color: "#9C27B0" },
       { mood: "Focused", color: "#2196F3" },
       { mood: "Stressed", color: "#FF5722" },
-      { mood: "Relaxed", color: "#4CAF50" }
+      { mood: "Relaxed", color: "#4CAF50" },
     ];
-    
+
     const moodIndex = dateValue % moods.length;
     const hours = 8 + (dateValue % 12); // Range 8-19 (8am to 7pm)
     const minutes = dateValue % 60;
-    
+
     setMoodData({
       mood: moods[moodIndex].mood,
-      time: `${hours > 12 ? hours - 12 : hours}:${minutes < 10 ? '0' + minutes : minutes}${hours >= 12 ? 'pm' : 'am'}`,
-      color: moods[moodIndex].color
+      time: `${hours > 12 ? hours - 12 : hours}:${
+        minutes < 10 ? "0" + minutes : minutes
+      }${hours >= 12 ? "pm" : "am"}`,
+      color: moods[moodIndex].color,
     });
-    
+
     // Exercise data - different routines for different days
     const routines = [
-      ["Barbell Hip Thrust", "Heels Elevated Zercher Squat", "Scrape Rack L-Seated Shoulder Press", "Seated DB Lateral Raise"],
+      [
+        "Barbell Hip Thrust",
+        "Heels Elevated Zercher Squat",
+        "Scrape Rack L-Seated Shoulder Press",
+        "Seated DB Lateral Raise",
+      ],
       ["Deadlift", "Pull-ups", "Dumbbell Rows", "Face Pulls"],
       ["Bench Press", "Incline Press", "Tricep Pushdowns", "Chest Flyes"],
-      ["Bulgarian Split Squats", "Romanian Deadlifts", "Leg Extensions", "Calf Raises"],
-  
+      [
+        "Bulgarian Split Squats",
+        "Romanian Deadlifts",
+        "Leg Extensions",
+        "Calf Raises",
+      ],
+
       ["Deadlift", "Pull-ups", "Dumbbell Rows", "Face Pulls"],
       ["Bench Press", "Incline Press", "Tricep Pushdowns", "Chest Flyes"],
-      ["Bulgarian Split Squats", "Romanian Deadlifts", "Leg Extensions", "Calf Raises"],
+      [
+        "Bulgarian Split Squats",
+        "Romanian Deadlifts",
+        "Leg Extensions",
+        "Calf Raises",
+      ],
       ["Rest Day"],
     ];
-    
+
     const routineIndex = selectedDate.getDay(); // 0-6 (Sunday-Saturday)
     setExerciseData({
-      exercises: routines[routineIndex]
+      exercises: routines[routineIndex],
     });
-    
   }, [selectedDate]);
 
   useEffect(() => {
@@ -567,10 +612,19 @@ setStepsData({
   }
 
   // Calculate percentages for nutrition
-  const proteinPercentage = Math.round((nutritionData.protein.actual / nutritionData.protein.target) * 100);
-  const fatPercentage = Math.round((nutritionData.fat.actual / nutritionData.fat.target) * 100);
-  const carbsPercentage = Math.round((nutritionData.carbs.actual / nutritionData.carbs.target) * 100);
-  const caloriesPercentage = Math.min(100, Math.round((nutritionData.calories.actual / 2200) * 100));
+  const proteinPercentage = Math.round(
+    (nutritionData.protein.actual / nutritionData.protein.target) * 100
+  );
+  const fatPercentage = Math.round(
+    (nutritionData.fat.actual / nutritionData.fat.target) * 100
+  );
+  const carbsPercentage = Math.round(
+    (nutritionData.carbs.actual / nutritionData.carbs.target) * 100
+  );
+  const caloriesPercentage = Math.min(
+    100,
+    Math.round((nutritionData.calories.actual / 2200) * 100)
+  );
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
@@ -683,7 +737,7 @@ setStepsData({
       {/* Main Content with Right Panel */}
       <div className="px-6 pb-3 pr-[510px]">
         {/* Cards Grid */}
-        <div className="grid grid-cols-12 gap-3 h-[calc(100vh-70px)] overflow-hidden">
+        <div className="grid grid-cols-12 gap-3 h-[calc(100vh-90px)] overflow-hidden">
           {/* Sleep Card */}
           <div
             className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-2.5 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
@@ -725,7 +779,9 @@ setStepsData({
               {/* Sleep Hours - Left Side */}
               <div>
                 <div className="flex items-end">
-                  <span className="text-3xl leading-none font-semibold">{sleepData.hours}</span>
+                  <span className="text-3xl leading-none font-semibold">
+                    {sleepData.hours}
+                  </span>
                   <span className="text-xs mb-1 ml-1">hr</span>
                   <span className="text-3xl leading-none font-semibold ml-1">
                     {sleepData.minutes}
@@ -781,7 +837,9 @@ setStepsData({
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <span className="text-3xl leading-none font-semibold">{weightData.weight}</span>
+              <span className="text-3xl leading-none font-semibold">
+                {weightData.weight}
+              </span>
               <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
             </div>
           </div>
@@ -832,7 +890,10 @@ setStepsData({
                     {nutritionData.protein.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">{nutritionData.protein.target.toFixed(1)}{nutritionData.protein.unit}</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  {nutritionData.protein.target.toFixed(1)}
+                  {nutritionData.protein.unit}
+                </div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
@@ -853,7 +914,10 @@ setStepsData({
                     {nutritionData.fat.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">{nutritionData.fat.target.toFixed(1)}{nutritionData.fat.unit}</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  {nutritionData.fat.target.toFixed(1)}
+                  {nutritionData.fat.unit}
+                </div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
@@ -874,7 +938,10 @@ setStepsData({
                     {nutritionData.carbs.unit}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mb-1">{nutritionData.carbs.target.toFixed(1)}{nutritionData.carbs.unit}</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  {nutritionData.carbs.target.toFixed(1)}
+                  {nutritionData.carbs.unit}
+                </div>
                 <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-600"
@@ -948,8 +1015,12 @@ setStepsData({
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <div className="text-3xl font-semibold">{stepsData.actual.toLocaleString()}</div>
-              <div className="text-[10px] text-gray-400 mt-1">{stepsData.target.toLocaleString()} Steps</div>
+              <div className="text-3xl font-semibold">
+                {stepsData.actual.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-gray-400 mt-1">
+                {stepsData.target.toLocaleString()} Steps
+              </div>
             </div>
           </div>
 
@@ -991,7 +1062,11 @@ setStepsData({
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <div className="w-12 h-12 rounded-lg" style={{backgroundColor: moodData.color}} className="flex items-center justify-center mr-4">
+              <div
+                className="w-12 h-12 rounded-lg"
+                style={{ backgroundColor: moodData.color }}
+                className="flex items-center justify-center mr-4"
+              >
                 <svg
                   className="w-8 h-8 text-[#07172C]"
                   viewBox="0 0 20 20"
@@ -1244,7 +1319,7 @@ setStepsData({
           </div>
         </div>
       </div>
-      
+
       {/* Side Navigation - styled exactly like Navigation component */}
       {/* ...existing code... */}
       {showNav && (

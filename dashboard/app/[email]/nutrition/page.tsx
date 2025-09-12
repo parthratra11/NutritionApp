@@ -129,6 +129,28 @@ export default function NutritionPage() {
   const [startDate, setStartDate] = useState<string>("2025-07-22");
   const [endDate, setEndDate] = useState<string>("2025-07-28");
 
+  // Add these state variables for date selection functionality
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(
+    new Date()
+  );
+  const [selectedDateNutrition, setSelectedDateNutrition] = useState<{
+    protein: number;
+    carbs: number;
+    fats: number;
+    calories: number;
+    dayType: string;
+    date: string;
+    formattedDate: string;
+  }>({
+    protein: 0,
+    carbs: 0,
+    fats: 0,
+    calories: 0,
+    dayType: "",
+    date: "",
+    formattedDate: "",
+  });
+
   // Define target values for each nutrient with proper decimal formatting
   const targets = {
     protein: 150.0,
@@ -608,6 +630,126 @@ export default function NutritionPage() {
     endDate,
   ]);
 
+  // Add the handler function to receive the selected date from the Navigation component
+  const handleDateSelection = (date: Date) => {
+    setSelectedCalendarDate(date);
+  };
+
+  // Add this useEffect to update macro data when a date is selected
+  useEffect(() => {
+    if (!weeklyData || !selectedCalendarDate) return;
+
+    const dateStr = selectedCalendarDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+
+    // Find the data for the selected date
+    let foundData = null;
+
+    Object.values(weeklyData).forEach((week) => {
+      Object.entries(week.dailyData).forEach(([date, dayData]) => {
+        // Check if this date matches the selected date (compare only YYYY-MM-DD part)
+        if (date.includes(dateStr)) {
+          foundData = {
+            protein: dayData.totals["Protein (g)"],
+            carbs: dayData.totals["Carbohydrate (g)"],
+            fats: dayData.totals["Fat (g)"],
+            calories: dayData.totals.Kcal,
+            dayType: dayData.dayType,
+            date: date,
+            formattedDate: formatDate(date),
+          };
+
+          // Update the macro data with selected date's values
+          setMacroData({
+            protein: {
+              value: dayData.totals["Protein (g)"],
+              target: targets.protein,
+              percentage: Math.round(
+                (dayData.totals["Protein (g)"] / targets.protein) * 100
+              ),
+              status: getStatusFromPercentage(
+                (dayData.totals["Protein (g)"] / targets.protein) * 100
+              ),
+            },
+            carbs: {
+              value: dayData.totals["Carbohydrate (g)"],
+              target: targets.carbs,
+              percentage: Math.round(
+                (dayData.totals["Carbohydrate (g)"] / targets.carbs) * 100
+              ),
+              status: getStatusFromPercentage(
+                (dayData.totals["Carbohydrate (g)"] / targets.carbs) * 100
+              ),
+            },
+            fats: {
+              value: dayData.totals["Fat (g)"],
+              target: targets.fat,
+              percentage: Math.round(
+                (dayData.totals["Fat (g)"] / targets.fat) * 100
+              ),
+              status: getStatusFromPercentage(
+                (dayData.totals["Fat (g)"] / targets.fat) * 100
+              ),
+            },
+            calories: {
+              value: dayData.totals.Kcal,
+              target: targets.calories,
+              percentage: Math.round(
+                (dayData.totals.Kcal / targets.calories) * 100
+              ),
+              status: getStatusFromPercentage(
+                (dayData.totals.Kcal / targets.calories) * 100
+              ),
+            },
+          });
+        }
+      });
+    });
+
+    // If data is found for the selected date, update state
+    if (foundData) {
+      setSelectedDateNutrition(foundData);
+    } else {
+      // Set default values when no data is available for the selected date
+      setSelectedDateNutrition({
+        protein: 0,
+        carbs: 0,
+        fats: 0,
+        calories: 0,
+        dayType: "No Data",
+        date: dateStr,
+        formattedDate: formatDate(dateStr),
+      });
+
+      // Reset macro data to zeros if no data exists for the date
+      setMacroData({
+        protein: {
+          value: 0,
+          target: targets.protein,
+          percentage: 0,
+          status: "below-target",
+        },
+        carbs: {
+          value: 0,
+          target: targets.carbs,
+          percentage: 0,
+          status: "below-target",
+        },
+        fats: {
+          value: 0,
+          target: targets.fat,
+          percentage: 0,
+          status: "below-target",
+        },
+        calories: {
+          value: 0,
+          target: targets.calories,
+          percentage: 0,
+          status: "below-target",
+        },
+      });
+    }
+  }, [selectedCalendarDate, weeklyData, targets]);
+
   const NutritionModal = ({
     isOpen,
     onClose,
@@ -773,6 +915,7 @@ export default function NutritionPage() {
         subtitle="Track your nutrition intake"
         email={decodeURIComponent(email)}
         userName={userName}
+        onDateSelect={handleDateSelection} // Pass the callback function
       />
 
       <div className="px-4 py-6 space-y-8">
@@ -857,7 +1000,6 @@ export default function NutritionPage() {
             )}
           </div>
         </div>
-
         {/* Custom Date Range Selector */}
         {comparisonPeriod === "custom" && (
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-4">
@@ -907,13 +1049,16 @@ export default function NutritionPage() {
             )}
           </div>
         )}
-
-        {/* Macro Cards */}
+        {/* Macro Cards - These now display the selected date's data */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Daily Protein Card */}
+          {/* Daily Protein Card - Now showing selected date data */}
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium">Daily Protein</h3>
+              <h3 className="text-base font-medium">
+                {selectedDateNutrition.formattedDate
+                  ? `Protein (${selectedDateNutrition.formattedDate})`
+                  : "Daily Protein"}
+              </h3>
               <div
                 className={`text-xs rounded-md px-2 py-0.5 ${
                   macroData.protein.status === "on-target"
@@ -945,10 +1090,14 @@ export default function NutritionPage() {
             </div>
           </div>
 
-          {/* Daily Carbs Card */}
+          {/* Daily Carbs Card - Now showing selected date data */}
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium">Daily Carbs</h3>
+              <h3 className="text-base font-medium">
+                {selectedDateNutrition.formattedDate
+                  ? `Carbs (${selectedDateNutrition.formattedDate})`
+                  : "Daily Carbs"}
+              </h3>
               <div
                 className={`text-xs rounded-md px-2 py-0.5 ${
                   macroData.carbs.status === "on-target"
@@ -980,10 +1129,14 @@ export default function NutritionPage() {
             </div>
           </div>
 
-          {/* Daily Fats Card */}
+          {/* Daily Fats Card - Now showing selected date data */}
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium">Daily Fats</h3>
+              <h3 className="text-base font-medium">
+                {selectedDateNutrition.formattedDate
+                  ? `Fats (${selectedDateNutrition.formattedDate})`
+                  : "Daily Fats"}
+              </h3>
               <div
                 className={`text-xs rounded-md px-2 py-0.5 ${
                   macroData.fats.status === "on-target"
@@ -1015,10 +1168,14 @@ export default function NutritionPage() {
             </div>
           </div>
 
-          {/* Daily Calories Card */}
+          {/* Daily Calories Card - Now showing selected date data */}
           <div className="bg-[#142437] border border-[#22364F] rounded-lg p-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-medium">Daily Calories</h3>
+              <h3 className="text-base font-medium">
+                {selectedDateNutrition.formattedDate
+                  ? `Calories (${selectedDateNutrition.formattedDate})`
+                  : "Daily Calories"}
+              </h3>
               <div
                 className={`text-xs rounded-md px-2 py-0.5 ${
                   macroData.calories.status === "on-target"
@@ -1050,7 +1207,52 @@ export default function NutritionPage() {
             </div>
           </div>
         </div>
+        {/* View meal details button if data exists for the selected date
+        {selectedDateNutrition.dayType !== "No Data" &&
+          selectedDateNutrition.dayType !== "" && (
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  // Find the week and day data for the selected date
+                  const weekKey = Object.keys(weeklyData || {}).find(
+                    (week) =>
+                      weeklyData &&
+                      Object.keys(weeklyData[week].dailyData).includes(
+                        selectedDateNutrition.date
+                      )
+                  );
 
+                  if (weekKey && weeklyData) {
+                    const dayData =
+                      weeklyData[weekKey].dailyData[selectedDateNutrition.date];
+                    setSelectedDateData({
+                      date: selectedDateNutrition.date,
+                      data: dayData,
+                    });
+                    setIsModalOpen(true);
+                  }
+                }}
+                className="text-blue-400 hover:text-blue-300 inline-flex items-center text-sm"
+              >
+                <span>
+                  View meal details for {selectedDateNutrition.formattedDate}
+                </span>
+                <svg
+                  className="w-4 h-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
+                </svg>
+              </button>
+            </div>
+          )} */}
         {viewMode === "graphs" ? (
           <>
             {/* Daily Macronutrient Trends */}
@@ -1748,7 +1950,6 @@ export default function NutritionPage() {
             </div>
           </>
         )}
-
         {/* Graph overlay when a specific day is selected */}
         {showGraphOverlay && (
           <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">

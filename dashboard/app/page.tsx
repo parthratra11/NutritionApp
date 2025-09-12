@@ -488,7 +488,7 @@ export default function Home() {
                 {generateDateStrip().map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedDate(item.fullDate)}
+                    // onClick={() => setSelectedDate(item.fullDate)}
                     className={`flex flex-col items-center justify-center w-[28px] lg:w-[30px] h-[48px] lg:h-[58px] rounded-full ${
                       item.isSelected
                         ? isDarkMode
