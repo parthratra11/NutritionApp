@@ -107,34 +107,15 @@ export default function UserDetails() {
     fetchUserDetails();
   }, [params?.id]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (!form) return <div className="p-6">No data found</div>;
-
-  const renderSection = (
-    title: string,
-    fields: { label: string; value: string | boolean | undefined }[]
-  ) => (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <div className="grid gap-4">
-        {fields.map(
-          ({ label, value }) =>
-            value !== undefined && (
-              <div key={label} className="bg-white p-4 rounded-lg shadow">
-                <p className="font-medium text-gray-700">{label}</p>
-                <p className="text-gray-600">
-                  {typeof value === "boolean" ? (value ? "Yes" : "No") : value}
-                </p>
-              </div>
-            )
-        )}
-      </div>
-    </div>
-  );
+  if (loading)
+    return <div className="p-6 text-white bg-[#07172C]">Loading...</div>;
+  if (error)
+    return <div className="p-6 text-red-500 bg-[#07172C]">{error}</div>;
+  if (!form)
+    return <div className="p-6 text-white bg-[#07172C]">No data found</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
         title={`${form?.fullName || "Client"}'s Details`}
         subtitle="Client Information"
@@ -143,31 +124,14 @@ export default function UserDetails() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header Card */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Client Profile
-              </h1>
-              <p className="text-gray-600">
-                Form submitted: {form?.timestamp?.toDate().toLocaleDateString()}
-              </p>
-            </div>
-            <Link
-              href={`/${params.email}`}
-              className="text-[#0a1c3f] hover:text-[#0b2552] font-medium"
-            >
-              Back to Overview
-            </Link>
-          </div>
-        </div>
+        
+       
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Personal Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          {/* Basic Information */}
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Basic Information
             </h2>
             <div className="space-y-4">
@@ -183,8 +147,8 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="font-medium text-white">
                     {item.value}
                   </span>
                 </div>
@@ -193,8 +157,8 @@ export default function UserDetails() {
           </div>
 
           {/* Medical & Lifestyle */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Medical & Lifestyle
             </h2>
             <div className="space-y-4">
@@ -216,16 +180,16 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="space-y-1">
-                  <span className="text-gray-500 text-sm">{item.label}</span>
-                  <p className="font-medium text-gray-900">{item.value}</p>
+                  <span className="text-gray-400 text-sm">{item.label}</span>
+                  <p className="font-medium text-white">{item.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Address */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          {/* Location Details */}
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Location Details
             </h2>
             <div className="space-y-4">
@@ -238,8 +202,8 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="font-medium text-white">
                     {item.value}
                   </span>
                 </div>
@@ -247,9 +211,9 @@ export default function UserDetails() {
             </div>
           </div>
 
-          {/* Training Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          {/* Training Profile */}
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Training Profile
             </h2>
             <div className="space-y-4">
@@ -266,16 +230,16 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="space-y-1">
-                  <span className="text-gray-500 text-sm">{item.label}</span>
-                  <p className="font-medium text-gray-900">{item.value}</p>
+                  <span className="text-gray-400 text-sm">{item.label}</span>
+                  <p className="font-medium text-white">{item.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Strength Metrics */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Strength Metrics
             </h2>
             <div className="space-y-4">
@@ -289,8 +253,8 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="font-medium text-white">
                     {item.value}
                   </span>
                 </div>
@@ -299,8 +263,8 @@ export default function UserDetails() {
           </div>
 
           {/* Body Measurements */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Body Measurements
             </h2>
             <div className="space-y-4">
@@ -318,8 +282,8 @@ export default function UserDetails() {
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="font-medium text-white">
                     {item.value}
                   </span>
                 </div>
@@ -328,8 +292,8 @@ export default function UserDetails() {
           </div>
 
           {/* Equipment Access */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Equipment Access
             </h2>
             <div className="grid grid-cols-2 gap-4">
@@ -342,35 +306,35 @@ export default function UserDetails() {
                         : "bg-red-500"
                     }`}
                   />
-                  <span className="text-sm text-gray-700">{label}</span>
+                  <span className="text-sm text-gray-300">{label}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Goals and Obstacles */}
-          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 col-span-full border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Goals & Obstacles
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <span className="text-gray-500">Goals</span>
-                  <p className="font-medium text-gray-900 mt-1">
+                  <span className="text-gray-400">Goals</span>
+                  <p className="font-medium text-white mt-1">
                     {form?.goals}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Main Obstacle</span>
-                  <p className="font-medium text-gray-900 mt-1">
+                  <span className="text-gray-400">Main Obstacle</span>
+                  <p className="font-medium text-white mt-1">
                     {form?.obstacle}
                   </p>
                 </div>
               </div>
               <div>
-                <span className="text-gray-500">Other Exercises</span>
-                <p className="font-medium text-gray-900 mt-1">
+                <span className="text-gray-400">Other Exercises</span>
+                <p className="font-medium text-white mt-1">
                   {form?.otherExercises}
                 </p>
               </div>
@@ -378,20 +342,20 @@ export default function UserDetails() {
           </div>
 
           {/* Additional Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6 col-span-full">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 col-span-full border border-[#22364F]">
+            <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Additional Information
             </h2>
             <div className="space-y-4">
               <div>
-                <span className="text-gray-500">Supplements</span>
-                <p className="font-medium text-gray-900 mt-1">
+                <span className="text-gray-400">Supplements</span>
+                <p className="font-medium text-white mt-1">
                   {form?.supplements}
                 </p>
               </div>
               <div>
-                <span className="text-gray-500">Typical Diet</span>
-                <p className="font-medium text-gray-900 mt-1">
+                <span className="text-gray-400">Typical Diet</span>
+                <p className="font-medium text-white mt-1">
                   {form?.typicalDiet}
                 </p>
               </div>
