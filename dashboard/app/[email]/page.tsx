@@ -70,15 +70,17 @@ export default function ClientOverview() {
     minutes: 42,
     quality: "Restful",
   });
-  const [weightData, setWeightData] = useState<WeightData>({
-    weight: 74.2,
+  const [weightData, setWeightData] = useState<WeightData & { isLoading?: boolean }>({
+    weight: 0,  // Start with 0 instead of mock data
     unit: "Kg",
+    isLoading: true
   });
-  const [nutritionData, setNutritionData] = useState<NutritionData>({
-    protein: { actual: 150.0, target: 165.0, unit: "g" },
-    fat: { actual: 80.0, target: 73.0, unit: "g" },
-    carbs: { actual: 195.0, target: 220.0, unit: "g" },
-    calories: { actual: 2150, unit: "Kcal" },
+  const [nutritionData, setNutritionData] = useState<NutritionData & { isLoading?: boolean }>({
+    protein: { actual: 0, target: 165.0, unit: "g" },
+    fat: { actual: 0, target: 73.0, unit: "g" },
+    carbs: { actual: 0, target: 220.0, unit: "g" },
+    calories: { actual: 0, unit: "Kcal" },
+    isLoading: true
   });
   const [stepsData, setStepsData] = useState<StepsData>({
     actual: 5000,
@@ -139,24 +141,46 @@ export default function ClientOverview() {
     fetchClientData();
   }, [params?.email]);
 
-  // New useEffect to fetch weight data based on selected date
+  // 1. First, optimize the useEffect hooks for data fetching
   useEffect(() => {
-    const fetchWeightData = async () => {
+    // Clear previous data and set loading state when date changes
+    setWeightFromFirebase(null);
+    setNutritionFromFirebase(null);
+    
+    setWeightData({
+      weight: 0,
+      unit: "Kg",
+      isLoading: true
+    });
+    
+    setNutritionData({
+      protein: { actual: 0, target: 165.0, unit: "g" },
+      fat: { actual: 0, target: 73.0, unit: "g" },
+      carbs: { actual: 0, target: 220.0, unit: "g" },
+      calories: { actual: 0, unit: "Kcal" },
+      isLoading: true
+    });
+    
+    const fetchData = async () => {
       if (!params?.email) return;
-
+      
       try {
         const decodedEmail = decodeURIComponent(params.email as string);
-        // Fetch weekly forms containing weight data
-        const weeklyDocRef = doc(db, "weeklyForms", decodedEmail);
-        const weeklyDocSnap = await getDoc(weeklyDocRef);
-
+        // Convert selectedDate to YYYY-MM-DD format for comparison
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        
+        // Run both fetch operations concurrently with Promise.all
+        const [weeklyDocSnap, nutritionDocSnap] = await Promise.all([
+          getDoc(doc(db, "weeklyForms", decodedEmail)),
+          getDoc(doc(db, "nutrition", decodedEmail))
+        ]);
+        
+        let weightFound = false;
+        let nutritionFound = false;
+        
+        // Process weight data
         if (weeklyDocSnap.exists()) {
           const data = weeklyDocSnap.data();
-          
-          // Convert selectedDate to YYYY-MM-DD format for comparison
-          const dateStr = selectedDate.toISOString().split('T')[0];
-          
-          // Find weight entry matching the selected date
           let foundWeight = null;
           
           Object.entries(data).forEach(([weekKey, weekData]) => {
@@ -177,49 +201,29 @@ export default function ClientOverview() {
           });
           
           if (foundWeight) {
+            weightFound = true;
             setWeightFromFirebase(foundWeight);
             setWeightData({
               weight: parseFloat(foundWeight.weight),
-              unit: "Kg"
+              unit: "Kg",
+              isLoading: false
             });
-          } else {
-            // Reset to mock data if no data found for selected date
-            setWeightFromFirebase(null);
           }
         }
-      } catch (err) {
-        console.error("Error fetching weight data:", err);
-      }
-    };
-    
-    fetchWeightData();
-  }, [selectedDate, params?.email]);
-
-  // New useEffect to fetch nutrition data based on selected date
-  useEffect(() => {
-    const fetchNutritionData = async () => {
-      if (!params?.email) return;
-
-      try {
-        const decodedEmail = decodeURIComponent(params.email as string);
-        // Fetch nutrition data
-        const nutritionDocRef = doc(db, "nutrition", decodedEmail);
-        const nutritionDocSnap = await getDoc(nutritionDocRef);
-
+        
+        // Process nutrition data
         if (nutritionDocSnap.exists()) {
           const data = nutritionDocSnap.data();
-          
-          // Convert selectedDate to YYYY-MM-DD format for comparison
-          const dateStr = selectedDate.toISOString().split('T')[0];
-          
-          // Find nutrition entry matching the selected date
           let foundNutrition = null;
           
           Object.entries(data).forEach(([key, value]) => {
             if (key === "firstEntryDate") return;
             
             const weekData = value as any;
+            if (!weekData) return;
+            
             Object.entries(weekData).forEach(([day, dayData]) => {
+              if (!dayData) return;
               if (dayData.date && dayData.date.includes(dateStr)) {
                 foundNutrition = {
                   protein: dayData.totals["Protein (g)"],
@@ -233,6 +237,7 @@ export default function ClientOverview() {
           });
           
           if (foundNutrition) {
+            nutritionFound = true;
             setNutritionFromFirebase(foundNutrition);
             setNutritionData({
               protein: { 
@@ -253,19 +258,81 @@ export default function ClientOverview() {
               calories: { 
                 actual: foundNutrition.calories, 
                 unit: "Kcal" 
-              }
+              },
+              isLoading: false
             });
-          } else {
-            // Reset to mock data if no data found for selected date
-            setNutritionFromFirebase(null);
           }
         }
+        
+        // Generate fallback data only if we couldn't find real data
+        if (!weightFound || !nutritionFound) {
+          generateMockData(weightFound, nutritionFound);
+        }
       } catch (err) {
-        console.error("Error fetching nutrition data:", err);
+        console.error("Error fetching data:", err);
+        // On error, generate mock data
+        generateMockData(false, false);
       }
     };
     
-    fetchNutritionData();
+    // Function to generate mock data
+    const generateMockData = (weightFound: boolean, nutritionFound: boolean) => {
+      const dateValue = selectedDate.getDate() + selectedDate.getMonth() * 31;
+      
+      // Generate weight data if needed
+      if (!weightFound) {
+        const baseWeight = 74.2;
+        const weightVariance = ((dateValue % 11) - 5) / 10; // Range -0.5 to +0.5
+        setWeightData({
+          weight: parseFloat((baseWeight + weightVariance).toFixed(1)),
+          unit: "Kg",
+          isLoading: false
+        });
+      }
+      
+      // Generate nutrition data if needed
+      if (!nutritionFound) {
+        const proteinBase = 150;
+        const proteinVariance = (dateValue % 41) - 20; // Range -20 to +20
+        
+        const fatBase = 80;
+        const fatVariance = (dateValue % 21) - 10; // Range -10 to +10
+        
+        const carbsBase = 195;
+        const carbsVariance = (dateValue % 61) - 30; // Range -30 to +30
+        
+        setNutritionData({
+          protein: {
+            actual: Math.max(100, Math.round(proteinBase + proteinVariance)),
+            target: 165.0,
+            unit: "g",
+          },
+          fat: {
+            actual: Math.max(50, Math.round(fatBase + fatVariance)),
+            target: 73.0,
+            unit: "g",
+          },
+          carbs: {
+            actual: Math.max(140, Math.round(carbsBase + carbsVariance)),
+            target: 220.0,
+            unit: "g",
+          },
+          calories: {
+            actual: Math.round(
+              (proteinBase + proteinVariance) * 4 +
+              (fatBase + fatVariance) * 9 +
+              (carbsBase + carbsVariance) * 4
+            ),
+            unit: "Kcal",
+          },
+          isLoading: false
+        });
+      }
+    };
+    
+    // Start fetching immediately
+    fetchData();
+    
   }, [selectedDate, params?.email]);
 
   // Side menu items
@@ -661,8 +728,8 @@ export default function ClientOverview() {
       calories: {
         actual: Math.round(
           (proteinBase + proteinVariance) * 4 +
-            (fatBase + fatVariance) * 9 +
-            (carbsBase + carbsVariance) * 4
+          (fatBase + fatVariance) * 9 +
+          (carbsBase + carbsVariance) * 4
         ),
         unit: "Kcal",
       },
@@ -992,10 +1059,19 @@ export default function ClientOverview() {
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
-              <span className="text-3xl leading-none font-semibold">
-                {weightData.weight}
-              </span>
-              <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
+              {weightData.isLoading ? (
+                <div className="animate-pulse flex space-x-2 items-center">
+                  <div className="h-8 w-16 bg-gray-700/50 rounded"></div>
+                  <div className="h-4 w-6 bg-gray-700/50 rounded"></div>
+                </div>
+              ) : (
+                <>
+                  <span className="text-3xl leading-none font-semibold">
+                    {weightData.weight}
+                  </span>
+                  <span className="text-xs mb-1 ml-1">{weightData.unit}</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -1035,95 +1111,151 @@ export default function ClientOverview() {
             <div className="grid grid-cols-4 gap-4 mt-2 w-full h-full items-center">
               {/* Protein */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.protein.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.protein.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.protein.target.toFixed(1)}
-                  {nutritionData.protein.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${proteinPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Protein</span>
-                  <span className="text-gray-400">{proteinPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.protein.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.protein.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.protein.target.toFixed(1)}
+                      {nutritionData.protein.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${proteinPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Protein</span>
+                      <span className="text-gray-400">{proteinPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Fat */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.fat.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.fat.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.fat.target.toFixed(1)}
-                  {nutritionData.fat.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${fatPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Fat</span>
-                  <span className="text-gray-400">{fatPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.fat.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.fat.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.fat.target.toFixed(1)}
+                      {nutritionData.fat.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${fatPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Fat</span>
+                      <span className="text-gray-400">{fatPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Carbs */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.carbs.actual.toFixed(1)}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.carbs.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">
-                  {nutritionData.carbs.target.toFixed(1)}
-                  {nutritionData.carbs.unit}
-                </div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${carbsPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Carbs</span>
-                  <span className="text-gray-400">{carbsPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.carbs.actual.toFixed(1)}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.carbs.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {nutritionData.carbs.target.toFixed(1)}
+                      {nutritionData.carbs.unit}
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${carbsPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Carbs</span>
+                      <span className="text-gray-400">{carbsPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Calories */}
               <div>
-                <div className="text-4xl font-semibold mb-1">
-                  {nutritionData.calories.actual.toLocaleString()}
-                  <span className="text-base ml-1 font-normal text-gray-400">
-                    {nutritionData.calories.unit}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
-                <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600"
-                    style={{ width: `${caloriesPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between w-3/4 text-xs mt-1">
-                  <span>Calories</span>
-                  <span className="text-gray-400">{caloriesPercentage}%</span>
-                </div>
+                {nutritionData.isLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-24 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700/50 rounded"></div>
+                    <div className="h-1 w-3/4 bg-gray-700/50 rounded-full"></div>
+                    <div className="flex justify-between w-3/4">
+                      <div className="h-3 w-12 bg-gray-700/50 rounded"></div>
+                      <div className="h-3 w-8 bg-gray-700/50 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-4xl font-semibold mb-1">
+                      {nutritionData.calories.actual.toLocaleString()}
+                      <span className="text-base ml-1 font-normal text-gray-400">
+                        {nutritionData.calories.unit}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">&nbsp;</div>
+                    <div className="h-1 w-3/4 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-600"
+                        style={{ width: `${caloriesPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between w-3/4 text-xs mt-1">
+                      <span>Calories</span>
+                      <span className="text-gray-400">{caloriesPercentage}%</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1377,7 +1509,9 @@ export default function ClientOverview() {
                   cm
                 </span>
               </div>
-              <div className="text-xs text-gray-400">Height</div>
+              <div className="text-xs text-gray-400 text-center">
+                Height
+              </div>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="text-2xl font-semibold">29</div>
