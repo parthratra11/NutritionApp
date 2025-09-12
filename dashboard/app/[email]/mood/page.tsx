@@ -17,37 +17,37 @@ type MoodPoint = {
 
 // Weekly data
 const weeklyBase: MoodPoint[] = [
-  { mood: "Calm", score: 4, date: "2025-07-22" },
-  { mood: "Tired", score: 3, date: "2025-07-23" },
-  { mood: "Energetic", score: 6, date: "2025-07-24" },
-  { mood: "Happy", score: 8, date: "2025-07-25" },
-  { mood: "Low", score: 5, date: "2025-07-26" },
-  { mood: "Focused", score: 7, date: "2025-07-27" },
-  { mood: "Energetic", score: 9, date: "2025-07-28" },
+  { mood: "Calm", score: 4, date: "2025-09-06" },
+  { mood: "Tired", score: 3, date: "2025-09-07" },
+  { mood: "Energetic", score: 6, date: "2025-09-08" },
+  { mood: "Happy", score: 8, date: "2025-09-09" },
+  { mood: "Low", score: 5, date: "2025-09-10" },
+  { mood: "Focused", score: 7, date: "2025-09-11" },
+  { mood: "Energetic", score: 9, date: "2025-09-12" },
 ];
 
 // Monthly data (4 weeks)
 const monthlyBase: MoodPoint[] = [
-  { mood: "Mixed", score: 6, date: "2025-07-01" },
-  { mood: "Happy", score: 7, date: "2025-07-08" },
-  { mood: "Stressed", score: 4, date: "2025-07-15" },
-  { mood: "Energetic", score: 8, date: "2025-07-22" },
+  { mood: "Mixed", score: 6, date: "2025-08-15" },
+  { mood: "Happy", score: 7, date: "2025-08-22" },
+  { mood: "Stressed", score: 4, date: "2025-08-29" },
+  { mood: "Energetic", score: 8, date: "2025-09-05" },
 ];
 
 // Yearly data (12 months)
 const yearlyBase: MoodPoint[] = [
-  { mood: "Calm", score: 5, date: "2025-01-01" },
-  { mood: "Happy", score: 7, date: "2025-02-01" },
-  { mood: "Stressed", score: 4, date: "2025-03-01" },
-  { mood: "Energetic", score: 8, date: "2025-04-01" },
-  { mood: "Tired", score: 3, date: "2025-05-01" },
-  { mood: "Focused", score: 6, date: "2025-06-01" },
-  { mood: "Happy", score: 9, date: "2025-07-01" },
-  { mood: "Low", score: 4, date: "2025-08-01" },
-  { mood: "Motivated", score: 7, date: "2025-09-01" },
-  { mood: "Calm", score: 6, date: "2025-10-01" },
-  { mood: "Anxious", score: 3, date: "2025-11-01" },
-  { mood: "Peaceful", score: 8, date: "2025-12-01" },
+  { mood: "Calm", score: 5, date: "2024-10-01" },
+  { mood: "Happy", score: 7, date: "2024-11-01" },
+  { mood: "Stressed", score: 4, date: "2024-12-01" },
+  { mood: "Energetic", score: 8, date: "2025-01-01" },
+  { mood: "Tired", score: 3, date: "2025-02-01" },
+  { mood: "Focused", score: 6, date: "2025-03-01" },
+  { mood: "Happy", score: 9, date: "2025-04-01" },
+  { mood: "Low", score: 4, date: "2025-05-01" },
+  { mood: "Motivated", score: 7, date: "2025-06-01" },
+  { mood: "Calm", score: 6, date: "2025-07-01" },
+  { mood: "Anxious", score: 3, date: "2025-08-01" },
+  { mood: "Peaceful", score: 8, date: "2025-09-01" },
 ];
 
 export default function MoodScreen() {
@@ -60,9 +60,9 @@ export default function MoodScreen() {
   );
   const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  // Pre-fill with last week's date range
-  const [startDate, setStartDate] = useState<string>("2025-07-22");
-  const [endDate, setEndDate] = useState<string>("2025-07-28");
+  // Pre-fill with updated date range
+  const [startDate, setStartDate] = useState<string>("2025-09-06");
+  const [endDate, setEndDate] = useState<string>("2025-09-12");
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
   const dataset = useMemo(() => {
@@ -190,36 +190,36 @@ export default function MoodScreen() {
   const getTableData = useMemo(() => {
     if (rangeTab === "weekly") {
       return [
-        { date: "22 Jul 2025", mood: "Calm" },
-        { date: "23 Jul 2025", mood: "Tired" },
-        { date: "24 Jul 2025", mood: "Energetic" },
-        { date: "25 Jul 2025", mood: "Happy" },
-        { date: "26 Jul 2025", mood: "Low" },
-        { date: "27 Jul 2025", mood: "Focused" },
-        { date: "28 Jul 2025", mood: "Energetic" },
+        { date: "6 Sep 2025", mood: "Calm" },
+        { date: "7 Sep 2025", mood: "Tired" },
+        { date: "8 Sep 2025", mood: "Energetic" },
+        { date: "9 Sep 2025", mood: "Happy" },
+        { date: "10 Sep 2025", mood: "Low" },
+        { date: "11 Sep 2025", mood: "Focused" },
+        { date: "12 Sep 2025", mood: "Energetic" },
       ];
     } else if (rangeTab === "monthly") {
       return [
-        { date: "1 Jul 2025", mood: "Mixed" },
-        { date: "8 Jul 2025", mood: "Happy" },
-        { date: "15 Jul 2025", mood: "Stressed" },
-        { date: "22 Jul 2025", mood: "Energetic" },
-        { date: "29 Jul 2025", mood: "Calm" },
+        { date: "15 Aug 2025", mood: "Mixed" },
+        { date: "22 Aug 2025", mood: "Happy" },
+        { date: "29 Aug 2025", mood: "Stressed" },
+        { date: "5 Sep 2025", mood: "Energetic" },
+        { date: "12 Sep 2025", mood: "Calm" },
       ];
     } else {
       return [
-        { date: "Jan 2025", mood: "Calm" },
-        { date: "Feb 2025", mood: "Happy" },
-        { date: "Mar 2025", mood: "Stressed" },
-        { date: "Apr 2025", mood: "Energetic" },
-        { date: "May 2025", mood: "Tired" },
-        { date: "Jun 2025", mood: "Focused" },
-        { date: "Jul 2025", mood: "Happy" },
-        { date: "Aug 2025", mood: "Low" },
-        { date: "Sep 2025", mood: "Motivated" },
-        { date: "Oct 2025", mood: "Calm" },
-        { date: "Nov 2025", mood: "Anxious" },
-        { date: "Dec 2025", mood: "Peaceful" },
+        { date: "Oct 2024", mood: "Calm" },
+        { date: "Nov 2024", mood: "Happy" },
+        { date: "Dec 2024", mood: "Stressed" },
+        { date: "Jan 2025", mood: "Energetic" },
+        { date: "Feb 2025", mood: "Tired" },
+        { date: "Mar 2025", mood: "Focused" },
+        { date: "Apr 2025", mood: "Happy" },
+        { date: "May 2025", mood: "Low" },
+        { date: "Jun 2025", mood: "Motivated" },
+        { date: "Jul 2025", mood: "Calm" },
+        { date: "Aug 2025", mood: "Anxious" },
+        { date: "Sep 2025", mood: "Peaceful" },
       ];
     }
   }, [rangeTab]);

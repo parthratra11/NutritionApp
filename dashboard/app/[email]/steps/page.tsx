@@ -8,37 +8,37 @@ import { doc, getDoc } from "firebase/firestore";
 
 // Weekly steps data
 const weeklyStepsData = [
-  { steps: 8400, date: "2025-07-22" },
-  { steps: 8100, date: "2025-07-23" },
-  { steps: 8250, date: "2025-07-24" },
-  { steps: 8550, date: "2025-07-25" },
-  { steps: 9000, date: "2025-07-26" },
-  { steps: 9800, date: "2025-07-27" },
-  { steps: 9400, date: "2025-07-28", highlight: true },
+  { steps: 8400, date: "2025-09-06" },
+  { steps: 8100, date: "2025-09-07" },
+  { steps: 8250, date: "2025-09-08" },
+  { steps: 8550, date: "2025-09-09" },
+  { steps: 9000, date: "2025-09-10" },
+  { steps: 9800, date: "2025-09-11" },
+  { steps: 9400, date: "2025-09-12", highlight: true },
 ];
 
 // Monthly steps data
 const monthlyStepsData = [
-  { steps: 58500, date: "2025-07-01" },
-  { steps: 61200, date: "2025-07-08" },
-  { steps: 59800, date: "2025-07-15" },
-  { steps: 63100, date: "2025-07-22" },
+  { steps: 58500, date: "2025-08-15" },
+  { steps: 61200, date: "2025-08-22" },
+  { steps: 59800, date: "2025-08-29" },
+  { steps: 63100, date: "2025-09-05" },
 ];
 
 // Yearly steps data
 const yearlyStepsData = [
-  { steps: 245000, date: "2025-01-01" },
-  { steps: 228000, date: "2025-02-01" },
-  { steps: 267000, date: "2025-03-01" },
-  { steps: 252000, date: "2025-04-01" },
-  { steps: 274000, date: "2025-05-01" },
-  { steps: 259000, date: "2025-06-01" },
-  { steps: 282000, date: "2025-07-01" },
-  { steps: 268000, date: "2025-08-01" },
-  { steps: 255000, date: "2025-09-01" },
-  { steps: 271000, date: "2025-10-01" },
-  { steps: 248000, date: "2025-11-01" },
-  { steps: 263000, date: "2025-12-01" },
+  { steps: 245000, date: "2024-10-01" },
+  { steps: 228000, date: "2024-11-01" },
+  { steps: 267000, date: "2024-12-01" },
+  { steps: 252000, date: "2025-01-01" },
+  { steps: 274000, date: "2025-02-01" },
+  { steps: 259000, date: "2025-03-01" },
+  { steps: 282000, date: "2025-04-01" },
+  { steps: 268000, date: "2025-05-01" },
+  { steps: 255000, date: "2025-06-01" },
+  { steps: 271000, date: "2025-07-01" },
+  { steps: 248000, date: "2025-08-01" },
+  { steps: 263000, date: "2025-09-01" },
 ];
 
 export default function StepsScreen() {
@@ -51,9 +51,9 @@ export default function StepsScreen() {
   );
   const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  // Pre-fill with last week's date range
-  const [startDate, setStartDate] = useState<string>("2025-07-22");
-  const [endDate, setEndDate] = useState<string>("2025-07-28");
+  // Pre-fill with updated date range
+  const [startDate, setStartDate] = useState<string>("2025-09-06");
+  const [endDate, setEndDate] = useState<string>("2025-09-12");
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>("User"); // Add userName state
 
@@ -97,35 +97,35 @@ export default function StepsScreen() {
   const getTableData = useMemo(() => {
     if (rangeTab === "weekly") {
       return [
-        { date: "28 Jul 2025", steps: 9400, change: "+600" },
-        { date: "27 Jul 2025", steps: 9800, change: "+200" },
-        { date: "26 Jul 2025", steps: 9000, change: "+450" },
-        { date: "25 Jul 2025", steps: 8550, change: "+300" },
-        { date: "24 Jul 2025", steps: 8250, change: "+150" },
-        { date: "23 Jul 2025", steps: 8100, change: "-300" },
-        { date: "22 Jul 2025", steps: 8400, change: "+200" },
+        { date: "12 Sep 2025", steps: 9400, change: "+600" },
+        { date: "11 Sep 2025", steps: 9800, change: "+200" },
+        { date: "10 Sep 2025", steps: 9000, change: "+450" },
+        { date: "9 Sep 2025", steps: 8550, change: "+300" },
+        { date: "8 Sep 2025", steps: 8250, change: "+150" },
+        { date: "7 Sep 2025", steps: 8100, change: "-300" },
+        { date: "6 Sep 2025", steps: 8400, change: "+200" },
       ];
     } else if (rangeTab === "monthly") {
       return [
-        { date: "Week 4 Jul 2025", steps: 63100, change: "+3300" },
-        { date: "Week 3 Jul 2025", steps: 59800, change: "-1400" },
-        { date: "Week 2 Jul 2025", steps: 61200, change: "+2700" },
-        { date: "Week 1 Jul 2025", steps: 58500, change: "+1200" },
+        { date: "Week 1 Sep 2025", steps: 63100, change: "+3300" },
+        { date: "Week 4 Aug 2025", steps: 59800, change: "-1400" },
+        { date: "Week 3 Aug 2025", steps: 61200, change: "+2700" },
+        { date: "Week 2 Aug 2025", steps: 58500, change: "+1200" },
       ];
     } else {
       return [
-        { date: "Dec 2025", steps: 263000, change: "+15000" },
-        { date: "Nov 2025", steps: 248000, change: "-23000" },
-        { date: "Oct 2025", steps: 271000, change: "+16000" },
-        { date: "Sep 2025", steps: 255000, change: "-13000" },
-        { date: "Aug 2025", steps: 268000, change: "-14000" },
-        { date: "Jul 2025", steps: 282000, change: "+23000" },
-        { date: "Jun 2025", steps: 259000, change: "-15000" },
-        { date: "May 2025", steps: 274000, change: "+22000" },
-        { date: "Apr 2025", steps: 252000, change: "-15000" },
-        { date: "Mar 2025", steps: 267000, change: "+39000" },
-        { date: "Feb 2025", steps: 228000, change: "-17000" },
-        { date: "Jan 2025", steps: 245000, change: "+12000" },
+        { date: "Sep 2025", steps: 263000, change: "+15000" },
+        { date: "Aug 2025", steps: 248000, change: "-23000" },
+        { date: "Jul 2025", steps: 271000, change: "+16000" },
+        { date: "Jun 2025", steps: 255000, change: "-13000" },
+        { date: "May 2025", steps: 268000, change: "-14000" },
+        { date: "Apr 2025", steps: 282000, change: "+23000" },
+        { date: "Mar 2025", steps: 259000, change: "-15000" },
+        { date: "Feb 2025", steps: 274000, change: "+22000" },
+        { date: "Jan 2025", steps: 252000, change: "-15000" },
+        { date: "Dec 2024", steps: 267000, change: "+39000" },
+        { date: "Nov 2024", steps: 228000, change: "-17000" },
+        { date: "Oct 2024", steps: 245000, change: "+12000" },
       ];
     }
   }, [rangeTab]);
