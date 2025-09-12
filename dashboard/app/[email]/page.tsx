@@ -97,6 +97,21 @@ export default function ClientOverview() {
       "Seated DB Lateral Raise",
     ],
   });
+
+  // Add new state for weight and nutrition from Firebase
+  const [weightFromFirebase, setWeightFromFirebase] = useState<{
+    weight: string;
+    timestamp: string;
+  } | null>(null);
+  
+  const [nutritionFromFirebase, setNutritionFromFirebase] = useState<{
+    protein: number;
+    carbs: number;
+    fat: number;
+    calories: number;
+    dayType: string;
+  } | null>(null);
+
   useEffect(() => {
     const fetchClientData = async () => {
       if (!params?.email) return;
@@ -123,6 +138,135 @@ export default function ClientOverview() {
 
     fetchClientData();
   }, [params?.email]);
+
+  // New useEffect to fetch weight data based on selected date
+  useEffect(() => {
+    const fetchWeightData = async () => {
+      if (!params?.email) return;
+
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        // Fetch weekly forms containing weight data
+        const weeklyDocRef = doc(db, "weeklyForms", decodedEmail);
+        const weeklyDocSnap = await getDoc(weeklyDocRef);
+
+        if (weeklyDocSnap.exists()) {
+          const data = weeklyDocSnap.data();
+          
+          // Convert selectedDate to YYYY-MM-DD format for comparison
+          const dateStr = selectedDate.toISOString().split('T')[0];
+          
+          // Find weight entry matching the selected date
+          let foundWeight = null;
+          
+          Object.entries(data).forEach(([weekKey, weekData]) => {
+            if (weekKey === "firstEntryDate") return;
+            
+            const weekObj = weekData as any;
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            
+            days.forEach(day => {
+              const dayData = weekObj[day];
+              if (dayData && dayData.timestamp && dayData.timestamp.includes(dateStr)) {
+                foundWeight = {
+                  weight: dayData.weight,
+                  timestamp: dayData.timestamp
+                };
+              }
+            });
+          });
+          
+          if (foundWeight) {
+            setWeightFromFirebase(foundWeight);
+            setWeightData({
+              weight: parseFloat(foundWeight.weight),
+              unit: "Kg"
+            });
+          } else {
+            // Reset to mock data if no data found for selected date
+            setWeightFromFirebase(null);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching weight data:", err);
+      }
+    };
+    
+    fetchWeightData();
+  }, [selectedDate, params?.email]);
+
+  // New useEffect to fetch nutrition data based on selected date
+  useEffect(() => {
+    const fetchNutritionData = async () => {
+      if (!params?.email) return;
+
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        // Fetch nutrition data
+        const nutritionDocRef = doc(db, "nutrition", decodedEmail);
+        const nutritionDocSnap = await getDoc(nutritionDocRef);
+
+        if (nutritionDocSnap.exists()) {
+          const data = nutritionDocSnap.data();
+          
+          // Convert selectedDate to YYYY-MM-DD format for comparison
+          const dateStr = selectedDate.toISOString().split('T')[0];
+          
+          // Find nutrition entry matching the selected date
+          let foundNutrition = null;
+          
+          Object.entries(data).forEach(([key, value]) => {
+            if (key === "firstEntryDate") return;
+            
+            const weekData = value as any;
+            Object.entries(weekData).forEach(([day, dayData]) => {
+              if (dayData.date && dayData.date.includes(dateStr)) {
+                foundNutrition = {
+                  protein: dayData.totals["Protein (g)"],
+                  carbs: dayData.totals["Carbohydrate (g)"],
+                  fat: dayData.totals["Fat (g)"],
+                  calories: dayData.totals.Kcal,
+                  dayType: dayData.dayType
+                };
+              }
+            });
+          });
+          
+          if (foundNutrition) {
+            setNutritionFromFirebase(foundNutrition);
+            setNutritionData({
+              protein: { 
+                actual: foundNutrition.protein, 
+                target: 165.0, 
+                unit: "g" 
+              },
+              fat: { 
+                actual: foundNutrition.fat, 
+                target: 73.0, 
+                unit: "g" 
+              },
+              carbs: { 
+                actual: foundNutrition.carbs, 
+                target: 220.0, 
+                unit: "g" 
+              },
+              calories: { 
+                actual: foundNutrition.calories, 
+                unit: "Kcal" 
+              }
+            });
+          } else {
+            // Reset to mock data if no data found for selected date
+            setNutritionFromFirebase(null);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching nutrition data:", err);
+      }
+    };
+    
+    fetchNutritionData();
+  }, [selectedDate, params?.email]);
 
   // Side menu items
   const menuItems = [
@@ -601,7 +745,26 @@ export default function ClientOverview() {
 
   useEffect(() => {
     const fetchClientData = async () => {
-      // ...existing code...
+      if (!params?.email) return;
+
+      try {
+        const decodedEmail = decodeURIComponent(params.email as string);
+        const clientDocRef = doc(db, "intakeForms", decodedEmail);
+        const clientDocSnap = await getDoc(clientDocRef);
+
+        if (clientDocSnap.exists()) {
+          const clientData = clientDocSnap.data() as IntakeForm;
+          setClient(clientData);
+          setUserName(clientData.fullName || "Aria Michele");
+        } else {
+          setError("Client not found");
+        }
+      } catch (err) {
+        setError("Failed to fetch client data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchClientData();
@@ -771,11 +934,7 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
-            <div className="flex justify-between mt-1.5 w-full h-full items-center">
+            <div className="mt-1.5 flex w-full h-full items-center">
               {/* Sleep Hours - Left Side */}
               <div>
                 <div className="flex items-end">
@@ -792,14 +951,14 @@ export default function ClientOverview() {
               </div>
 
               {/* Sleep Quality - Right Side */}
-              <div className="text-right">
+              <div className="text-right ml-auto">
                 <div className="text-xl font-semibold">{sleepData.quality}</div>
                 <div className="text-[9px] text-gray-400">Sleep Quality</div>
               </div>
             </div>
           </div>
 
-          {/* Weight Card */}
+          {/* Weight Card - Updated to show Firebase data when available */}
           <div
             className="col-span-6 bg-[#FFFFFF1A] backdrop-blur-xl rounded-xl p-2.5 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/weight`)}
@@ -832,10 +991,6 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-2.5 right-2.5 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
             <div className="mt-2 flex w-full h-full items-center">
               <span className="text-3xl leading-none font-semibold">
                 {weightData.weight}
@@ -844,7 +999,7 @@ export default function ClientOverview() {
             </div>
           </div>
 
-          {/* Nutrition Card */}
+          {/* Nutrition Card - Updated to show Firebase data when available */}
           <div
             className="col-span-12 bg-[#FFFFFF1A]  backdrop-blur-xl rounded-xl p-4 relative cursor-pointer shadow-[-2px_6px_22.6px_-3px_#00000040]"
             onClick={() => router.push(`/${params.email}/nutrition`)}
@@ -875,10 +1030,6 @@ export default function ClientOverview() {
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
-
-            <div className="absolute top-4 right-4 text-sm text-gray-400">
-              {formatSelectedDate()}
             </div>
 
             <div className="grid grid-cols-4 gap-4 mt-2 w-full h-full items-center">
@@ -1010,15 +1161,11 @@ export default function ClientOverview() {
               </svg>
             </div>
 
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
-            </div>
-
             <div className="mt-2 flex w-full h-full items-center">
               <div className="text-3xl font-semibold">
                 {stepsData.actual.toLocaleString()}
               </div>
-              <div className="text-[10px] text-gray-400 mt-1">
+              <div className="text-[10px] text-gray-400 mt-1 ml-2">
                 {stepsData.target.toLocaleString()} Steps
               </div>
             </div>
@@ -1055,10 +1202,6 @@ export default function ClientOverview() {
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
-
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
             </div>
 
             <div className="mt-2 flex w-full h-full items-center">
@@ -1117,10 +1260,6 @@ export default function ClientOverview() {
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
-
-            <div className="absolute top-3 right-3 text-[10px] text-gray-400">
-              {formatSelectedDate()}
             </div>
 
             <ul className="text-xs space-y-1 pt-2">
