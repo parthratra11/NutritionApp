@@ -1,7 +1,7 @@
 "use client";
 
 import Navigation from "@/components/shared/Navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
@@ -488,60 +488,110 @@ export default function WorkoutDashboard() {
     },
   ];
 
-  // Filter workout history based on search, filter, and date range
-  const filteredWorkoutHistory = workoutHistory.reverse().filter((workout) => {
-    const matchesSearch =
-      workout.date.toLowerCase().includes(search.toLowerCase()) ||
-      workout.session.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter =
-      filter === "All Sessions" || workout.session === filter;
+  // Add this helper function after the workoutHistory array
+  const parseDateString = (dateStr: string): Date => {
+    // Parse "15 Jul 2025" format to Date object
+    const months: { [key: string]: number } = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
 
-    // Enhanced date filtering
-    let matchesDateFilter = true;
-    if (dateFilter !== "all") {
-      const workoutDate = new Date(workout.date);
-      const now = new Date();
-
-      if (dateFilter === "custom") {
-        if (customStartDate && customEndDate) {
-          // Custom date range
-          const startDate = new Date(customStartDate);
-          const endDate = new Date(customEndDate);
-          endDate.setHours(23, 59, 59, 999); // Include the entire end date
-          matchesDateFilter =
-            workoutDate >= startDate && workoutDate <= endDate;
-        } else if (selectedSingleDate) {
-          // Single date selection
-          const selectedDate = new Date(selectedSingleDate);
-          const nextDay = new Date(selectedDate);
-          nextDay.setDate(nextDay.getDate() + 1);
-          matchesDateFilter =
-            workoutDate >= selectedDate && workoutDate < nextDay;
-        } else {
-          matchesDateFilter = true; // No custom filter applied
-        }
-      } else {
-        const cutoffDate = new Date();
-        switch (dateFilter) {
-          case "weekly":
-            cutoffDate.setDate(now.getDate() - 7);
-            break;
-          case "monthly":
-            cutoffDate.setMonth(now.getMonth() - 1);
-            break;
-          case "quarterly":
-            cutoffDate.setMonth(now.getMonth() - 3);
-            break;
-          case "yearly":
-            cutoffDate.setFullYear(now.getFullYear() - 1);
-            break;
-        }
-        matchesDateFilter = workoutDate >= cutoffDate;
-      }
+    const parts = dateStr.split(" ");
+    if (parts.length === 3) {
+      const day = parseInt(parts[0]);
+      const month = months[parts[1]];
+      const year = parseInt(parts[2]);
+      return new Date(year, month, day);
     }
+    return new Date(dateStr); // Fallback to default parsing
+  };
 
-    return matchesSearch && matchesFilter && matchesDateFilter;
-  });
+  // Add this helper function after the parseDateString function
+  const formatDateToWorkoutFormat = (dateStr: string): string => {
+    // Convert YYYY-MM-DD to "DD MMM YYYY" format to match workout history
+    const date = new Date(dateStr + "T00:00:00"); // Add time to avoid timezone issues
+    const day = date.getDate();
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  };
+
+  // Filter workout history based on search, filter, and date range
+  const filteredWorkoutHistory = useMemo(() => {
+    return [...workoutHistory].reverse().filter((workout) => {
+      const matchesSearch =
+        workout.date.toLowerCase().includes(search.toLowerCase()) ||
+        workout.session.toLowerCase().includes(search.toLowerCase());
+      const matchesFilter =
+        filter === "All Sessions" || workout.session === filter;
+
+      // Enhanced date filtering
+      let matchesDateFilter = true;
+      if (dateFilter !== "all") {
+        if (dateFilter === "custom") {
+          if (customStartDate && customEndDate) {
+            // Custom date range - convert input dates to workout format for comparison
+            const startFormatted = formatDateToWorkoutFormat(customStartDate);
+            const endFormatted = formatDateToWorkoutFormat(customEndDate);
+            const startDate = parseDateString(startFormatted);
+            const endDate = parseDateString(endFormatted);
+            const workoutDate = parseDateString(workout.date);
+
+            endDate.setHours(23, 59, 59, 999); // Include the entire end date
+            matchesDateFilter =
+              workoutDate >= startDate && workoutDate <= endDate;
+          } else if (selectedSingleDate) {
+            // Single date selection - convert input date to workout format for exact comparison
+            const selectedFormatted =
+              formatDateToWorkoutFormat(selectedSingleDate);
+            matchesDateFilter = workout.date === selectedFormatted;
+          } else {
+            matchesDateFilter = true; // No custom filter applied
+          }
+        } else {
+          const workoutDate = parseDateString(workout.date);
+          const now = new Date();
+          const cutoffDate = new Date();
+
+          switch (dateFilter) {
+            case "weekly":
+              cutoffDate.setDate(now.getDate() - 7);
+              break;
+            case "monthly":
+              cutoffDate.setMonth(now.getMonth() - 1);
+              break;
+            case "quarterly":
+              cutoffDate.setMonth(now.getMonth() - 3);
+              break;
+            case "yearly":
+              cutoffDate.setFullYear(now.getFullYear() - 1);
+              break;
+          }
+          matchesDateFilter = workoutDate >= cutoffDate;
+        }
+      }
+
+      return matchesSearch && matchesFilter && matchesDateFilter;
+    });
+  }, [
+    search,
+    filter,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    selectedSingleDate,
+  ]);
 
   // Helper function to get status class
   const getSessionStatusClass = (session: string, completed: boolean) => {

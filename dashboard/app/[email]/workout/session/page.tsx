@@ -37,37 +37,37 @@ export default function WorkoutSessionPage() {
   const [sessionName, setSessionName] = useState<string>(sessionType);
   const email = params.email as string;
 
-  // Mock workout dates - different for each session type
+  // Mock workout dates - different for each session type with updated date format
   const getWorkoutDates = (sessionType: string) => {
     switch (sessionType) {
       case "Session A":
         return [
           {
-            date: "8 July 2025",
+            date: "12 Sep 2025",
             time: "08:00 AM - 09:30 AM",
             note: "New PR on hip thrusts, felt amazing",
             warmupCompleted: true,
           },
           {
-            date: "1 July 2025",
+            date: "9 Sep 2025",
             time: "08:00 AM - 09:30 AM",
             note: "Shoulder press felt strong today, increased weight",
             warmupCompleted: true,
           },
           {
-            date: "24 June 2025",
+            date: "6 Sep 2025",
             time: "08:00 AM - 09:30 AM",
             note: "Recovery was good since last session",
             warmupCompleted: false,
           },
           {
-            date: "17 June 2025",
+            date: "3 Sep 2025",
             time: "08:00 AM - 09:30 AM",
             note: "Great leg day, focused on hip thrusts and squat form",
             warmupCompleted: true,
           },
           {
-            date: "10 June 2025",
+            date: "30 Aug 2025",
             time: "08:00 AM - 09:30 AM",
             note: "First week back, taking it easy",
             warmupCompleted: true,
@@ -76,31 +76,31 @@ export default function WorkoutSessionPage() {
       case "Session B":
         return [
           {
-            date: "9 July 2025",
+            date: "11 Sep 2025",
             time: "06:00 PM - 07:30 PM",
             note: "Chest and back feeling strong, great session",
             warmupCompleted: true,
           },
           {
-            date: "2 July 2025",
+            date: "8 Sep 2025",
             time: "06:00 PM - 07:30 PM",
             note: "Upper body focus, good pump today",
             warmupCompleted: true,
           },
           {
-            date: "25 June 2025",
+            date: "5 Sep 2025",
             time: "06:00 PM - 07:30 PM",
             note: "Felt tired but pushed through all sets",
             warmupCompleted: true,
           },
           {
-            date: "18 June 2025",
+            date: "2 Sep 2025",
             time: "06:00 PM - 07:30 PM",
             note: "First time doing this routine, felt challenging",
             warmupCompleted: false,
           },
           {
-            date: "11 June 2025",
+            date: "29 Aug 2025",
             time: "06:00 PM - 07:30 PM",
             note: "Getting used to the new upper body routine",
             warmupCompleted: true,
@@ -109,31 +109,31 @@ export default function WorkoutSessionPage() {
       case "Session C":
         return [
           {
-            date: "10 July 2025",
+            date: "10 Sep 2025",
             time: "07:00 AM - 08:15 AM",
             note: "Deadlifts feeling heavier but form is perfect",
             warmupCompleted: true,
           },
           {
-            date: "3 July 2025",
+            date: "7 Sep 2025",
             time: "07:00 AM - 08:15 AM",
             note: "Perfect form on all movements today",
             warmupCompleted: true,
           },
           {
-            date: "26 June 2025",
+            date: "4 Sep 2025",
             time: "07:00 AM - 08:15 AM",
             note: "Lower body strength improving consistently",
             warmupCompleted: true,
           },
           {
-            date: "19 June 2025",
+            date: "1 Sep 2025",
             time: "07:00 AM - 08:15 AM",
             note: "Good session, felt energized throughout",
             warmupCompleted: true,
           },
           {
-            date: "12 June 2025",
+            date: "28 Aug 2025",
             time: "07:00 AM - 08:15 AM",
             note: "Learning proper Romanian deadlift technique",
             warmupCompleted: false,

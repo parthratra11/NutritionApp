@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -151,13 +151,16 @@ export default function NutritionPage() {
     formattedDate: "",
   });
 
-  // Define target values for each nutrient with proper decimal formatting
-  const targets = {
-    protein: 150.0,
-    carbs: 200.0,
-    fat: 70.0,
-    calories: 2000,
-  };
+  // Define target values for each nutrient with proper decimal formatting - memoize to prevent re-creation
+  const targets = useMemo(
+    () => ({
+      protein: 150.0,
+      carbs: 200.0,
+      fat: 70.0,
+      calories: 2000,
+    }),
+    []
+  );
 
   // Current macro data based on most recent day
   const [macroData, setMacroData] = useState<{
@@ -657,50 +660,6 @@ export default function NutritionPage() {
             date: date,
             formattedDate: formatDate(date),
           };
-
-          // Update the macro data with selected date's values
-          setMacroData({
-            protein: {
-              value: dayData.totals["Protein (g)"],
-              target: targets.protein,
-              percentage: Math.round(
-                (dayData.totals["Protein (g)"] / targets.protein) * 100
-              ),
-              status: getStatusFromPercentage(
-                (dayData.totals["Protein (g)"] / targets.protein) * 100
-              ),
-            },
-            carbs: {
-              value: dayData.totals["Carbohydrate (g)"],
-              target: targets.carbs,
-              percentage: Math.round(
-                (dayData.totals["Carbohydrate (g)"] / targets.carbs) * 100
-              ),
-              status: getStatusFromPercentage(
-                (dayData.totals["Carbohydrate (g)"] / targets.carbs) * 100
-              ),
-            },
-            fats: {
-              value: dayData.totals["Fat (g)"],
-              target: targets.fat,
-              percentage: Math.round(
-                (dayData.totals["Fat (g)"] / targets.fat) * 100
-              ),
-              status: getStatusFromPercentage(
-                (dayData.totals["Fat (g)"] / targets.fat) * 100
-              ),
-            },
-            calories: {
-              value: dayData.totals.Kcal,
-              target: targets.calories,
-              percentage: Math.round(
-                (dayData.totals.Kcal / targets.calories) * 100
-              ),
-              status: getStatusFromPercentage(
-                (dayData.totals.Kcal / targets.calories) * 100
-              ),
-            },
-          });
         }
       });
     });
@@ -708,9 +667,43 @@ export default function NutritionPage() {
     // If data is found for the selected date, update state
     if (foundData) {
       setSelectedDateNutrition(foundData);
+
+      // Update the macro data with selected date's values
+      setMacroData({
+        protein: {
+          value: foundData.protein,
+          target: targets.protein,
+          percentage: Math.round((foundData.protein / targets.protein) * 100),
+          status: getStatusFromPercentage(
+            (foundData.protein / targets.protein) * 100
+          ),
+        },
+        carbs: {
+          value: foundData.carbs,
+          target: targets.carbs,
+          percentage: Math.round((foundData.carbs / targets.carbs) * 100),
+          status: getStatusFromPercentage(
+            (foundData.carbs / targets.carbs) * 100
+          ),
+        },
+        fats: {
+          value: foundData.fats,
+          target: targets.fat,
+          percentage: Math.round((foundData.fats / targets.fat) * 100),
+          status: getStatusFromPercentage((foundData.fats / targets.fat) * 100),
+        },
+        calories: {
+          value: foundData.calories,
+          target: targets.calories,
+          percentage: Math.round((foundData.calories / targets.calories) * 100),
+          status: getStatusFromPercentage(
+            (foundData.calories / targets.calories) * 100
+          ),
+        },
+      });
     } else {
       // Set default values when no data is available for the selected date
-      setSelectedDateNutrition({
+      const defaultNutrition = {
         protein: 0,
         carbs: 0,
         fats: 0,
@@ -718,7 +711,9 @@ export default function NutritionPage() {
         dayType: "No Data",
         date: dateStr,
         formattedDate: formatDate(dateStr),
-      });
+      };
+
+      setSelectedDateNutrition(defaultNutrition);
 
       // Reset macro data to zeros if no data exists for the date
       setMacroData({
