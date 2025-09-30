@@ -199,6 +199,23 @@ export default function CircumferenceScreen() {
   const CircumferenceTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      // Find previous data point for percent change
+      const allData = getCircumferenceData();
+      const idx = allData.findIndex(
+        (d: any) =>
+          (rangeTab === "yearly" ? d.label : d.formattedDate) ===
+          (rangeTab === "yearly" ? label : data.formattedDate)
+      );
+      const prev = idx < allData.length - 1 ? allData[idx + 1] : null;
+      const waistChange =
+        prev && prev.waist
+          ? (((data.waist - prev.waist) / prev.waist) * 100).toFixed(2)
+          : null;
+      const hipChange =
+        prev && prev.hip
+          ? (((data.hip - prev.hip) / prev.hip) * 100).toFixed(2)
+          : null;
+
       return (
         <div className="bg-gray-900 text-white p-3 rounded-lg shadow-lg border border-gray-700">
           <p className="font-medium">
@@ -210,6 +227,18 @@ export default function CircumferenceScreen() {
             <p key={entry.dataKey} style={{ color: entry.color }}>
               <strong>{entry.dataKey === "waist" ? "Waist" : "Hip"}:</strong>{" "}
               {entry.value} cm
+              {entry.dataKey === "waist" && waistChange !== null && (
+                <span className="ml-2 text-xs text-gray-300">
+                  ({waistChange > 0 ? "+" : ""}
+                  {waistChange}%)
+                </span>
+              )}
+              {entry.dataKey === "hip" && hipChange !== null && (
+                <span className="ml-2 text-xs text-gray-300">
+                  ({hipChange > 0 ? "+" : ""}
+                  {hipChange}%)
+                </span>
+              )}
             </p>
           ))}
         </div>
@@ -584,6 +613,8 @@ export default function CircumferenceScreen() {
                     </th>
                     <th className="py-3 pr-4 font-medium">Waist Change</th>
                     <th className="py-3 pr-4 font-medium">Hip Change</th>
+                    <th className="py-3 pr-4 font-medium">Waist % Change</th>
+                    <th className="py-3 pr-4 font-medium">Hip % Change</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -598,6 +629,20 @@ export default function CircumferenceScreen() {
                       const hipChange = nextItem
                         ? (item.hip - nextItem.hip).toFixed(1)
                         : null;
+                      const waistPercent =
+                        nextItem && nextItem.waist
+                          ? (
+                              ((item.waist - nextItem.waist) / nextItem.waist) *
+                              100
+                            ).toFixed(2)
+                          : null;
+                      const hipPercent =
+                        nextItem && nextItem.hip
+                          ? (
+                              ((item.hip - nextItem.hip) / nextItem.hip) *
+                              100
+                            ).toFixed(2)
+                          : null;
 
                       return (
                         <tr
@@ -646,6 +691,42 @@ export default function CircumferenceScreen() {
                               >
                                 {parseFloat(hipChange) > 0 ? "+" : ""}
                                 {hipChange} cm
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {waistPercent ? (
+                              <span
+                                className={
+                                  parseFloat(waistPercent) > 0
+                                    ? "text-red-500"
+                                    : parseFloat(waistPercent) < 0
+                                    ? "text-green-500"
+                                    : "text-gray-400"
+                                }
+                              >
+                                {parseFloat(waistPercent) > 0 ? "+" : ""}
+                                {waistPercent}%
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {hipPercent ? (
+                              <span
+                                className={
+                                  parseFloat(hipPercent) > 0
+                                    ? "text-red-500"
+                                    : parseFloat(hipPercent) < 0
+                                    ? "text-green-500"
+                                    : "text-gray-400"
+                                }
+                              >
+                                {parseFloat(hipPercent) > 0 ? "+" : ""}
+                                {hipPercent}%
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>

@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Navigation from "@/components/shared/Navigation";
-import { db } from "../../../firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
 
 // Weekly steps data
 const weeklyStepsData = [
@@ -42,20 +38,14 @@ const yearlyStepsData = [
 ];
 
 export default function StepsScreen() {
-  const params = useParams();
-  const router = useRouter();
-  const email = params.email as string;
-  const [viewMode, setViewMode] = useState<"graphs" | "tabular">("graphs");
-  const [rangeTab, setRangeTab] = useState<"weekly" | "monthly" | "yearly">(
-    "weekly"
-  );
-  const [comparisonPeriod, setComparisonPeriod] = useState<string>("all");
+  const [viewMode, setViewMode] = useState("graphs");
+  const [rangeTab, setRangeTab] = useState("weekly");
+  const [comparisonPeriod, setComparisonPeriod] = useState("all");
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  // Pre-fill with updated date range
-  const [startDate, setStartDate] = useState<string>("2025-09-06");
-  const [endDate, setEndDate] = useState<string>("2025-09-12");
+  const [startDate, setStartDate] = useState("2025-09-06");
+  const [endDate, setEndDate] = useState("2025-09-12");
   const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("User"); // Add userName state
+  const [userName, setUserName] = useState("User");
 
   // Get current dataset based on range
   const currentStepsData = useMemo(() => {
@@ -77,18 +67,17 @@ export default function StepsScreen() {
     return baseData;
   }, [rangeTab, startDate, endDate]);
 
-  // Helper function to format date for display (consistent format)
-  const formatDateForDisplay = (dateStr: string) => {
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr) => {
     const date = new Date(dateStr);
     const day = date.getDate();
     const month = date.toLocaleDateString("en-US", { month: "short" });
     const year = date.getFullYear();
-
     return `${day} ${month} ${year}`;
   };
 
-  // Helper function to format date input value for display in the date range section
-  const formatDateRangeDisplay = (dateStr: string) => {
+  // Helper function to format date input value for display
+  const formatDateRangeDisplay = (dateStr) => {
     if (!dateStr) return "";
     return formatDateForDisplay(dateStr);
   };
@@ -130,26 +119,6 @@ export default function StepsScreen() {
     }
   }, [rangeTab]);
 
-  // Fetch client name
-  useEffect(() => {
-    const fetchClientName = async () => {
-      if (!params?.email) return;
-      try {
-        const clientEmail = decodeURIComponent(params.email as string);
-        const clientDocRef = doc(db, "intakeForms", clientEmail);
-        const clientDocSnap = await getDoc(clientDocRef);
-        if (clientDocSnap.exists()) {
-          const clientData = clientDocSnap.data();
-          setUserName(clientData.fullName || "User");
-        }
-      } catch (err) {
-        console.error("Failed to fetch client name:", err);
-      }
-    };
-
-    fetchClientName();
-  }, [params?.email]);
-
   // Simulate data loading
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -157,68 +126,6 @@ export default function StepsScreen() {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
-
-  // Simple calendar component
-  const Calendar = ({
-    onSelect,
-    onClose,
-  }: {
-    onSelect: (date: string) => void;
-    onClose: () => void;
-  }) => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const monthName = new Date(currentYear, currentMonth).toLocaleString(
-      "default",
-      { month: "long" }
-    );
-
-    const handleSelect = (day: number) => {
-      const formattedDate = `${monthName} ${day}, ${currentYear}`;
-      onSelect(formattedDate);
-      onClose();
-    };
-
-    return (
-      <div className="absolute top-full left-0 z-10 mt-1 bg-[#0E1F34] border border-[#22364F] rounded-lg shadow-lg p-3 w-64">
-        <div className="flex justify-between items-center mb-2">
-          <div className="font-medium">
-            {monthName} {currentYear}
-          </div>
-          <button onClick={onClose} className="text-gray-400">
-            ×
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-            <div key={day} className="text-center text-xs text-gray-400">
-              {day}
-            </div>
-          ))}
-          {Array(firstDayOfMonth)
-            .fill(null)
-            .map((_, i) => (
-              <div key={`empty-${i}`} className="h-7"></div>
-            ))}
-          {days.map((day) => (
-            <button
-              key={day}
-              onClick={() => handleSelect(day)}
-              className="h-7 w-7 rounded-full hover:bg-[#DD3333] flex items-center justify-center text-sm"
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   // Calculate min and max for chart scaling
   const { minSteps, maxSteps } = useMemo(() => {
@@ -235,14 +142,12 @@ export default function StepsScreen() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#07172C] text-white">
-        <Navigation
-          title="Workout"
-          subtitle="Track your steps progress"
-          email={decodeURIComponent(email)}
-          userName={userName}
-        />
-        <div className="px-4 py-6 flex justify-center items-center h-64">
-          <p>Loading steps data...</p>
+        <div className="px-4 py-6">
+          <h1 className="text-2xl font-bold mb-2">Steps</h1>
+          <p className="text-gray-400 mb-6">Track your steps progress</p>
+          <div className="flex justify-center items-center h-64">
+            <p>Loading steps data...</p>
+          </div>
         </div>
       </div>
     );
@@ -250,17 +155,13 @@ export default function StepsScreen() {
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
-      {/* Use the shared Navigation component */}
-      <Navigation
-        title="Steps"
-        subtitle="Track your steps progress"
-        email={decodeURIComponent(email)}
-        userName={userName}
-      />
+      {/* Header */}
+      <div className="px-4 py-6">
+        <h1 className="text-2xl font-bold mb-2">Steps</h1>
+        <p className="text-gray-400 mb-6">Track your steps progress</p>
 
-      <div className="px-4 py-6 space-y-8">
         {/* Period Selection and View Mode Toggle */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-6">
           <div className="flex">
             <button
               onClick={() => setViewMode("graphs")}
@@ -318,28 +219,6 @@ export default function StepsScreen() {
 
             {isPeriodDropdownOpen && (
               <div className="absolute z-10 mt-1 w-full bg-[#142437] border border-[#22364F] rounded-lg shadow-lg overflow-hidden">
-                {/*
-                  { id: "all", label: "All Time" },
-                  { id: "yearly", label: "Past Year" },
-                  { id: "quarterly", label: "Past Quarter" },
-                  { id: "monthly", label: "Past Month" },
-                  { id: "weekly", label: "Past Week" },
-                  { id: "custom", label: "Custom" },
-                ].map((period) => (
-                  <button
-                    key={period.id}
-                    onClick={() => {
-                      setComparisonPeriod(period.id);
-                      setIsPeriodDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#22364F] ${
-                      comparisonPeriod === period.id ? "bg-[#22364F]" : ""
-                    }`}
-                  >
-                    {period.label}
-                  </button>
-                ))}
-              */}
                 <button
                   onClick={() => {
                     setComparisonPeriod("all");
@@ -411,9 +290,9 @@ export default function StepsScreen() {
           </div>
         </div>
 
-        {/* Custom Date Range Selector - Only show when custom is selected */}
+        {/* Custom Date Range Selector */}
         {comparisonPeriod === "custom" && (
-          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-4">
+          <div className="bg-[#142437] border border-[#22364F] rounded-lg p-4 mb-6">
             <h3 className="text-sm font-medium text-gray-300 mb-3">
               Custom Date Range
             </h3>
@@ -449,8 +328,8 @@ export default function StepsScreen() {
                 </span>
                 <button
                   onClick={() => {
-                    setStartDate("2025-07-22");
-                    setEndDate("2025-07-28");
+                    setStartDate("2025-09-06");
+                    setEndDate("2025-09-12");
                   }}
                   className="text-sm text-[#DD3333] hover:text-[#FF4444]"
                 >
@@ -547,7 +426,6 @@ export default function StepsScreen() {
               </div>
             </div>
           ) : (
-            // Tabular view
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -555,31 +433,60 @@ export default function StepsScreen() {
                     <th className="py-3 pr-4 font-medium">Date</th>
                     <th className="py-3 pr-4 font-medium">Steps</th>
                     <th className="py-3 pr-4 font-medium">Change</th>
+                    <th className="py-3 pr-4 font-medium">% Change</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {getTableData.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-[#20354A] last:border-0"
-                    >
-                      <td className="py-3 pr-4">{item.date}</td>
-                      <td className="py-3 pr-4">
-                        {item.steps.toLocaleString()}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <span
-                          className={
-                            item.change.startsWith("+")
-                              ? "text-green-500"
-                              : "text-red-500"
-                          }
-                        >
-                          {item.change}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {getTableData.map((item, index, array) => {
+                    const nextItem = array[index + 1];
+                    const percentChange =
+                      nextItem && nextItem.steps
+                        ? (
+                            ((item.steps - nextItem.steps) / nextItem.steps) *
+                            100
+                          ).toFixed(2)
+                        : null;
+                    return (
+                      <tr
+                        key={index}
+                        className="border-b border-[#20354A] last:border-0"
+                      >
+                        <td className="py-3 pr-4">{item.date}</td>
+                        <td className="py-3 pr-4">
+                          {item.steps.toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={
+                              item.change.startsWith("+")
+                                ? "text-green-500"
+                                : "text-red-500"
+                            }
+                          >
+                            {item.change}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {percentChange !== null ? (
+                            <span
+                              className={
+                                parseFloat(percentChange) > 0
+                                  ? "text-green-500"
+                                  : parseFloat(percentChange) < 0
+                                  ? "text-red-500"
+                                  : "text-gray-400"
+                              }
+                            >
+                              {parseFloat(percentChange) > 0 ? "+" : ""}
+                              {percentChange}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
