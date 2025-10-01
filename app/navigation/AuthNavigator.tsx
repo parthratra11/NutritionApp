@@ -28,6 +28,19 @@ import SleepQualityScreen from 'screens/SleepQualityScreen';
 import SleepDetailScreen from 'screens/SleepDetailScreen';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import CommentScreen from 'screens/CommentScreen';
+import Greetings from 'screens/FormScreens/Greetings';
+import MeasurementChoice from 'screens/FormScreens/MeasurementChoice';
+import WeightHeightScreen from 'screens/FormScreens/WeightHeightScreen';
+import StrengthChoice from 'screens/FormScreens/StrengthChoice';
+import Strength1 from '../screens/FormScreens/Strength1';
+import Strength2 from '../screens/FormScreens/Strength2';
+import OtherExercise from '../screens/FormScreens/OtherExercise';
+import Goals from '../screens/FormScreens/Goals';
+import DedicationLevel from '../screens/FormScreens/DedicationLevel';
+import TrainingFrequency from '../screens/FormScreens/TrainingFrequency';
+import Occupation from '../screens/FormScreens/Occupation';
+import TrainingTime from '../screens/FormScreens/TrainingTime';
 
 const Stack = createNativeStackNavigator();
 
@@ -95,7 +108,19 @@ export default function AuthNavigator() {
   }
 
   return (
-    <Stack.Navigator initialRouteName={initialRoute}>
+    <Stack.Navigator initialRouteName="Greetings">
+      <Stack.Screen name="Greetings" component={Greetings} options={{ headerShown: false }} />
+      <Stack.Screen name="MeasurementChoice" component={MeasurementChoice} options={{ headerShown: false }} />
+      <Stack.Screen name="WeightHeight" component={WeightHeightScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="StrengthChoice" component={StrengthChoice} options={{ headerShown: false }} />
+      <Stack.Screen name="Strength1" component={Strength1} options={{ headerShown: false }} />
+      <Stack.Screen name="Strength2" component={Strength2} options={{ headerShown: false }} />
+      <Stack.Screen name="Goals" component={Goals} options={{ headerShown: false }} />
+      <Stack.Screen name="OtherExercise" component={OtherExercise} options={{ headerShown: false }} />
+      <Stack.Screen name="DedicationLevel" component={DedicationLevel} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingFrequency" component={TrainingFrequency} options={{ headerShown: false }} />
+      <Stack.Screen name="Occupation" component={Occupation} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingTime" component={TrainingTime} options={{ headerShown: false }} />
       {user ? (
         // Protected screens
         <>
@@ -103,11 +128,23 @@ export default function AuthNavigator() {
           <Stack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
-          
+          <Stack.Screen name="Greetings" component={Greetings} options={{ headerShown: false }} />
+          <Stack.Screen name="MeasurementChoice" component={MeasurementChoice} options={{ headerShown: false }} />
+          <Stack.Screen name="WeightHeight" component={WeightHeightScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="StrengthChoice" component={StrengthChoice} options={{ headerShown: false }} />
+          <Stack.Screen name="Strength1" component={Strength1} options={{ headerShown: false }} />
+          <Stack.Screen name="Strength2" component={Strength2} options={{ headerShown: false }} />
+          <Stack.Screen name="Goals" component={Goals} options={{ headerShown: false }} />
+          <Stack.Screen name="OtherExercise" component={OtherExercise} options={{ headerShown: false }} />
+          <Stack.Screen name="DedicationLevel" component={DedicationLevel} options={{ headerShown: false }} />
+          <Stack.Screen name="TrainingFrequency" component={TrainingFrequency} options={{ headerShown: false }} />
+          <Stack.Screen name="Occupation" component={Occupation} options={{ headerShown: false }} />
+          <Stack.Screen name="TrainingTime" component={TrainingTime} options={{ headerShown: false }} />
           {/* Main app screens */}
           <Stack.Screen name="Reports" component={ReportScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen
             name="DetailedFitnessScreen"

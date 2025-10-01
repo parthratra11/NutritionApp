@@ -30,7 +30,7 @@ export default function PaymentScreen() {
     // Handle subscription logic here
     console.log('Subscribe pressed');
     // For now, navigate to Address screen
-    navigation.navigate('Form');
+    navigation.navigate('Greetings');
   };
 
   return (
