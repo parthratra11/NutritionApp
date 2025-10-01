@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { db } from "../firebaseConfig";
-import { collection, getDocs } from "@firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  onSnapshot,
+  DocumentData,
+} from "@firebase/firestore";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -39,6 +46,7 @@ export default function Home() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
 
   const calendarRef = useRef<HTMLDivElement>(null);
 
@@ -146,9 +154,25 @@ export default function Home() {
     fetchIntakeForms();
   }, []);
 
+  // Add effect to listen for unread comments
+  useEffect(() => {
+    const commentsRef = collection(db, "comments");
+    const q = query(
+      commentsRef,
+      where("isRead", "==", false),
+      where("sender", "==", "client")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCommentsCount(snapshot.docs.length);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const dateStrip = generateDateStrip();
 
-  // Sidebar menu items updated to include Dashboard and Exercises
+  // Sidebar menu items updated to include Comments
   const menuItems = [
     {
       label: "Dashboard",
@@ -163,6 +187,27 @@ export default function Home() {
         >
           <path
             d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      label: "Comments",
+      path: "/comments",
+      icon: (
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
@@ -353,6 +398,7 @@ export default function Home() {
               >
                 <button
                   onClick={() => {
+                    console.log("Navigating to:", item.path); // Add this for debugging
                     router.push(item.path);
                     setShowNav(false);
                   }}
@@ -360,7 +406,7 @@ export default function Home() {
                     isDarkMode
                       ? "text-white/80 hover:text-white hover:bg-[#1e3252]/50"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  } transition-colors`}
+                  } transition-colors relative`}
                 >
                   <div
                     className={`w-8 h-8 flex items-center justify-center mr-4 ${
@@ -370,6 +416,11 @@ export default function Home() {
                     {item.icon}
                   </div>
                   <span className="text-lg">{item.label}</span>
+                  {item.label === "Comments" && unreadCommentsCount > 0 && (
+                    <span className="absolute right-4 bg-[#DD3333] text-white text-xs px-2 py-1 rounded-full">
+                      {unreadCommentsCount}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -414,13 +465,41 @@ export default function Home() {
                   />
                 </svg>
               </button>
+
+              {/* Add notifications button */}
+              <button
+                onClick={() => router.push("/comments")}
+                className={`mr-3 lg:mr-4 relative p-2 rounded-full ${
+                  isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
+                } transition-colors`}
+              >
+                <svg
+                  className="h-5 w-5 lg:h-6 lg:w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                {unreadCommentsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#DD3333] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCommentsCount > 9 ? "9+" : unreadCommentsCount}
+                  </span>
+                )}
+              </button>
+
               {/* Theme Toggle Pill - responsive */}
               <div
                 className={`flex items-center ${
                   isDarkMode ? "bg-[#0F1D3C]" : "bg-gray-200"
                 } border ${
                   isDarkMode ? "border-white/10" : "border-gray-300"
-                } rounded-full px-1 lg:px-1.5 mr-3 lg:mx-6`}
+                } rounded-full px-1 lg:px-1.5`}
               >
                 <button
                   onClick={() => setIsDarkMode(true)}
@@ -461,12 +540,10 @@ export default function Home() {
                   </svg>
                 </button>
               </div>
+
               {/* Greeting text - responsive */}
               <div className="mr-3 lg:mr-4 lg:ml-6">
                 <p className="text-lg lg:text-xl font-semibold">Hi, Cymron</p>
-                {/* <p className="text-xs lg:text-sm opacity-80">
-                  See their progress!
-                </p> */}
               </div>
             </div>
 
@@ -563,7 +640,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stats cards - responsive grid */}
+        {/* Stats cards - remove urgent messages card */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-5 mt-6 lg:mt-8">
           <div
             className={`${

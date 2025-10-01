@@ -28,6 +28,7 @@ import SleepQualityScreen from 'screens/SleepQualityScreen';
 import SleepDetailScreen from 'screens/SleepDetailScreen';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import CommentScreen from 'screens/CommentScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -52,12 +53,12 @@ export default function AuthNavigator() {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          
+
           // Determine which screen to show based on user's progress
           if (userData.isSignupOnly === true) {
             // New user needs to complete onboarding
             setIsNewUser(true);
-            
+
             // Check if they have an address yet
             if (!userData.address) {
               setInitialRoute('Address');
@@ -103,11 +104,12 @@ export default function AuthNavigator() {
           <Stack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
-          
+
           {/* Main app screens */}
           <Stack.Screen name="Reports" component={ReportScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen
             name="DetailedFitnessScreen"
@@ -150,8 +152,16 @@ export default function AuthNavigator() {
           <Stack.Screen name="Weight" component={WeightScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Mood" component={MoodScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Sleep" component={SleepScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="SleepQualityScreen" component={SleepQualityScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="SleepDetailScreen" component={SleepDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="SleepQualityScreen"
+            component={SleepQualityScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SleepDetailScreen"
+            component={SleepDetailScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
@@ -163,7 +173,6 @@ export default function AuthNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen name="Slack" component={SlackScreen} options={{ headerShown: false }} />
-         
         </>
       ) : (
         // Auth screens

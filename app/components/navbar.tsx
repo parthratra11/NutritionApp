@@ -21,7 +21,7 @@ const NutritionIcon = require('../assets/nutrition.png');
 const NavRectangle = require('../assets/NavRectangle.png');
 
 type NavbarProps = {
-  activeScreen?: 'Home' | 'Nutrition' | 'WeeklyForm' | 'Slack' | 'Workout';
+  activeScreen?: 'Home' | 'Nutrition' | 'WeeklyForm' | 'Slack' | 'Workout' | 'Comments';
   opacityValue?: Animated.Value; // Add prop to pass in opacity value from parent
 };
 
@@ -104,7 +104,6 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
           </View>
         </Pressable>
 
-        {/* Change this Pressable to use handleTrackingButton */}
         <Pressable onPress={handleTrackingButton} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={AddIcon} style={styles.bottomNavIcon} />
@@ -112,10 +111,10 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
           </View>
         </Pressable>
 
-        <Pressable onPress={openSlackApp} style={styles.navItem}>
+        <Pressable onPress={() => handleNavigate('CommentScreen')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={ChatIcon} style={styles.bottomNavIcon} />
-            {activeScreen === 'Slack' && <View style={styles.activeEclipse} />}
+            {activeScreen === 'Comments' && <View style={styles.activeEclipse} />}
           </View>
         </Pressable>
 
@@ -184,4 +183,5 @@ const styles = StyleSheet.create({
   },
 });
 
+export default Navbar;
 export default Navbar;
