@@ -615,6 +615,7 @@ export default function WeightScreen() {
                       {rangeTab === "yearly" ? "Avg Weight" : "Weight"}
                     </th>
                     <th className="py-3 pr-4 font-medium">Change</th>
+                    <th className="py-3 pr-4 font-medium">% Change</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -629,6 +630,15 @@ export default function WeightScreen() {
                             parseFloat(nextItem.weight)
                           ).toFixed(1)
                         : null;
+                      const percentChange =
+                        nextItem && parseFloat(nextItem.weight) !== 0
+                          ? (
+                              ((parseFloat(item.weight) -
+                                parseFloat(nextItem.weight)) /
+                                parseFloat(nextItem.weight)) *
+                              100
+                            ).toFixed(2)
+                          : null;
 
                       return (
                         <tr
@@ -654,6 +664,24 @@ export default function WeightScreen() {
                               >
                                 {parseFloat(weightChange) > 0 ? "+" : ""}
                                 {weightChange} kg
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {percentChange ? (
+                              <span
+                                className={
+                                  parseFloat(percentChange) > 0
+                                    ? "text-red-500"
+                                    : parseFloat(percentChange) < 0
+                                    ? "text-green-500"
+                                    : "text-gray-400"
+                                }
+                              >
+                                {parseFloat(percentChange) > 0 ? "+" : ""}
+                                {percentChange}%
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>

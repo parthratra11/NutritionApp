@@ -65,12 +65,12 @@ export default function AuthNavigator() {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          
+
           // Determine which screen to show based on user's progress
           if (userData.isSignupOnly === true) {
             // New user needs to complete onboarding
             setIsNewUser(true);
-            
+
             // Check if they have an address yet
             if (!userData.address) {
               setInitialRoute('Address');
@@ -145,6 +145,7 @@ export default function AuthNavigator() {
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen
             name="DetailedFitnessScreen"
@@ -187,8 +188,16 @@ export default function AuthNavigator() {
           <Stack.Screen name="Weight" component={WeightScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Mood" component={MoodScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Sleep" component={SleepScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="SleepQualityScreen" component={SleepQualityScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="SleepDetailScreen" component={SleepDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="SleepQualityScreen"
+            component={SleepQualityScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SleepDetailScreen"
+            component={SleepDetailScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="Nutrition"
             component={NutritionScreen}
@@ -200,7 +209,6 @@ export default function AuthNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen name="Slack" component={SlackScreen} options={{ headerShown: false }} />
-         
         </>
       ) : (
         // Auth screens

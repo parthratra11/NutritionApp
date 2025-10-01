@@ -44,46 +44,52 @@ const TrackingOptionsModal = ({ visible, onClose, navigation }) => {
               <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.contentContainer}>
             <Text style={styles.titleText}>What would you like to input today?</Text>
-            
+
             <View style={styles.optionsContainer}>
-              <TrackingOption 
+              <TrackingOption
                 icon={<Ionicons name="footsteps" size={24} color="#FFFFFF" />}
                 title="Steps"
                 onPress={() => navigateToScreen('Steps')}
               />
-              
-              <TrackingOption 
+
+              <TrackingOption
                 icon={<Ionicons name="restaurant-outline" size={24} color="#FFFFFF" />}
                 title="Nutrition"
                 onPress={() => navigateToScreen('Nutrition')}
               />
-              
-              <TrackingOption 
+
+              <TrackingOption
                 icon={<Ionicons name="body-outline" size={24} color="#FFFFFF" />}
                 title="Weight"
                 onPress={() => navigateToScreen('Weight')}
               />
-              
-              <TrackingOption 
+
+              <TrackingOption
                 icon={<Ionicons name="bed-outline" size={24} color="#FFFFFF" />}
                 title="Sleep"
                 onPress={() => navigateToScreen('Sleep')}
               />
-              
-              <TrackingOption 
+
+              <TrackingOption
                 icon={<Ionicons name="happy-outline" size={24} color="#FFFFFF" />}
                 title="Mood"
                 onPress={() => navigateToScreen('Mood')}
               />
-              
+
               {/* Weekly Check-in Tracking Option */}
-              <TrackingOption 
+              <TrackingOption
                 icon={<Ionicons name="calendar-outline" size={24} color="#FFFFFF" />}
                 title="Check-in"
                 onPress={() => navigateToScreen('WeeklyForm')}
+              />
+
+              <TrackingOption
+                icon={<Ionicons name="calendar-outline" size={24} color="#FFFFFF" />}
+                title="Comment"
+                onPress={() => navigateToScreen('Comment')}
               />
             </View>
           </View>
