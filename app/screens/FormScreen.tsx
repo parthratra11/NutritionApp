@@ -5540,68 +5540,7 @@ const EquipmentAccessScreen: React.FC<{
     navigation.navigate('EquipmentDifference', { screenIndex: SCREEN_INDEX + 1 });
 
   // Equipment options with images
-  const equipmentOptions = [
-    {
-      key: 'squatRack',
-      label: 'Squat cage or rack',
-      image: require('../assets/SquatRack.png'),
-    },
-    {
-      key: 'hyperBench',
-      label: '45° hyperextension bench',
-      image: require('../assets/Hyperextension.png'),
-    },
-    {
-      key: 'gluteHam',
-      label: 'Glute-ham raise',
-      image: require('../assets/Glute.png'),
-    },
-    {
-      key: 'standingCalf',
-      label: 'Standing calf raise machine',
-      image: require('../assets/StandingCalfRaise.png'),
-    },
-    {
-      key: 'dipBelt',
-      label: 'Dip/chin-up belt',
-      image: require('../assets/Dip.png'),
-    },
-    {
-      key: 'legCurl',
-      label: 'Leg Curl Machine',
-      image: require('../assets/LegCurl.png'),
-    },
-    {
-      key: 'gymRings',
-      label: 'Gymnastic Rings',
-      image: require('../assets/GymnasticsRings.png'),
-    },
-    {
-      key: 'trx',
-      label: 'TRX/ Similar Suspension Device',
-      image: require('../assets/Trx.png'),
-    },
-    {
-      key: 'resistanceBands',
-      label: 'Resistance Bands',
-      image: require('../assets/ResistanceBands.png'),
-    },
-    {
-      key: 'pullUpBar',
-      label: 'Pull-Up Bar',
-      image: require('../assets/PullupBar.png'),
-    },
-    {
-      key: 'cableTower',
-      label: 'Cable Tower',
-      image: require('../assets/CableTower.png'),
-    },
-    {
-      key: 'seatedCalf',
-      label: 'Seated Calf Raise Machine',
-      image: require('../assets/SeatedCalfRaise.png'),
-    },
-  ];
+  
 
   return (
     <>

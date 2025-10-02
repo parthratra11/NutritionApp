@@ -111,7 +111,7 @@ const Navbar = forwardRef<any, NavbarProps>(({ activeScreen, opacityValue }, ref
           </View>
         </Pressable>
 
-        <Pressable onPress={() => handleNavigate('CommentScreen')} style={styles.navItem}>
+        <Pressable onPress={() => handleNavigate('Comment')} style={styles.navItem}>
           <View style={styles.iconContainer}>
             <Image source={ChatIcon} style={styles.bottomNavIcon} />
             {activeScreen === 'Comments' && <View style={styles.activeEclipse} />}
@@ -184,4 +184,4 @@ const styles = StyleSheet.create({
 });
 
 export default Navbar;
-export default Navbar;
+
