@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import FormScreen from '../screens/FormScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import WeeklyCheckInForm from '../screens/WeeklyForm';
@@ -29,6 +28,8 @@ import SleepDetailScreen from 'screens/SleepDetailScreen';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import CommentScreen from 'screens/CommentScreen';
+
+// Import new form screens
 import Greetings from 'screens/FormScreens/Greetings';
 import MeasurementChoice from 'screens/FormScreens/MeasurementChoice';
 import WeightHeightScreen from 'screens/FormScreens/WeightHeightScreen';
@@ -41,6 +42,18 @@ import DedicationLevel from '../screens/FormScreens/DedicationLevel';
 import TrainingFrequency from '../screens/FormScreens/TrainingFrequency';
 import Occupation from '../screens/FormScreens/Occupation';
 import TrainingTime from '../screens/FormScreens/TrainingTime';
+import ActivityLevel from 'screens/FormScreens/ActivityLevel';
+import StressLevel from 'screens/FormScreens/StressLevel';
+import Sleep from 'screens/FormScreens/Sleep';
+import Caffeine from 'screens/FormScreens/Caffeine';
+import Equipment1 from 'screens/FormScreens/Equipment1';
+import Equipment2 from 'screens/FormScreens/Equipment2';
+import Equipment3 from 'screens/FormScreens/Equipment3';
+import Equipment4 from 'screens/FormScreens/Equipment4';
+import Supplements from 'screens/FormScreens/Supplements';
+import Genetics from 'screens/FormScreens/Genetics';
+import CurrentProgram from 'screens/FormScreens/CurrentProgram';
+import Welcome from 'screens/FormScreens/Welcome';
 
 const Stack = createNativeStackNavigator();
 
@@ -77,7 +90,8 @@ export default function AuthNavigator() {
             } else if (!userData.hasCompletedPayment) {
               setInitialRoute('Payment');
             } else {
-              setInitialRoute('Form');
+              // Send to first screen of new form flow instead of 'Form'
+              setInitialRoute('Greetings');
             }
           } else {
             // Returning user goes straight to Reports
@@ -108,26 +122,15 @@ export default function AuthNavigator() {
   }
 
   return (
-    <Stack.Navigator initialRouteName="Greetings">
-      <Stack.Screen name="Greetings" component={Greetings} options={{ headerShown: false }} />
-      <Stack.Screen name="MeasurementChoice" component={MeasurementChoice} options={{ headerShown: false }} />
-      <Stack.Screen name="WeightHeight" component={WeightHeightScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="StrengthChoice" component={StrengthChoice} options={{ headerShown: false }} />
-      <Stack.Screen name="Strength1" component={Strength1} options={{ headerShown: false }} />
-      <Stack.Screen name="Strength2" component={Strength2} options={{ headerShown: false }} />
-      <Stack.Screen name="Goals" component={Goals} options={{ headerShown: false }} />
-      <Stack.Screen name="OtherExercise" component={OtherExercise} options={{ headerShown: false }} />
-      <Stack.Screen name="DedicationLevel" component={DedicationLevel} options={{ headerShown: false }} />
-      <Stack.Screen name="TrainingFrequency" component={TrainingFrequency} options={{ headerShown: false }} />
-      <Stack.Screen name="Occupation" component={Occupation} options={{ headerShown: false }} />
-      <Stack.Screen name="TrainingTime" component={TrainingTime} options={{ headerShown: false }} />
+    <Stack.Navigator initialRouteName={initialRoute}>
       {user ? (
         // Protected screens
         <>
           {/* Initial route for new users */}
           <Stack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Form" component={FormScreen} options={{ headerShown: false }} />
+
+          {/* New form flow screens */}
           <Stack.Screen name="Greetings" component={Greetings} options={{ headerShown: false }} />
           <Stack.Screen name="MeasurementChoice" component={MeasurementChoice} options={{ headerShown: false }} />
           <Stack.Screen name="WeightHeight" component={WeightHeightScreen} options={{ headerShown: false }} />
@@ -140,11 +143,30 @@ export default function AuthNavigator() {
           <Stack.Screen name="TrainingFrequency" component={TrainingFrequency} options={{ headerShown: false }} />
           <Stack.Screen name="Occupation" component={Occupation} options={{ headerShown: false }} />
           <Stack.Screen name="TrainingTime" component={TrainingTime} options={{ headerShown: false }} />
+          <Stack.Screen name="ActivityLevel" component={ActivityLevel} options={{ headerShown: false }} />
+          <Stack.Screen name="StressLevel" component={StressLevel} options={{ headerShown: false }} />
+          <Stack.Screen name="SleepForm" component={Sleep} options={{ headerShown: false }} />
+          <Stack.Screen name="Caffeine" component={Caffeine} options={{ headerShown: false }} />
+          <Stack.Screen name="Equipment1" component={Equipment1} options={{ headerShown: false }} />
+          <Stack.Screen name="Equipment2" component={Equipment2} options={{ headerShown: false }} />
+          <Stack.Screen name="Equipment3" component={Equipment3} options={{ headerShown: false }} />
+          <Stack.Screen name="Equipment4" component={Equipment4} options={{ headerShown: false }} />
+          <Stack.Screen name="Supplements" component={Supplements} options={{ headerShown: false }} />
+          <Stack.Screen name="Genetics" component={Genetics} options={{ headerShown: false }} />
+          <Stack.Screen name="CurrentProgram" component={CurrentProgram} options={{ headerShown: false }} />
+          <Stack.Screen name="Welcome" component={Welcome} options={{ headerShown: false }} />
+
           {/* Main app screens */}
-          <Stack.Screen name="Reports" component={ReportScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Reports"
+            component={ReportScreen}
+            options={{
+              headerShown: false,
+              gestureEnabled: false, // Disable swipe back gesture
+            }}
+          />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Comment" component={CommentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Progress" component={ProgressScreen} />
           <Stack.Screen

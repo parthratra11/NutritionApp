@@ -13,8 +13,9 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { LineChart, BarChart } from 'react-native-chart-kit';
@@ -406,6 +407,21 @@ export default function ReportScreen() {
       lastScrollY.current = currentScrollY;
     },
   });
+
+  // Add this useFocusEffect to prevent going back with hardware button
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        return true; // Return true to prevent default behavior (going back)
+      };
+
+      // Use addListener instead of addEventListener
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      // Return the cleanup function that uses remove() instead of removeEventListener
+      return () => backHandler.remove();
+    }, [])
+  );
 
   if (loading) {
     return (
