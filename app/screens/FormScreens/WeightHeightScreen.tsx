@@ -105,7 +105,7 @@ export default function WeightHeightScreen({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.3} barHeight={8} />
+      <ProgressBar progress={0.12} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

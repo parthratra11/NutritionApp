@@ -13,7 +13,7 @@ export default function Equipment2({ route }) {
   const navigation = useNavigation();
   const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +42,7 @@ export default function Equipment2({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form field with existing data
           if (data.cardioEquipment && Array.isArray(data.cardioEquipment)) {
             setSelectedEquipment(data.cardioEquipment);
@@ -92,7 +92,7 @@ export default function Equipment2({ route }) {
       cardioEquipment: selectedEquipment,
       equipment2Completed: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('Equipment3', {
       ...previousParams,
@@ -112,7 +112,7 @@ export default function Equipment2({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.85} barHeight={8} />
+      <ProgressBar progress={0.74} barHeight={8} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}

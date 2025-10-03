@@ -53,7 +53,7 @@ export default function StressLevel({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form field with existing data
           if (data.stressLevel) {
             setSelectedLevel(data.stressLevel);
@@ -100,9 +100,10 @@ export default function StressLevel({ route }) {
         stressLevel: selectedLevel,
         stressLevelCompleted: true,
       });
-      
+
       // Navigate to next screen with updated params
-      navigation.navigate('SleepForm', {  // Changed from 'SleepForm' to 'Sleep' based on your file structure
+      navigation.navigate('SleepForm', {
+        // Changed from 'SleepForm' to 'Sleep' based on your file structure
         ...previousParams,
         stressLevel: selectedLevel,
       });
@@ -121,7 +122,7 @@ export default function StressLevel({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.69} barHeight={8} />
+      <ProgressBar progress={0.58} barHeight={8} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}

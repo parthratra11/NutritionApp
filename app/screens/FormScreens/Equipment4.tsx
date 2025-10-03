@@ -21,7 +21,7 @@ export default function Equipment4({ route }) {
   const navigation = useNavigation();
   const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +43,7 @@ export default function Equipment4({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form field with existing data
           if (data.additionalEquipmentInfo) {
             setAdditionalInfo(data.additionalEquipmentInfo);
@@ -85,7 +85,7 @@ export default function Equipment4({ route }) {
       additionalEquipmentInfo: additionalInfo,
       equipment4Completed: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('Supplements', {
       ...previousParams,
@@ -105,7 +105,7 @@ export default function Equipment4({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.95} barHeight={8} />
+      <ProgressBar progress={0.82} barHeight={8} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}

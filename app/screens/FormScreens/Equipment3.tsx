@@ -23,7 +23,7 @@ export default function Equipment3({ route }) {
   const navigation = useNavigation();
   const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -55,16 +55,16 @@ export default function Equipment3({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form fields with existing data
           if (data.gymEquipment && Array.isArray(data.gymEquipment)) {
             setSelectedEquipment(data.gymEquipment);
           }
-          
+
           if (data.legCurlType) {
             setLegCurlType(data.legCurlType);
           }
-          
+
           if (data.dumbbellInfo) {
             setIsFullSet(data.dumbbellInfo.isFullSet);
             if (data.dumbbellInfo.isFullSet) {
@@ -282,12 +282,13 @@ export default function Equipment3({ route }) {
 
   const handleNext = async () => {
     // Prepare dumbbell information
-    const dumbbellInfo = isFullSet !== null ? (
-      isFullSet
-        ? { isFullSet: true, minWeight: minWeight, maxWeight: maxWeight }
-        : { isFullSet: false, specificWeights: specificWeights }
-    ) : null;
-    
+    const dumbbellInfo =
+      isFullSet !== null
+        ? isFullSet
+          ? { isFullSet: true, minWeight: minWeight, maxWeight: maxWeight }
+          : { isFullSet: false, specificWeights: specificWeights }
+        : null;
+
     // Save data to Firestore before navigating
     await saveFormData({
       gymEquipment: selectedEquipment,
@@ -295,7 +296,7 @@ export default function Equipment3({ route }) {
       dumbbellInfo: dumbbellInfo,
       equipment3Completed: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('Equipment4', {
       ...previousParams,
@@ -410,7 +411,7 @@ export default function Equipment3({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.9} barHeight={8} />
+      <ProgressBar progress={0.78} barHeight={8} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
@@ -629,7 +630,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: screenWidth * 0.85,
     height: screenHeight * 0.25,
-    backgroundColor: '#081A2FED', 
+    backgroundColor: '#081A2FED',
     borderRadius: 20,
     padding: screenWidth * 0.05,
     justifyContent: 'center',

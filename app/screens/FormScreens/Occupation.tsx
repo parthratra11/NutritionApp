@@ -25,7 +25,7 @@ export default function Occupation({ route }) {
   const { user } = useAuth();
   const previousParams = route?.params || {};
   const scrollViewRef = useRef(null);
-  
+
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +64,7 @@ export default function Occupation({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form fields with existing data
           if (data.occupation) setOccupation(data.occupation);
           if (data.diet) setDiet(data.diet);
@@ -112,7 +112,7 @@ export default function Occupation({ route }) {
   const handleNext = async () => {
     // Dismiss keyboard if visible
     Keyboard.dismiss();
-    
+
     // Save data to Firestore before navigating
     await saveFormData({
       occupation,
@@ -120,7 +120,7 @@ export default function Occupation({ route }) {
       medicalConditions,
       occupationCompleted: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('TrainingTime', {
       ...previousParams,
@@ -132,9 +132,9 @@ export default function Occupation({ route }) {
 
   const scrollToInput = (inputName) => {
     if (!scrollViewRef.current) return;
-    
+
     let scrollPosition = 0;
-    
+
     switch (inputName) {
       case 'occupation':
         scrollPosition = 0; // Top of the form
@@ -146,7 +146,7 @@ export default function Occupation({ route }) {
         scrollPosition = screenHeight * 0.6; // Approximate position of medical conditions input
         break;
     }
-    
+
     scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
   };
 
@@ -167,7 +167,7 @@ export default function Occupation({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.58} barHeight={8} />
+      <ProgressBar progress={0.46} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -178,7 +178,7 @@ export default function Occupation({ route }) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollViewContent,
-            keyboardVisible && { paddingBottom: screenHeight * 0.3 } // Add extra padding when keyboard is visible
+            keyboardVisible && { paddingBottom: screenHeight * 0.3 }, // Add extra padding when keyboard is visible
           ]}
           keyboardShouldPersistTaps="handled">
           <View style={styles.contentContainer}>
@@ -229,13 +229,12 @@ export default function Occupation({ route }) {
               />
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.nextButton,
-                keyboardVisible && { marginBottom: screenHeight * 0.15 } // Add extra margin when keyboard is visible
-              ]} 
-              onPress={handleNext}
-            >
+                keyboardVisible && { marginBottom: screenHeight * 0.15 }, // Add extra margin when keyboard is visible
+              ]}
+              onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
           </View>

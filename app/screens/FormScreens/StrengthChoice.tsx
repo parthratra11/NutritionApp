@@ -83,7 +83,7 @@ export default function StrengthChoice({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.4} barHeight={8} />
+      <ProgressBar progress={0.16} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>Experience in Strength{'\n'}Training?</Text>
 

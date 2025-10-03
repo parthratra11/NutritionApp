@@ -27,7 +27,7 @@ export default function Genetics({ route }) {
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [wristCircumference, setWristCircumference] = useState('');
   const [ankleCircumference, setAnkleCircumference] = useState('');
 
@@ -46,7 +46,7 @@ export default function Genetics({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form fields with existing data
           if (data.genetics) {
             if (data.genetics.wristCircumference) {
@@ -96,7 +96,7 @@ export default function Genetics({ route }) {
       },
       geneticsCompleted: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('CurrentProgram', {
       ...previousParams,
@@ -119,7 +119,7 @@ export default function Genetics({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.92} barHeight={8} />
+      <ProgressBar progress={0.9} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

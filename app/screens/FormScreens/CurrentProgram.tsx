@@ -55,7 +55,7 @@ export default function CurrentProgram({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form fields with existing data
           if (data.dietDescription) setDietDescription(data.dietDescription);
           if (data.trainingProgram) setTrainingProgram(data.trainingProgram);
@@ -97,12 +97,12 @@ export default function CurrentProgram({ route }) {
   const uploadPhoto = async (uri) => {
     const response = await fetch(uri);
     const blob = await response.blob();
-    
+
     const filename = uri.substring(uri.lastIndexOf('/') + 1);
     const storageRef = ref(storage, `users/${user.email.toLowerCase()}/bodyPhotos/${filename}`);
-    
+
     const uploadTask = uploadBytesResumable(storageRef, blob);
-    
+
     return new Promise((resolve, reject) => {
       uploadTask.on(
         'state_changed',
@@ -125,14 +125,14 @@ export default function CurrentProgram({ route }) {
   // Upload all photos and save their URLs
   const uploadAllPhotos = async () => {
     if (photos.length === 0) return photoUrls;
-    
+
     try {
-      const uploadPromises = photos.map(photo => uploadPhoto(photo));
+      const uploadPromises = photos.map((photo) => uploadPhoto(photo));
       const uploadedUrls = await Promise.all(uploadPromises);
-      
+
       // Combine existing photo URLs with new ones
       const allPhotoUrls = [...photoUrls, ...uploadedUrls];
-      
+
       return allPhotoUrls;
     } catch (error) {
       console.error('Error uploading photos:', error);
@@ -205,20 +205,20 @@ export default function CurrentProgram({ route }) {
 
   const handleNext = async () => {
     setIsSaving(true);
-    
+
     try {
       // Upload all new photos and get their URLs
       const allPhotoUrls = await uploadAllPhotos();
-      
+
       // Save form data with photo URLs
       await saveFormData({
         dietDescription,
         trainingProgram,
         bodyPhotoUrls: allPhotoUrls,
         currentProgramCompleted: true,
-        intakeFormCompleted: true,  // Mark the entire form as completed
+        intakeFormCompleted: true, // Mark the entire form as completed
       });
-      
+
       // Navigate to Welcome screen
       navigation.navigate('Welcome', {
         ...previousParams,
@@ -246,7 +246,7 @@ export default function CurrentProgram({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.99} barHeight={8} />
+      <ProgressBar progress={0.95} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

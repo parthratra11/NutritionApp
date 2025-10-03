@@ -133,7 +133,7 @@ export default function Strength2({ route }) {
   if (isLoading) {
     return (
       <BackgroundWrapper>
-        <ProgressBar progress={0.6} barHeight={8} />
+        <ProgressBar progress={0.24} barHeight={8} />
         <View style={styles.mainContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -143,7 +143,7 @@ export default function Strength2({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.6} barHeight={8} />
+      <ProgressBar progress={0.24} barHeight={8} />
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
           <View style={styles.contentContainer}>

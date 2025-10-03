@@ -83,7 +83,7 @@ export default function OtherExercise({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.8} barHeight={8} />
+      <ProgressBar progress={0.34} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

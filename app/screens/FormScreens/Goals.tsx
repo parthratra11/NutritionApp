@@ -116,7 +116,7 @@ export default function Goals({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.7} barHeight={8} />
+      <ProgressBar progress={0.3} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

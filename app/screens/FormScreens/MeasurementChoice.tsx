@@ -63,7 +63,7 @@ export default function MeasurementChoice() {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.2} barHeight={8} />
+      <ProgressBar progress={0.08} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>Preferred Measurement{'\n'} System</Text>
 

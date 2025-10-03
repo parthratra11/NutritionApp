@@ -104,7 +104,7 @@ export default function Strength1({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.5} barHeight={8} />
+      <ProgressBar progress={0.2} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

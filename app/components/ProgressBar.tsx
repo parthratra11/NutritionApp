@@ -3,11 +3,22 @@ import { View, StyleSheet, Dimensions } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function ProgressBar({ progress = 0.1, barHeight = 8, backgroundColor = '#E9E9E9', fillColor = '#C7312B', style }) {
+export default function ProgressBar({
+  progress = 0.1,
+  barHeight = 8,
+  backgroundColor = '#E9E9E9',
+  fillColor = '#C7312B',
+  style,
+}) {
   return (
     <View style={[styles.progressContainer, { height: barHeight }, style]}>
       <View style={[styles.progressBackground, { backgroundColor, height: barHeight }]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%`, height: barHeight, backgroundColor: fillColor }]} />
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${progress * 100}%`, height: barHeight, backgroundColor: fillColor },
+          ]}
+        />
       </View>
     </View>
   );

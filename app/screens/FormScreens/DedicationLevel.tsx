@@ -91,7 +91,7 @@ export default function DedicationLevel({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.85} barHeight={8} />
+      <ProgressBar progress={0.38} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>What's your dedication{'\n'}level?</Text>
 

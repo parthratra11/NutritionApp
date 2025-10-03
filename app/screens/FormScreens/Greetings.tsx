@@ -11,7 +11,7 @@ export default function Greetings() {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.1} barHeight={8} />
+      <ProgressBar progress={0.04} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>Let's personalize {'\n'} your plan.</Text>
         <Text style={styles.subtitle}>Fill this quick form to get started.</Text>

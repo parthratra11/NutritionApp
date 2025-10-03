@@ -45,7 +45,7 @@ export default function TrainingTime({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form field with existing data
           if (data.trainingTimePreference) {
             setTrainingTimePreference(data.trainingTimePreference);
@@ -87,7 +87,7 @@ export default function TrainingTime({ route }) {
       trainingTimePreference,
       trainingTimeCompleted: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('ActivityLevel', {
       ...previousParams,
@@ -107,7 +107,7 @@ export default function TrainingTime({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.62} barHeight={8} />
+      <ProgressBar progress={0.5} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

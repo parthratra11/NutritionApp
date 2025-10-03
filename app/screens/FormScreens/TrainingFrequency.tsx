@@ -84,7 +84,7 @@ export default function TrainingFrequency({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.9} barHeight={8} />
+      <ProgressBar progress={0.42} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>
           How often in a week would you be prepared to train for maximal results?

@@ -24,11 +24,11 @@ export default function Caffeine({ route }) {
   const navigation = useNavigation();
   const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [caffeine, setCaffeine] = useState('');
   const [menstrualInfo, setMenstrualInfo] = useState('');
 
@@ -47,7 +47,7 @@ export default function Caffeine({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form fields with existing data
           if (data.caffeine) setCaffeine(data.caffeine);
           if (data.menstrualInfo) setMenstrualInfo(data.menstrualInfo);
@@ -85,14 +85,14 @@ export default function Caffeine({ route }) {
   const handleNext = async () => {
     // Dismiss keyboard if it's open
     Keyboard.dismiss();
-    
+
     // Save data to Firestore before navigating
     await saveFormData({
       caffeine,
       menstrualInfo,
       caffeineCompleted: true,
     });
-    
+
     // Navigate to next screen with updated params
     navigation.navigate('Equipment1', {
       ...previousParams,
@@ -113,7 +113,7 @@ export default function Caffeine({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.75} barHeight={8} />
+      <ProgressBar progress={0.66} barHeight={8} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

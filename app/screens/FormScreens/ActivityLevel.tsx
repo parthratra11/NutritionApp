@@ -53,7 +53,7 @@ export default function ActivityLevel({ route }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFormData(data);
-          
+
           // Populate form field with existing data
           if (data.activityLevel) {
             setSelectedLevel(data.activityLevel);
@@ -100,7 +100,7 @@ export default function ActivityLevel({ route }) {
         activityLevel: selectedLevel,
         activityLevelCompleted: true,
       });
-      
+
       // Navigate to next screen with updated params
       navigation.navigate('StressLevel', {
         ...previousParams,
@@ -121,7 +121,7 @@ export default function ActivityLevel({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.65} barHeight={8} />
+      <ProgressBar progress={0.54} barHeight={8} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
