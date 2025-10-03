@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,7 +19,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Genetics({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [wristCircumference, setWristCircumference] = useState('');
   const [ankleCircumference, setAnkleCircumference] = useState('');
 
@@ -18,63 +28,61 @@ export default function Genetics({ route }) {
       ...previousParams,
       genetics: {
         wristCircumference,
-        ankleCircumference
-      }
+        ankleCircumference,
+      },
     });
   };
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.98} barHeight={8} />
-      <ScrollView 
+      <ProgressBar progress={0.92} barHeight={8} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
-        <View style={styles.contentContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.labelText}>
-              Wrist circumference (smallest point)
-            </Text>
-            
-            <TextInput
-              style={styles.inputField}
-              value={wristCircumference}
-              onChangeText={setWristCircumference}
-              placeholder=""
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              keyboardType="numeric"
-            />
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.contentContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>Wrist circumference (smallest point)</Text>
+
+              <TextInput
+                style={styles.inputField}
+                value={wristCircumference}
+                onChangeText={setWristCircumference}
+                placeholder=""
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Added spacing view to create more distance between questions */}
+            <View style={styles.spacer} />
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>Ankle circumference (smallest point)</Text>
+
+              <TextInput
+                style={styles.inputField}
+                value={ankleCircumference}
+                onChangeText={setAnkleCircumference}
+                placeholder=""
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                <Text style={styles.nextButtonText}>&gt;</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          
-          {/* Added spacing view to create more distance between questions */}
-          <View style={styles.spacer} />
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.labelText}>
-              Ankle circumference (smallest point)
-            </Text>
-            
-            <TextInput
-              style={styles.inputField}
-              value={ankleCircumference}
-              onChangeText={setAnkleCircumference}
-              placeholder=""
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              keyboardType="numeric"
-            />
-          </View>
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={styles.nextButton} 
-              onPress={handleNext}
-            >
-              <Text style={styles.nextButtonText}>&gt;</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }
@@ -83,8 +91,10 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: screenWidth * 0.05,
-    paddingTop: screenHeight * 0.3,
-    paddingBottom: screenHeight * 0.05,
+    paddingTop: screenHeight * 0.15,
+    paddingBottom: screenHeight * 0.2, // Increased bottom padding
+    justifyContent: 'space-around',
+    minHeight: screenHeight * 0.8,
   },
   inputContainer: {
     marginBottom: screenHeight * 0.02, // Reduced from 0.04 since we're adding a spacer

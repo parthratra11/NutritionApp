@@ -1,16 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function TrainingFrequency({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+  const [formData, setFormData] = useState<any>({});
   const [frequency, setFrequency] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          setFrequency(data.weeklyFrequency ? parseInt(data.weeklyFrequency) : 1);
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
 
   const handleIncrement = () => {
     if (frequency < 7) {
@@ -23,11 +70,15 @@ export default function TrainingFrequency({ route }) {
       setFrequency(frequency - 1);
     }
   };
-  
-  const handleNext = () => {
+
+  const handleNext = async () => {
+    await saveFormData({
+      weeklyFrequency: frequency.toString(),
+      trainingFrequencyCompleted: true,
+    });
     navigation.navigate('Occupation', {
       ...previousParams,
-      trainingFrequency: frequency
+      trainingFrequency: frequency,
     });
   };
 
@@ -38,31 +89,29 @@ export default function TrainingFrequency({ route }) {
         <Text style={styles.mainTitle}>
           How often in a week would you be prepared to train for maximal results?
         </Text>
-        
+
         <Text style={styles.subtitle}>
           (A higher weekly training frequency means less time spent in the gym per session)
         </Text>
-        
+
         <View style={styles.counterContainer}>
-          <TouchableOpacity 
-            style={styles.counterButton} 
+          <TouchableOpacity
+            style={styles.counterButton}
             onPress={handleDecrement}
-            disabled={frequency <= 1}
-          >
+            disabled={frequency <= 1}>
             <Text style={styles.counterButtonText}>-</Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.counterValue}>{frequency}</Text>
-          
-          <TouchableOpacity 
-            style={styles.counterButton} 
+
+          <TouchableOpacity
+            style={styles.counterButton}
             onPress={handleIncrement}
-            disabled={frequency >= 7}
-          >
+            disabled={frequency >= 7}>
             <Text style={styles.counterButtonText}>+</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.buttonWrapper}>
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>&gt;</Text>
@@ -119,7 +168,7 @@ const styles = StyleSheet.create({
   },
   counterValue: {
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.10,
+    fontSize: screenWidth * 0.1,
     fontWeight: '600',
     paddingHorizontal: screenWidth * 0.1,
   },
@@ -137,7 +186,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: screenHeight * 0.15,
-    
   },
   nextButtonText: {
     color: '#FFFFFF',

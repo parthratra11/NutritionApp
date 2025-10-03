@@ -10,12 +10,12 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Welcome({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   // Animation values
   const opacity = new Animated.Value(0);
   const scale = new Animated.Value(0.8);
   const translateY = new Animated.Value(30);
-  
+
   // Text animation values
   const textOpacity = new Animated.Value(0);
   const textTranslateY = new Animated.Value(20);
@@ -78,44 +78,37 @@ export default function Welcome({ route }) {
           colors={[
             'rgba(255, 255, 255, 0.28)',
             'rgba(255, 255, 255, 0.23)',
-            'rgba(255, 255, 255, 0.00)'
+            'rgba(255, 255, 255, 0.00)',
           ]}
           locations={[0, 0.7019, 0.9663]}
-          style={styles.gradientCard}
-        >
-          <Animated.View 
+          style={styles.gradientCard}>
+          <Animated.View
             style={[
-              styles.animatedContent, 
-              { 
-                opacity, 
-                transform: [
-                  { scale },
-                  { translateY }
-                ] 
-              }
-            ]}
-          >
-            <Animated.Text 
+              styles.animatedContent,
+              {
+                opacity,
+                transform: [{ scale }, { translateY }],
+              },
+            ]}>
+            <Animated.Text
               style={[
                 styles.welcomeText,
-                { 
-                  opacity: textOpacity, 
-                  transform: [{ translateY: textTranslateY }]
-                }
-              ]}
-            >
+                {
+                  opacity: textOpacity,
+                  transform: [{ translateY: textTranslateY }],
+                },
+              ]}>
               Welcome!
             </Animated.Text>
-            
-            <Animated.Text 
+
+            <Animated.Text
               style={[
                 styles.descriptionText,
-                { 
-                  opacity: textOpacity, 
-                  transform: [{ translateY: textTranslateY }]
-                }
-              ]}
-            >
+                {
+                  opacity: textOpacity,
+                  transform: [{ translateY: textTranslateY }],
+                },
+              ]}>
               Your coach will review your info.
             </Animated.Text>
           </Animated.View>
@@ -133,7 +126,7 @@ const styles = StyleSheet.create({
   },
   gradientCard: {
     width: screenWidth * 0.92, // 379px from design
-    height: screenHeight * 0.75, // 690px from design  
+    height: screenHeight * 0.75, // 690px from design
     borderRadius: 74,
     justifyContent: 'center',
     alignItems: 'center',

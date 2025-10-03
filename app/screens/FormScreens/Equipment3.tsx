@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Image, Modal, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  Image,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,11 +19,11 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Equipment3({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [selectedEquipment, setSelectedEquipment] = useState([]);
   const [showLegCurlModal, setShowLegCurlModal] = useState(false);
   const [legCurlType, setLegCurlType] = useState('');
-  
+
   // New state for dumbbell modal
   const [showDumbbellModal, setShowDumbbellModal] = useState(false);
   const [dumbbellModalStep, setDumbbellModalStep] = useState(1); // 1: Ask if full set, 2: Min/Max or specific weights
@@ -23,124 +33,124 @@ export default function Equipment3({ route }) {
   const [specificWeights, setSpecificWeights] = useState('');
 
   const gymEquipment = [
-    { 
-      id: 'squat_rack', 
-      name: 'Squat cage or rack', 
-      image: require('../../assets/intakeform/SquatRack.png') 
+    {
+      id: 'squat_rack',
+      name: 'Squat cage or rack',
+      image: require('../../assets/intakeform/SquatRack.png'),
     },
-    { 
-      id: 'hyperextension', 
-      name: '45° hyperextension bench', 
-      image: require('../../assets/intakeform/Hyperextension.png') 
+    {
+      id: 'hyperextension',
+      name: '45° hyperextension bench',
+      image: require('../../assets/intakeform/Hyperextension.png'),
     },
-    { 
-      id: 'leg_press', 
-      name: 'Leg Press Machine', 
-      image: require('../../assets/intakeform/LegPress.png') 
+    {
+      id: 'leg_press',
+      name: 'Leg Press Machine',
+      image: require('../../assets/intakeform/LegPress.png'),
     },
-    { 
-      id: 'dual_pulley', 
-      name: 'Dual pulley cable machine', 
-      image: require('../../assets/intakeform/dualpulley.png') 
+    {
+      id: 'dual_pulley',
+      name: 'Dual pulley cable machine',
+      image: require('../../assets/intakeform/dualpulley.png'),
     },
-    { 
-      id: 'trap_bar', 
-      name: 'Trap Bar', 
-      image: require('../../assets/intakeform/TrapBar.png') 
+    {
+      id: 'trap_bar',
+      name: 'Trap Bar',
+      image: require('../../assets/intakeform/TrapBar.png'),
     },
-    { 
-      id: 'leg_curl', 
-      name: 'Leg Curl Machine', 
-      image: require('../../assets/intakeform/LegCurl.png') 
+    {
+      id: 'leg_curl',
+      name: 'Leg Curl Machine',
+      image: require('../../assets/intakeform/LegCurl.png'),
     },
-    { 
-      id: 'gymnastics_rings', 
-      name: 'Gymnastic Rings', 
-      image: require('../../assets/intakeform/GymnasticsRings.png') 
+    {
+      id: 'gymnastics_rings',
+      name: 'Gymnastic Rings',
+      image: require('../../assets/intakeform/GymnasticsRings.png'),
     },
-    { 
-      id: 'trx', 
-      name: 'TRX / Similar Suspension Device', 
-      image: require('../../assets/intakeform/Trx.png') 
+    {
+      id: 'trx',
+      name: 'TRX / Similar Suspension Device',
+      image: require('../../assets/intakeform/Trx.png'),
     },
-    { 
-      id: 'dumbbell_set', 
-      name: 'Full Dumbbell Set', 
-      image: require('../../assets/intakeform/dumbellSet.png') 
+    {
+      id: 'dumbbell_set',
+      name: 'Full Dumbbell Set',
+      image: require('../../assets/intakeform/dumbellSet.png'),
     },
-    { 
-      id: 'pull_up_bar', 
-      name: 'Pull-Up Bar', 
-      image: require('../../assets/intakeform/PullupBar.png') 
+    {
+      id: 'pull_up_bar',
+      name: 'Pull-Up Bar',
+      image: require('../../assets/intakeform/PullupBar.png'),
     },
-    { 
-      id: 'single_column', 
-      name: 'Single Column Cable Machine', 
-      image: require('../../assets/intakeform/SinglePulley.png') 
+    {
+      id: 'single_column',
+      name: 'Single Column Cable Machine',
+      image: require('../../assets/intakeform/SinglePulley.png'),
     },
-    { 
-      id: 'seated_calf_machine', 
-      name: 'Seated Calf Machine', 
-      image: require('../../assets/intakeform/SeatedCalf.png') 
+    {
+      id: 'seated_calf_machine',
+      name: 'Seated Calf Machine',
+      image: require('../../assets/intakeform/SeatedCalf.png'),
     },
-    { 
-      id: 'leg_extension', 
-      name: 'Leg extension machine', 
-      image: require('../../assets/intakeform/LegExtension.png') 
+    {
+      id: 'leg_extension',
+      name: 'Leg extension machine',
+      image: require('../../assets/intakeform/LegExtension.png'),
     },
-    { 
-      id: 'bench', 
-      name: 'Bench Press', 
-      image: require('../../assets/intakeform/bench.png') 
+    {
+      id: 'bench',
+      name: 'Bench Press',
+      image: require('../../assets/intakeform/bench.png'),
     },
-    { 
-      id: 'cable_tower', 
-      name: 'Cable Tower', 
-      image: require('../../assets/intakeform/CableTower.png') 
+    {
+      id: 'cable_tower',
+      name: 'Cable Tower',
+      image: require('../../assets/intakeform/CableTower.png'),
     },
-    { 
-      id: 'dip_station', 
-      name: 'Dip Station', 
-      image: require('../../assets/intakeform/Dip.png') 
+    {
+      id: 'dip_station',
+      name: 'Dip Station',
+      image: require('../../assets/intakeform/Dip.png'),
     },
-    { 
-      id: 'glute_machine', 
-      name: 'Glute Machine', 
-      image: require('../../assets/intakeform/Glute.png') 
+    {
+      id: 'glute_machine',
+      name: 'Glute Machine',
+      image: require('../../assets/intakeform/Glute.png'),
     },
-    { 
-      id: 'resistance_bands', 
-      name: 'Resistance Bands', 
-      image: require('../../assets/intakeform/ResistanceBands.png') 
+    {
+      id: 'resistance_bands',
+      name: 'Resistance Bands',
+      image: require('../../assets/intakeform/ResistanceBands.png'),
     },
-    { 
-      id: 'standing_calf_raise', 
-      name: 'Standing Calf Raise', 
-      image: require('../../assets/intakeform/StandingCalfRaise.png') 
+    {
+      id: 'standing_calf_raise',
+      name: 'Standing Calf Raise',
+      image: require('../../assets/intakeform/StandingCalfRaise.png'),
     },
-    { 
-      id: 'step', 
-      name: 'Step Platform', 
-      image: require('../../assets/intakeform/step.png') 
-    }
+    {
+      id: 'step',
+      name: 'Step Platform',
+      image: require('../../assets/intakeform/step.png'),
+    },
   ];
 
   const toggleEquipment = (equipmentId) => {
     // Special handling for leg curl machine
     if (equipmentId === 'leg_curl') {
       if (selectedEquipment.includes('leg_curl')) {
-        setSelectedEquipment(selectedEquipment.filter(id => id !== 'leg_curl'));
+        setSelectedEquipment(selectedEquipment.filter((id) => id !== 'leg_curl'));
         setLegCurlType('');
       } else {
         setShowLegCurlModal(true);
       }
       return;
     }
-    
+
     // Special handling for dumbbell set
     if (equipmentId === 'dumbbell_set') {
       if (selectedEquipment.includes('dumbbell_set')) {
-        setSelectedEquipment(selectedEquipment.filter(id => id !== 'dumbbell_set'));
+        setSelectedEquipment(selectedEquipment.filter((id) => id !== 'dumbbell_set'));
         // Reset dumbbell-related state
         setIsFullSet(null);
         setMinWeight('');
@@ -155,7 +165,7 @@ export default function Equipment3({ route }) {
 
     // Normal toggle behavior for other equipment
     if (selectedEquipment.includes(equipmentId)) {
-      setSelectedEquipment(selectedEquipment.filter(id => id !== equipmentId));
+      setSelectedEquipment(selectedEquipment.filter((id) => id !== equipmentId));
     } else {
       setSelectedEquipment([...selectedEquipment, equipmentId]);
     }
@@ -168,7 +178,7 @@ export default function Equipment3({ route }) {
     }
     setShowLegCurlModal(false);
   };
-  
+
   const closeModal = () => {
     setShowLegCurlModal(false);
     setShowDumbbellModal(false);
@@ -191,7 +201,7 @@ export default function Equipment3({ route }) {
     if (!selectedEquipment.includes('dumbbell_set')) {
       setSelectedEquipment([...selectedEquipment, 'dumbbell_set']);
     }
-    
+
     // Close the modal
     setShowDumbbellModal(false);
     setDumbbellModalStep(1);
@@ -199,15 +209,15 @@ export default function Equipment3({ route }) {
 
   const handleNext = () => {
     // Add dumbbell information to the navigation params
-    const dumbbellInfo = isFullSet 
+    const dumbbellInfo = isFullSet
       ? { isFullSet: true, minWeight: minWeight, maxWeight: maxWeight }
       : { isFullSet: false, specificWeights: specificWeights };
-    
+
     navigation.navigate('Equipment4', {
       ...previousParams,
       gymEquipment: selectedEquipment,
       legCurlType: legCurlType,
-      dumbbellInfo: isFullSet !== null ? dumbbellInfo : null
+      dumbbellInfo: isFullSet !== null ? dumbbellInfo : null,
     });
   };
 
@@ -226,89 +236,79 @@ export default function Equipment3({ route }) {
           <>
             <Text style={styles.modalTitle}>Is it a full set?</Text>
             <View style={styles.modalButtonsContainer}>
-              <TouchableOpacity 
-                style={[styles.modalButton, isFullSet === true && styles.redButton]} 
-                onPress={() => handleFullSetSelection(true)}
-              >
+              <TouchableOpacity
+                style={[styles.modalButton, isFullSet === true && styles.redButton]}
+                onPress={() => handleFullSetSelection(true)}>
                 <Text style={styles.modalButtonText}>Yes</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, isFullSet === false && styles.redButton]} 
-                onPress={() => handleFullSetSelection(false)}
-              >
+
+              <TouchableOpacity
+                style={[styles.modalButton, isFullSet === false && styles.redButton]}
+                onPress={() => handleFullSetSelection(false)}>
                 <Text style={styles.modalButtonText}>No</Text>
               </TouchableOpacity>
             </View>
           </>
         );
-        
+
       case 2: // Min/Max weight for full set
         return (
           <>
-
-            
             <View style={styles.weightInputContainer}>
               <Text style={styles.weightLabel}>Min Weight</Text>
               <TextInput
                 style={styles.weightInput}
                 value={minWeight}
                 onChangeText={setMinWeight}
-               
                 placeholderTextColor="#CCCCCC"
                 keyboardType="numeric"
               />
             </View>
-            
+
             <View style={styles.weightInputContainer}>
               <Text style={styles.weightLabel}>Max Weight</Text>
               <TextInput
                 style={styles.weightInput}
                 value={maxWeight}
                 onChangeText={setMaxWeight}
-                
                 placeholderTextColor="#CCCCCC"
                 keyboardType="numeric"
               />
             </View>
-            
-            <TouchableOpacity 
-              style={[styles.nextButtonSmall, (minWeight && maxWeight) ? {} : styles.disabledButton]} 
+
+            <TouchableOpacity
+              style={[styles.nextButtonSmall, minWeight && maxWeight ? {} : styles.disabledButton]}
               onPress={handleDumbbellSubmit}
-              disabled={!minWeight || !maxWeight}
-            >
+              disabled={!minWeight || !maxWeight}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
           </>
         );
-        
+
       case 3: // Specific weights for non-full set
         return (
           <>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>What dumbbells weights do you have access to?</Text>
-
             </View>
-            
+
             <TextInput
               style={styles.specificWeightsInput}
               value={specificWeights}
               onChangeText={setSpecificWeights}
-             
               placeholderTextColor="#CCCCCC"
               multiline
             />
-            
-            <TouchableOpacity 
-              style={[styles.submitButton, !specificWeights ? styles.disabledButton : {}]} 
+
+            <TouchableOpacity
+              style={[styles.submitButton, !specificWeights ? styles.disabledButton : {}]}
               onPress={handleDumbbellSubmit}
-              disabled={!specificWeights}
-            >
+              disabled={!specificWeights}>
               <Text style={styles.submitButtonText}>Submit</Text>
             </TouchableOpacity>
           </>
         );
-        
+
       default:
         return null;
     }
@@ -316,17 +316,14 @@ export default function Equipment3({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.90} barHeight={8} />
-      <ScrollView 
+      <ProgressBar progress={0.9} barHeight={8} />
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
+        contentContainerStyle={{ paddingBottom: 20 }}>
         <View style={styles.contentContainer}>
-          <Text style={styles.questionText}>
-            Do you have access to...
-          </Text>
-          
+          <Text style={styles.questionText}>Do you have access to...</Text>
+
           <View style={styles.equipmentGrid}>
             {/* Display all equipment except the last two */}
             {mainEquipment.map((equipment) => (
@@ -334,25 +331,25 @@ export default function Equipment3({ route }) {
                 key={equipment.id}
                 style={[
                   styles.equipmentCard,
-                  selectedEquipment.includes(equipment.id) && styles.selectedCard
+                  selectedEquipment.includes(equipment.id) && styles.selectedCard,
                 ]}
-                onPress={() => toggleEquipment(equipment.id)}
-              >
-                <Image 
-                  source={equipment.image} 
-                  style={styles.equipmentImage} 
+                onPress={() => toggleEquipment(equipment.id)}>
+                <Image
+                  source={equipment.image}
+                  style={styles.equipmentImage}
                   resizeMode="contain"
                 />
-                <Text style={[
-                  styles.equipmentText,
-                  selectedEquipment.includes(equipment.id) && styles.selectedEquipmentText
-                ]}>
+                <Text
+                  style={[
+                    styles.equipmentText,
+                    selectedEquipment.includes(equipment.id) && styles.selectedEquipmentText,
+                  ]}>
                   {equipment.name}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          
+
           {/* Last row with second-to-last item, next button, and last item */}
           <View style={styles.lastRowContainer}>
             {/* Second-to-last item */}
@@ -360,46 +357,42 @@ export default function Equipment3({ route }) {
               key={secondLastItem.id}
               style={[
                 styles.equipmentCard,
-                selectedEquipment.includes(secondLastItem.id) && styles.selectedCard
+                selectedEquipment.includes(secondLastItem.id) && styles.selectedCard,
               ]}
-              onPress={() => toggleEquipment(secondLastItem.id)}
-            >
-              <Image 
-                source={secondLastItem.image} 
-                style={styles.equipmentImage} 
+              onPress={() => toggleEquipment(secondLastItem.id)}>
+              <Image
+                source={secondLastItem.image}
+                style={styles.equipmentImage}
                 resizeMode="contain"
               />
-              <Text style={[
-                styles.equipmentText,
-                selectedEquipment.includes(secondLastItem.id) && styles.selectedEquipmentText
-              ]}>
+              <Text
+                style={[
+                  styles.equipmentText,
+                  selectedEquipment.includes(secondLastItem.id) && styles.selectedEquipmentText,
+                ]}>
                 {secondLastItem.name}
               </Text>
             </TouchableOpacity>
-            
+
             {/* Next button */}
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
-            
+
             {/* Last item */}
             <TouchableOpacity
               key={lastItem.id}
               style={[
                 styles.equipmentCard,
-                selectedEquipment.includes(lastItem.id) && styles.selectedCard
+                selectedEquipment.includes(lastItem.id) && styles.selectedCard,
               ]}
-              onPress={() => toggleEquipment(lastItem.id)}
-            >
-              <Image 
-                source={lastItem.image} 
-                style={styles.equipmentImage} 
-                resizeMode="contain"
-              />
-              <Text style={[
-                styles.equipmentText,
-                selectedEquipment.includes(lastItem.id) && styles.selectedEquipmentText
-              ]}>
+              onPress={() => toggleEquipment(lastItem.id)}>
+              <Image source={lastItem.image} style={styles.equipmentImage} resizeMode="contain" />
+              <Text
+                style={[
+                  styles.equipmentText,
+                  selectedEquipment.includes(lastItem.id) && styles.selectedEquipmentText,
+                ]}>
                 {lastItem.name}
               </Text>
             </TouchableOpacity>
@@ -412,33 +405,28 @@ export default function Equipment3({ route }) {
         visible={showLegCurlModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={closeModal}
-      >
+        onRequestClose={closeModal}>
         <View style={styles.modalOverlay} onTouchEnd={closeModal}>
           <View style={styles.modalContainer} onTouchEnd={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Is the leg curl machine,</Text>
-
             </View>
             <View style={styles.modalButtonsContainer}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.redButton]} 
-                onPress={() => handleLegCurlSelection('standing')}
-              >
+              <TouchableOpacity
+                style={[styles.modalButton, styles.redButton]}
+                onPress={() => handleLegCurlSelection('standing')}>
                 <Text style={styles.modalButtonText}>Standing</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalButton} 
-                onPress={() => handleLegCurlSelection('lying')}
-              >
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => handleLegCurlSelection('lying')}>
                 <Text style={styles.modalButtonText}>Lying</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalButton} 
-                onPress={() => handleLegCurlSelection('seated')}
-              >
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => handleLegCurlSelection('seated')}>
                 <Text style={styles.modalButtonText}>Seated</Text>
               </TouchableOpacity>
             </View>
@@ -451,17 +439,15 @@ export default function Equipment3({ route }) {
         visible={showDumbbellModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={closeModal}
-      >
+        onRequestClose={closeModal}>
         <View style={styles.modalOverlay} onTouchEnd={closeModal}>
-          <View 
+          <View
             style={[
-              styles.modalContainer, 
+              styles.modalContainer,
               dumbbellModalStep === 2 && styles.modalContainerTall,
-              dumbbellModalStep === 3 && styles.modalContainerTall
-            ]} 
-            onTouchEnd={(e) => e.stopPropagation()}
-          >
+              dumbbellModalStep === 3 && styles.modalContainerTall,
+            ]}
+            onTouchEnd={(e) => e.stopPropagation()}>
             {renderDumbbellModalContent()}
           </View>
         </View>

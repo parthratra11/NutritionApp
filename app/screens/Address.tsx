@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig.js';
 
 export default function AddressScreen() {
@@ -37,13 +37,24 @@ export default function AddressScreen() {
       if (!user?.email) return;
 
       try {
-        const userDocRef = doc(db, 'intakeForms', user.email);
+        const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
         const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists() && userDocSnap.data().address) {
-          // User already has address, redirect to home
-          navigation.navigate('Reports');
-          return;
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+
+          // Load existing address data if available
+          if (data.houseNumber) setHouseNumber(data.houseNumber);
+          if (data.street) setStreet(data.street);
+          if (data.postalCode) setPostalCode(data.postalCode);
+          if (data.city) setCity(data.city);
+          if (data.country) setCountry(data.country);
+
+          // If user has completed payment, redirect to Reports
+          if (data.hasCompletedPayment) {
+            navigation.navigate('Reports');
+            return;
+          }
         }
       } catch (error) {
         console.error('Error checking address:', error);
@@ -69,32 +80,35 @@ export default function AddressScreen() {
     setLoading(true);
 
     try {
-      // Check if user document exists in intakeForms
-      const userDocRef = doc(db, 'intakeForms', user.email);
+      const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
       const userDocSnap = await getDoc(userDocRef);
+
+      const addressData = {
+        houseNumber,
+        street,
+        postalCode,
+        city,
+        country,
+        email: user.email.toLowerCase(),
+        addressUpdatedAt: new Date(),
+        lastUpdated: new Date(),
+      };
 
       if (userDocSnap.exists()) {
         // Update existing document with address information
-        await updateDoc(userDocRef, {
-          address: {
-            houseNumber,
-            street,
-            postalCode,
-            city,
-            country,
-          },
-          addressUpdatedAt: new Date().toISOString(),
-        });
+        await setDoc(userDocRef, addressData, { merge: true });
       } else {
-        Alert.alert('Error', 'User profile not found. Please complete registration first.');
-        return;
+        // Create new document with address information
+        await setDoc(userDocRef, {
+          ...addressData,
+          isSignupOnly: true,
+        });
       }
 
       Alert.alert('Success', 'Address information saved successfully!', [
         {
           text: 'OK',
           onPress: () => {
-            // Navigate to Home after successful address save
             navigation.navigate('Payment');
           },
         },

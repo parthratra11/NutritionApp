@@ -17,8 +17,7 @@ export default function Greetings() {
         <Text style={styles.subtitle}>Fill this quick form to get started.</Text>
         <TouchableOpacity
           style={styles.startButton}
-          onPress={() => navigation.navigate('MeasurementChoice')}
-        >
+          onPress={() => navigation.navigate('MeasurementChoice')}>
           <Text style={styles.startButtonText}>Start</Text>
         </TouchableOpacity>
       </View>
@@ -38,7 +37,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     fontFamily: 'Texta',
-    fontSize: screenWidth * 0.09 ,
+    fontSize: screenWidth * 0.09,
     fontWeight: '800',
     lineHeight: screenWidth * 0.11,
     marginBottom: screenHeight * 0.025,
@@ -72,4 +71,3 @@ const styles = StyleSheet.create({
     lineHeight: screenWidth * 0.055,
   },
 });
-

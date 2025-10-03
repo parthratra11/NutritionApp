@@ -9,19 +9,19 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Equipment2({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [selectedEquipment, setSelectedEquipment] = useState([]);
 
   const cardioEquipment = [
     { id: 'treadmill', name: 'Treadmill' },
     { id: 'rower', name: 'Rower' },
     { id: 'crosstrainer', name: 'Cross- Trainer' },
-    { id: 'skippingrope', name: 'Skipping Rope' }
+    { id: 'skippingrope', name: 'Skipping Rope' },
   ];
 
   const toggleEquipment = (equipmentId) => {
     if (selectedEquipment.includes(equipmentId)) {
-      setSelectedEquipment(selectedEquipment.filter(id => id !== equipmentId));
+      setSelectedEquipment(selectedEquipment.filter((id) => id !== equipmentId));
     } else {
       setSelectedEquipment([...selectedEquipment, equipmentId]);
     }
@@ -30,38 +30,36 @@ export default function Equipment2({ route }) {
   const handleNext = () => {
     navigation.navigate('Equipment3', {
       ...previousParams,
-      cardioEquipment: selectedEquipment
+      cardioEquipment: selectedEquipment,
     });
   };
 
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.85} barHeight={8} />
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.questionText}>
             Do you have access to any cardio equipment at home ?
           </Text>
-          
+
           <View style={styles.equipmentGrid}>
             {cardioEquipment.map((equipment, index) => (
               <TouchableOpacity
                 key={equipment.id}
                 style={[
                   styles.equipmentCard,
-                  selectedEquipment.includes(equipment.id) && styles.selectedCard
+                  selectedEquipment.includes(equipment.id) && styles.selectedCard,
                 ]}
-                onPress={() => toggleEquipment(equipment.id)}
-              >
+                onPress={() => toggleEquipment(equipment.id)}>
                 <Text style={styles.equipmentText}>{equipment.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>&gt;</Text>
           </TouchableOpacity>

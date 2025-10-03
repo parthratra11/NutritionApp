@@ -9,26 +9,26 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function StressLevel({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [selectedLevel, setSelectedLevel] = useState(null);
 
   const stressLevels = [
     {
       id: 'stress_free',
-      text: 'Stress-free (e.g. on holiday)'
+      text: 'Stress-free (e.g. on holiday)',
     },
     {
       id: 'mild_stress',
-      text: 'Only occasional/mild stress (e.g. student not during exam period)'
+      text: 'Only occasional/mild stress (e.g. student not during exam period)',
     },
     {
       id: 'average_stress',
-      text: 'Average stress (e.g. full-time work with deadlines/commuting)'
+      text: 'Average stress (e.g. full-time work with deadlines/commuting)',
     },
     {
       id: 'high_stress',
-      text: 'High stress (e.g. very high-paced work environment with great responsibility)'
-    }
+      text: 'High stress (e.g. very high-paced work environment with great responsibility)',
+    },
   ];
 
   const handleSelection = (levelId) => {
@@ -39,39 +39,35 @@ export default function StressLevel({ route }) {
     if (selectedLevel) {
       navigation.navigate('SleepForm', {
         ...previousParams,
-        stressLevel: selectedLevel
+        stressLevel: selectedLevel,
       });
     }
   };
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.60} barHeight={8} />
-      <ScrollView 
+      <ProgressBar progress={0.6} barHeight={8} />
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.mainTitle}>
-            Which of the following options best describes your stress level ?(this does NOT include exercise)
+            Which of the following options best describes your stress level ?(this does NOT include
+            exercise)
           </Text>
-          
+
           <View style={styles.optionsContainer}>
             {stressLevels.map((level) => (
               <TouchableOpacity
                 key={level.id}
-                style={[
-                  styles.optionCard,
-                  selectedLevel === level.id && styles.selectedCard
-                ]}
-                onPress={() => handleSelection(level.id)}
-              >
+                style={[styles.optionCard, selectedLevel === level.id && styles.selectedCard]}
+                onPress={() => handleSelection(level.id)}>
                 <Text style={styles.optionText}>{level.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          
+
           {selectedLevel && (
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>

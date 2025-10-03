@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,29 +17,28 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Equipment4({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [additionalInfo, setAdditionalInfo] = useState('');
 
   const handleNext = () => {
     navigation.navigate('Supplements', {
       ...previousParams,
-      additionalEquipmentInfo: additionalInfo
+      additionalEquipmentInfo: additionalInfo,
     });
   };
 
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.95} barHeight={8} />
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.questionText}>
             Is there anything else you would like to share regarding equipment availability?
           </Text>
-          
+
           <TextInput
             style={styles.inputField}
             value={additionalInfo}
@@ -41,7 +48,7 @@ export default function Equipment4({ route }) {
             placeholderTextColor="rgba(255, 255, 255, 0.5)"
             textAlignVertical="top"
           />
-          
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
@@ -89,7 +96,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: screenHeight * 0.3,
-    
   },
   nextButtonText: {
     color: '#FFFFFF',

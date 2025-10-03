@@ -1,40 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function DedicationLevel({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-  
+  const [formData, setFormData] = useState<any>({});
   const [selectedLevel, setSelectedLevel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          setSelectedLevel(data.dedicationLevel || null);
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
 
   const dedicationLevels = [
     {
       id: 'steady',
-      text: "Steady and sustainability is most important to me. As long as I'm moving in the right direction, I don't mind about the rate of progress."
+      text: "Steady and sustainability is most important to me. As long as I'm moving in the right direction, I don't mind about the rate of progress.",
     },
     {
       id: 'balanced',
-      text: "I want to achieve results at a good pace whilst maintaining a balanced lifestyle."
+      text: 'I want to achieve results at a good pace whilst maintaining a balanced lifestyle.',
     },
     {
       id: 'maximum',
-      text: "I will do whatever it takes to achieve maximum results without compromising my health."
-    }
+      text: 'I will do whatever it takes to achieve maximum results without compromising my health.',
+    },
   ];
 
   const handleSelect = (levelId) => {
     setSelectedLevel(levelId);
   };
-  
-  const handleNext = () => {
+
+  const handleNext = async () => {
+    await saveFormData({
+      dedicationLevel: selectedLevel,
+      dedicationLevelCompleted: true,
+    });
     navigation.navigate('TrainingFrequency', {
       ...previousParams,
-      dedicationLevel: selectedLevel
+      dedicationLevel: selectedLevel,
     });
   };
 
@@ -43,27 +94,20 @@ export default function DedicationLevel({ route }) {
       <ProgressBar progress={0.85} barHeight={8} />
       <View style={styles.contentContainer}>
         <Text style={styles.mainTitle}>What's your dedication{'\n'}level?</Text>
-        
+
         <View style={styles.optionsContainer}>
           {dedicationLevels.map((level) => (
             <TouchableOpacity
               key={level.id}
-              style={[
-                styles.optionCard,
-                selectedLevel === level.id && styles.selectedCard
-              ]}
-              onPress={() => handleSelect(level.id)}
-            >
+              style={[styles.optionCard, selectedLevel === level.id && styles.selectedCard]}
+              onPress={() => handleSelect(level.id)}>
               <Text style={styles.optionText}>{level.text}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        
+
         {selectedLevel && (
-          <TouchableOpacity 
-            style={styles.nextButton} 
-            onPress={handleNext}
-          >
+          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>&gt;</Text>
           </TouchableOpacity>
         )}

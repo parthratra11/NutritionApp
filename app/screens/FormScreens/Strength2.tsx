@@ -1,23 +1,98 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Strength2({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-  
-  // Initialize exercise data
+  const [formData, setFormData] = useState<any>({});
   const [exerciseData, setExerciseData] = useState({
     benchPress: { weight: '', reps: '' },
     backSquat: { weight: '', reps: '' },
     chinUp: { weight: '', reps: '' },
     deadlift: { weight: '', reps: '' },
-    overheadPress: { weight: '', reps: '' }
+    overheadPress: { weight: '', reps: '' },
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          setExerciseData({
+            benchPress: {
+              weight: data.benchPressWeight || '',
+              reps: data.benchPressReps || '',
+            },
+            backSquat: {
+              weight: data.squatWeight || '',
+              reps: data.squatReps || '',
+            },
+            chinUp: {
+              weight: data.chinUpWeight || '',
+              reps: data.chinUpReps || '',
+            },
+            deadlift: {
+              weight: data.deadliftWeight || '',
+              reps: data.deadliftReps || '',
+            },
+            overheadPress: {
+              weight: data.overheadPressWeight || '',
+              reps: data.overheadPressReps || '',
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
 
   // Handle input change
   const handleInputChange = (exercise, field, value) => {
@@ -25,18 +100,46 @@ export default function Strength2({ route }) {
       ...exerciseData,
       [exercise]: {
         ...exerciseData[exercise],
-        [field]: value
-      }
+        [field]: value,
+      },
     });
   };
 
   // Handle next button press
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Convert exercise data to individual fields for database
+    const dataToSave = {
+      benchPressWeight: exerciseData.benchPress.weight,
+      benchPressReps: exerciseData.benchPress.reps,
+      squatWeight: exerciseData.backSquat.weight,
+      squatReps: exerciseData.backSquat.reps,
+      chinUpWeight: exerciseData.chinUp.weight,
+      chinUpReps: exerciseData.chinUp.reps,
+      deadliftWeight: exerciseData.deadlift.weight,
+      deadliftReps: exerciseData.deadlift.reps,
+      overheadPressWeight: exerciseData.overheadPress.weight,
+      overheadPressReps: exerciseData.overheadPress.reps,
+      strength2Completed: true,
+    };
+
+    await saveFormData(dataToSave);
+
     navigation.navigate('Goals', {
       ...previousParams,
-      exerciseData
+      exerciseData,
     });
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <ProgressBar progress={0.6} barHeight={8} />
+        <View style={styles.mainContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -194,7 +297,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#BFC9D1',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
+    fontSize: screenWidth * 0.04,
     paddingVertical: 8,
     marginVertical: 4,
   },
@@ -214,5 +317,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Texta',
     textAlign: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.05,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: screenHeight * 0.3,
   },
 });

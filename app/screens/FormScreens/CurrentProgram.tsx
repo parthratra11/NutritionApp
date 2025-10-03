@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, TextInput, Image, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  TextInput,
+  Image,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +22,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function CurrentProgram({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [dietDescription, setDietDescription] = useState('');
   const [trainingProgram, setTrainingProgram] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -58,11 +69,11 @@ export default function CurrentProgram({ route }) {
     if (!result.canceled && result.assets.length > 0) {
       // Get the existing photos or initialize an empty array
       const currentPhotos = [...photos];
-      
+
       // Add new photos up to a maximum of 4
-      const newPhotos = result.assets.map(asset => asset.uri);
+      const newPhotos = result.assets.map((asset) => asset.uri);
       const combinedPhotos = [...currentPhotos, ...newPhotos];
-      
+
       // Limit to 4 photos maximum
       setPhotos(combinedPhotos.slice(0, 4));
     }
@@ -85,99 +96,102 @@ export default function CurrentProgram({ route }) {
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.99} barHeight={8} />
-      <ScrollView 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
-      >
-        <View style={styles.contentContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.labelText}>
-              Please describe a typical day of eating in detail (or diet plan if following one), including snacking and alcohol.
-            </Text>
-            
-            <TextInput
-              style={styles.inputField}
-              value={dietDescription}
-              onChangeText={setDietDescription}
-              placeholder=""
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              multiline
-            />
-          </View>
-          
-          {/* Add spacer */}
-          <View style={styles.spacer} />
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.labelText}>
-              Please describe or attach your current training program in detail (if any)
-            </Text>
-            
-            <TextInput
-              style={styles.inputField}
-              value={trainingProgram}
-              onChangeText={setTrainingProgram}
-              placeholder=""
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              multiline
-            />
-          </View>
-          
-          {/* Add spacer */}
-          <View style={styles.spacer} />
-          
-          <View style={styles.photoSectionContainer}>
-            <Text style={styles.labelText}>
-              Please upload atleast four full-body pictures. Your natural relaxed posture.
-            </Text>
-            
-            <Text style={styles.sublabelText}>
-              (wearing shorts that don't cover your knees): front, both sides, and back. Shirtless if male or a vest if female.
-            </Text>
-            
-            <TouchableOpacity 
-              style={styles.uploadButton}
-              onPress={pickImages}
-            >
-              <Ionicons name="cloud-upload-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.uploadButtonText}>Upload Photos</Text>
-            </TouchableOpacity>
-            
-            {photos.length > 0 && (
-              <View style={styles.photosPreviewContainer}>
-                <Text style={styles.photosCountText}>
-                  {photos.length} {photos.length === 1 ? 'photo' : 'photos'} selected
-                </Text>
-                
-                {/* Display photo thumbnails with remove option */}
-                <View style={styles.photoThumbnailsContainer}>
-                  {photos.map((photo, index) => (
-                    <View key={index} style={styles.thumbnailContainer}>
-                      <Image source={{ uri: photo }} style={styles.thumbnail} />
-                      <TouchableOpacity 
-                        style={styles.removePhotoButton}
-                        onPress={() => removePhoto(index)}
-                      >
-                        <Ionicons name="close-circle" size={22} color="#C7312B" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: screenHeight * 0.15, // Extra padding for keyboard
+          }}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.contentContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>
+                Please describe a typical day of eating in detail (or diet plan if following one),
+                including snacking and alcohol.
+              </Text>
+
+              <TextInput
+                style={styles.inputField}
+                value={dietDescription}
+                onChangeText={setDietDescription}
+                placeholder=""
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                multiline
+              />
+            </View>
+
+            {/* Add spacer */}
+            <View style={styles.spacer} />
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>
+                Please describe or attach your current training program in detail (if any)
+              </Text>
+
+              <TextInput
+                style={styles.inputField}
+                value={trainingProgram}
+                onChangeText={setTrainingProgram}
+                placeholder=""
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                multiline
+              />
+            </View>
+
+            {/* Add spacer */}
+            <View style={styles.spacer} />
+
+            <View style={styles.photoSectionContainer}>
+              <Text style={styles.labelText}>
+                Please upload atleast four full-body pictures. Your natural relaxed posture.
+              </Text>
+
+              <Text style={styles.sublabelText}>
+                (wearing shorts that don't cover your knees): front, both sides, and back. Shirtless
+                if male or a vest if female.
+              </Text>
+
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
+                <Ionicons name="cloud-upload-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.uploadButtonText}>Upload Photos</Text>
+              </TouchableOpacity>
+
+              {photos.length > 0 && (
+                <View style={styles.photosPreviewContainer}>
+                  <Text style={styles.photosCountText}>
+                    {photos.length} {photos.length === 1 ? 'photo' : 'photos'} selected
+                  </Text>
+
+                  {/* Display photo thumbnails with remove option */}
+                  <View style={styles.photoThumbnailsContainer}>
+                    {photos.map((photo, index) => (
+                      <View key={index} style={styles.thumbnailContainer}>
+                        <Image source={{ uri: photo }} style={styles.thumbnail} />
+                        <TouchableOpacity
+                          style={styles.removePhotoButton}
+                          onPress={() => removePhoto(index)}>
+                          <Ionicons name="close-circle" size={22} color="#C7312B" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                <Text style={styles.nextButtonText}>&gt;</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={styles.nextButton} 
-              onPress={handleNext}
-            >
-              <Text style={styles.nextButtonText}>&gt;</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }
@@ -188,6 +202,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: screenWidth * 0.05,
     paddingTop: screenHeight * 0.1,
     paddingBottom: screenHeight * 0.05,
+    minHeight: screenHeight * 0.9, // Ensure minimum content height
   },
   spacer: {
     height: screenHeight * 0.05, // Adds spacing between sections
@@ -217,8 +232,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#8496A6',
     color: '#FFFFFF',
     fontSize: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.01,
-    minHeight: screenHeight * 0.05,
+    paddingVertical: screenHeight * 0.015, // Increased padding for better touch target
+    minHeight: screenHeight * 0.08, // Minimum height for text areas
+    textAlignVertical: 'top',
   },
   uploadButton: {
     backgroundColor: '#1E3557',
@@ -268,7 +284,8 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     alignItems: 'center',
-    marginTop: screenHeight * 0.06, // Increased for more space at bottom
+    marginTop: screenHeight * 0.08, // Increased margin
+    paddingBottom: screenHeight * 0.05,
   },
   nextButton: {
     backgroundColor: '#C7312B',
@@ -277,7 +294,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
-  
   },
   nextButtonText: {
     color: '#FFFFFF',

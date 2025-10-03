@@ -1,5 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -10,7 +20,7 @@ export default function Occupation({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
   const scrollViewRef = useRef(null);
-  
+
   const [occupation, setOccupation] = useState('');
   const [diet, setDiet] = useState('');
   const [medicalConditions, setMedicalConditions] = useState('');
@@ -20,10 +30,10 @@ export default function Occupation({ route }) {
       ...previousParams,
       occupation,
       diet,
-      medicalConditions
+      medicalConditions,
     });
   };
-  
+
   const handleFocus = (inputName) => {
     setTimeout(() => {
       if (scrollViewRef.current && (inputName === 'medicalConditions' || inputName === 'diet')) {
@@ -34,37 +44,37 @@ export default function Occupation({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.95} barHeight={8} />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <ProgressBar progress={0.58} barHeight={8} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
-      >
-        <ScrollView 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
-        >
+          keyboardShouldPersistTaps="handled">
           <View style={styles.contentContainer}>
             <View style={styles.sectionContainer}>
               <Text style={styles.question}>What is your occupation?</Text>
               <Text style={styles.description}>
-                The aim is to understand your circadian rhythm (physiological impact of your daily routine), stress and activity level.
+                The aim is to understand your circadian rhythm (physiological impact of your daily
+                routine), stress and activity level.
               </Text>
               <TextInput
                 style={styles.input}
                 value={occupation}
                 onChangeText={setOccupation}
                 onFocus={() => handleFocus('occupation')}
-                
                 placeholderTextColor="#8496A6"
               />
             </View>
 
             <View style={styles.sectionContainer}>
               <Text style={styles.question}>
-                Do you currently follow any special diet, or wish to follow any special diet as part of this coaching program?
+                Do you currently follow any special diet, or wish to follow any special diet as part
+                of this coaching program?
               </Text>
               <Text style={styles.description}>e.g. ketogenic, vegan</Text>
               <TextInput
@@ -72,29 +82,26 @@ export default function Occupation({ route }) {
                 value={diet}
                 onChangeText={setDiet}
                 onFocus={() => handleFocus('diet')}
-                
                 placeholderTextColor="#8496A6"
               />
             </View>
 
             <View style={styles.sectionContainer}>
-              <Text style={styles.question}>
-                Please list any medical conditions or injuries.
-              </Text>
+              <Text style={styles.question}>Please list any medical conditions or injuries.</Text>
               <Text style={styles.description}>
-                Including disabilities, allergies, illnesses, syndromes, disorders, etc.) you have or have had historically.
+                Including disabilities, allergies, illnesses, syndromes, disorders, etc.) you have
+                or have had historically.
               </Text>
               <TextInput
                 style={styles.input}
                 value={medicalConditions}
                 onChangeText={setMedicalConditions}
                 onFocus={() => handleFocus('medicalConditions')}
-                
                 placeholderTextColor="#8496A6"
                 multiline
               />
             </View>
-            
+
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
@@ -108,9 +115,10 @@ export default function Occupation({ route }) {
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
-    paddingHorizontal: screenWidth * 0.03,
-    paddingTop: screenHeight * 0.07,
-    paddingBottom: screenHeight * 0.1,
+    paddingHorizontal: screenWidth * 0.05,
+    paddingTop: screenHeight * 0.1,
+    paddingBottom: screenHeight * 0.15, // Increased bottom padding
+    minHeight: screenHeight * 0.9,
   },
   sectionContainer: {
     marginBottom: screenHeight * 0.04,
@@ -133,7 +141,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#BFC9D1',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
+    fontSize: screenWidth * 0.04,
     paddingVertical: 8,
   },
   nextButton: {

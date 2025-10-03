@@ -1,25 +1,81 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  TextInput,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import Slider from '@react-native-community/slider';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Strength1({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-  
-  const [competencyLevel, setCompetencyLevel] = useState(0.5); // Default to middle (Intermediate)
+  const [formData, setFormData] = useState<any>({});
+  const [competencyLevel, setCompetencyLevel] = useState(0.5); // Keep for UI
   const [comments, setComments] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleNext = () => {
-    navigation.navigate('Strength2', {
-      ...previousParams,
-      competencyLevel,
-      trainingComments: comments
-    });
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          // Convert text back to slider value for display
+          const savedCompetency = data.strengthCompetency;
+          if (savedCompetency === 'Novice') setCompetencyLevel(0.2);
+          else if (savedCompetency === 'Intermediate') setCompetencyLevel(0.5);
+          else if (savedCompetency === 'Advanced') setCompetencyLevel(0.8);
+          else setCompetencyLevel(data.strengthCompetencyValue || 0.5);
+
+          setComments(data.strengthCompetencyComments || '');
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
   };
 
   // Function to get label text based on slider value
@@ -29,47 +85,88 @@ export default function Strength1({ route }) {
     return 'Advanced';
   };
 
+  const handleNext = async () => {
+    const competencyText = getCompetencyText();
+
+    await saveFormData({
+      strengthCompetency: competencyText, // Save text instead of number
+      strengthCompetencyValue: competencyLevel, // Keep numeric for reference
+      strengthCompetencyComments: comments,
+      strength1Completed: true,
+    });
+
+    navigation.navigate('Strength2', {
+      ...previousParams,
+      competencyLevel: competencyText, // Pass text to next screen
+      trainingComments: comments,
+    });
+  };
+
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.5} barHeight={8} />
-      <View style={styles.contentContainer}>
-        <Text style={styles.mainTitle}>How would you rate your competency on the mentioned exercises?</Text>
-        
-        <View style={styles.sliderContainer}>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={1}
-            value={competencyLevel}
-            onValueChange={setCompetencyLevel}
-            minimumTrackTintColor="#C7312B"
-            maximumTrackTintColor="#FFFFFF"
-            thumbTintColor="#C7312B"
-          />
-          
-          <View style={styles.labelsContainer}>
-            <Text style={styles.labelText}>Novice{'\n'}(Questionable{'\n'}Technique)</Text>
-            <Text style={styles.labelText}>Intermediate{'\n'}(Reasonably{'\n'}Competent but could{'\n'}Improve)</Text>
-            <Text style={styles.labelText}>Advanced (Highly{'\n'}competent, with{'\n'}months/years of{'\n'}consistent{'\n'}application)</Text>
-          </View>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.contentContainer}>
+            <Text style={styles.mainTitle}>
+              How would you rate your competency on the mentioned exercises?
+            </Text>
 
-        <View style={styles.commentsContainer}>
-          <Text style={styles.commentsLabel}>Comments? (Add any context to your training history)</Text>
-          <TextInput
-            style={styles.commentsInput}
-            value={comments}
-            onChangeText={setComments}
-           
-            
-            multiline
-          />
-        </View>
-        
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>&gt;</Text>
-        </TouchableOpacity>
-      </View>
+            <View style={styles.sliderContainer}>
+              <Slider
+                style={styles.slider}
+                minimumValue={0}
+                maximumValue={1}
+                value={competencyLevel}
+                onValueChange={setCompetencyLevel}
+                minimumTrackTintColor="#C7312B"
+                maximumTrackTintColor="#FFFFFF"
+                thumbTintColor="#C7312B"
+              />
+
+              <View style={styles.labelsContainer}>
+                <Text style={styles.labelText}>
+                  Novice{'\n'}(Questionable{'\n'}Technique)
+                </Text>
+                <Text style={styles.labelText}>
+                  Intermediate{'\n'}(Reasonably{'\n'}Competent but could{'\n'}Improve)
+                </Text>
+                <Text style={styles.labelText}>
+                  Advanced (Highly{'\n'}competent, with{'\n'}months/years of{'\n'}consistent{'\n'}
+                  application)
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.commentsContainer}>
+              <Text style={styles.commentsLabel}>
+                Comments? (Add any context to your training history)
+              </Text>
+              <TextInput
+                style={styles.commentsInput}
+                value={comments}
+                onChangeText={setComments}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                placeholder="Add any context to your training history..."
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              />
+            </View>
+
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>&gt;</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }
@@ -79,8 +176,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.02, // Reduced horizontal padding
-    marginTop: screenHeight * 0.15,
+    paddingHorizontal: screenWidth * 0.02,
+    paddingTop: screenHeight * 0.15,
+    paddingBottom: screenHeight * 0.1, // Added bottom padding
+    minHeight: screenHeight * 0.9, // Ensure minimum height
   },
   mainTitle: {
     color: '#FFFFFF',
@@ -130,8 +229,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#BFC9D1',
     color: '#FFFFFF',
     fontSize: screenWidth * 0.036,
-    paddingVertical: 6,
+    paddingVertical: 20,
     fontFamily: 'Texta',
+    minHeight: screenHeight * 0.08, // Minimum height for better touch target
+    maxHeight: screenHeight * 0.15, // Maximum height to prevent overflow
   },
   nextButton: {
     backgroundColor: '#C7312B',

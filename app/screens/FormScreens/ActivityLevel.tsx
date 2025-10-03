@@ -9,26 +9,26 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function ActivityLevel({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [selectedLevel, setSelectedLevel] = useState(null);
 
   const activityLevels = [
     {
       id: 'sedentary',
-      text: 'Sedentary (e.g. office job), below 7,500 steps/day'
+      text: 'Sedentary (e.g. office job), below 7,500 steps/day',
     },
     {
       id: 'somewhat_active',
-      text: 'Somewhat active (e.g. you walk your dog several times a day or you commute by bicycle/on foot), 7,500 - 9,999 steps/day'
+      text: 'Somewhat active (e.g. you walk your dog several times a day or you commute by bicycle/on foot), 7,500 - 9,999 steps/day',
     },
     {
       id: 'active',
-      text: 'Active (e.g. full-time PT, literally on your feet most of the day), 10,000 - 12,500 steps/day'
+      text: 'Active (e.g. full-time PT, literally on your feet most of the day), 10,000 - 12,500 steps/day',
     },
     {
       id: 'very_active',
-      text: 'Very active (e.g. involved in physical labour), over 12,500 steps/day with intensive movement'
-    }
+      text: 'Very active (e.g. involved in physical labour), over 12,500 steps/day with intensive movement',
+    },
   ];
 
   const handleSelection = (levelId) => {
@@ -39,7 +39,7 @@ export default function ActivityLevel({ route }) {
     if (selectedLevel) {
       navigation.navigate('StressLevel', {
         ...previousParams,
-        activityLevel: selectedLevel
+        activityLevel: selectedLevel,
       });
     }
   };
@@ -47,34 +47,27 @@ export default function ActivityLevel({ route }) {
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.65} barHeight={8} />
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.mainTitle}>
             Which of the following options best describes your activity level?
           </Text>
-          <Text style={styles.descriptionText}>
-            (this does NOT include exercise)
-          </Text>
-          
+          <Text style={styles.descriptionText}>(this does NOT include exercise)</Text>
+
           <View style={styles.optionsContainer}>
             {activityLevels.map((level) => (
               <TouchableOpacity
                 key={level.id}
-                style={[
-                  styles.optionCard,
-                  selectedLevel === level.id && styles.selectedCard
-                ]}
-                onPress={() => handleSelection(level.id)}
-              >
+                style={[styles.optionCard, selectedLevel === level.id && styles.selectedCard]}
+                onPress={() => handleSelection(level.id)}>
                 <Text style={styles.optionText}>{level.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          
+
           {selectedLevel && (
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>

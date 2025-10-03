@@ -1,51 +1,111 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function OtherExercise({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
   const scrollViewRef = useRef(null);
-  
+  const [formData, setFormData] = useState<any>({});
   const [otherExercise, setOtherExercise] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleNext = () => {
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          setOtherExercise(data.otherExercises || '');
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
+
+  const handleNext = async () => {
+    await saveFormData({
+      otherExercises: otherExercise,
+      otherExerciseCompleted: true,
+    });
     navigation.navigate('DedicationLevel', {
       ...previousParams,
-      otherExercise
+      otherExercise,
     });
   };
 
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.8} barHeight={8} />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
-      >
-        <ScrollView 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
+          contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.contentContainer}>
             <Text style={styles.mainTitle}>
-              Will you be performing any other form of exercise alongside strength training (e.g. running, football, yoga)?*
+              Will you be performing any other form of exercise alongside strength training (e.g.
+              running, football, yoga)?*
             </Text>
-            
+
             <TextInput
               style={styles.input}
               value={otherExercise}
               onChangeText={setOtherExercise}
               multiline
             />
-            
+
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
@@ -75,7 +135,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#BFC9D1',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
+    fontSize: screenWidth * 0.04,
     paddingVertical: 12,
     marginBottom: screenHeight * 0.025,
   },

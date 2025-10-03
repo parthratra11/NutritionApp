@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,7 +19,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function TrainingTime({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [trainingTimePreference, setTrainingTimePreference] = useState('');
 
   const handleNext = () => {
@@ -21,27 +31,28 @@ export default function TrainingTime({ route }) {
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.90} barHeight={8} />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <ProgressBar progress={0.9} barHeight={8} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
-      >
-        <ScrollView 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
+          contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.contentContainer}>
             <View style={styles.questionContainer}>
               <Text style={styles.questionText}>
-                Are there any times of day at which you are unable or unwilling to train, and outside of that, do you have a strong preference to train at a particular time of day?
+                Are there any times of day at which you are unable or unwilling to train, and
+                outside of that, do you have a strong preference to train at a particular time of
+                day?
               </Text>
-              
+
               <Text style={styles.descriptionText}>
-                This includes when you're at work. If you don't answer this question accurately with detailed times, you may get a program you can't follow(!)
+                This includes when you're at work. If you don't answer this question accurately with
+                detailed times, you may get a program you can't follow(!)
               </Text>
-              
+
               <TextInput
                 style={styles.input}
                 value={trainingTimePreference}
@@ -50,7 +61,7 @@ export default function TrainingTime({ route }) {
                 placeholderTextColor="#8496A6"
               />
             </View>
-            
+
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
@@ -90,8 +101,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#8496A6',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
-    padding: 0,  // Remove padding
+    fontSize: screenWidth * 0.04,
+    padding: 0, // Remove padding
     paddingBottom: 8, // Add some padding only at bottom
     textAlignVertical: 'bottom', // Align text at bottom
     height: 40, // Fixed height instead of minHeight

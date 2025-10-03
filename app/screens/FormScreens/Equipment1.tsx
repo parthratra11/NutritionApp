@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,7 +17,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Equipment1({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [fitnessTech, setFitnessTech] = useState('');
   const [skinfoldCalipers, setSkinfoldCalipers] = useState('');
   const [hasMeasuringTape, setHasMeasuringTape] = useState(null);
@@ -19,29 +27,26 @@ export default function Equipment1({ route }) {
       ...previousParams,
       fitnessTech,
       skinfoldCalipers,
-      hasMeasuringTape
+      hasMeasuringTape,
     });
   };
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.80} barHeight={8} />
-      <ScrollView 
+      <ProgressBar progress={0.8} barHeight={8} />
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <View style={styles.questionContainer}>
             {/* First question section */}
             <View style={styles.questionSection}>
-              <Text style={styles.questionText}>
-                Do you wear any fitness technology ?
-              </Text>
+              <Text style={styles.questionText}>Do you wear any fitness technology ?</Text>
               <Text style={styles.descriptionText}>
                 (Apple Watch, FitBit, Oura Ring, HR Chest Strap, etc)
               </Text>
-              
+
               <TextInput
                 style={styles.input}
                 value={fitnessTech}
@@ -49,13 +54,13 @@ export default function Equipment1({ route }) {
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
             </View>
-            
+
             {/* Second question section */}
             <View style={styles.questionSection}>
               <Text style={styles.questionText}>
                 Do you have skinfold calipers and if so, which one(s)?
               </Text>
-              
+
               <TextInput
                 style={styles.input}
                 value={skinfoldCalipers}
@@ -63,43 +68,41 @@ export default function Equipment1({ route }) {
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
             </View>
-            
+
             {/* Third question section */}
             <View style={styles.questionSection}>
               <Text style={styles.questionText}>
                 Do you have a MyoTape (for taking circumference measurements)?
               </Text>
-              
+
               <View style={styles.buttonContainer}>
-                <TouchableOpacity 
-                  style={[
-                    styles.optionButton,
-                    hasMeasuringTape === true && styles.selectedButton
-                  ]}
-                  onPress={() => setHasMeasuringTape(true)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    hasMeasuringTape === true && styles.selectedButtonText
-                  ]}>Yes</Text>
+                <TouchableOpacity
+                  style={[styles.optionButton, hasMeasuringTape === true && styles.selectedButton]}
+                  onPress={() => setHasMeasuringTape(true)}>
+                  <Text
+                    style={[
+                      styles.optionButtonText,
+                      hasMeasuringTape === true && styles.selectedButtonText,
+                    ]}>
+                    Yes
+                  </Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.optionButton,
-                    hasMeasuringTape === false && styles.selectedButton
-                  ]}
-                  onPress={() => setHasMeasuringTape(false)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    hasMeasuringTape === false && styles.selectedButtonText
-                  ]}>No</Text>
+
+                <TouchableOpacity
+                  style={[styles.optionButton, hasMeasuringTape === false && styles.selectedButton]}
+                  onPress={() => setHasMeasuringTape(false)}>
+                  <Text
+                    style={[
+                      styles.optionButtonText,
+                      hasMeasuringTape === false && styles.selectedButtonText,
+                    ]}>
+                    No
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>&gt;</Text>
           </TouchableOpacity>
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#8496A6',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
+    fontSize: screenWidth * 0.04,
     padding: 0,
     paddingBottom: 8,
     textAlignVertical: 'bottom',

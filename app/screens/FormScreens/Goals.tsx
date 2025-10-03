@@ -1,39 +1,110 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Goals({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
   const scrollViewRef = useRef(null);
-  
+  const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
+
   const [goals, setGoals] = useState({
     goal1: '',
     goal2: '',
     goal3: '',
   });
-  
+
   const [obstacle, setObstacle] = useState('');
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) return;
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          setGoals({
+            goal1: data.goal1 || '',
+            goal2: data.goal2 || '',
+            goal3: data.goal3 || '',
+          });
+          setObstacle(data.obstacle || '');
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
 
   const handleGoalChange = (goalKey, value) => {
     setGoals({
       ...goals,
-      [goalKey]: value
+      [goalKey]: value,
     });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    await saveFormData({
+      goal1: goals.goal1,
+      goal2: goals.goal2,
+      goal3: goals.goal3,
+      obstacle,
+      goalsCompleted: true,
+    });
+
     navigation.navigate('OtherExercise', {
       ...previousParams,
       goals,
-      obstacle
+      obstacle,
     });
   };
-  
+
   const handleFocus = (inputName) => {
     // Just handle scrolling without active input styling
     setTimeout(() => {
@@ -46,20 +117,18 @@ export default function Goals({ route }) {
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.7} barHeight={8} />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
-      >
-        <ScrollView 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}>
+        <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
+          contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.contentContainer}>
             <Text style={styles.mainTitle}>What are your top 3 Goals?</Text>
-            
+
             <View style={styles.goalsContainer}>
               <TextInput
                 style={styles.input}
@@ -69,7 +138,7 @@ export default function Goals({ route }) {
                 placeholderTextColor="#8496A6"
                 onFocus={() => handleFocus('goal1')}
               />
-              
+
               <TextInput
                 style={styles.input}
                 value={goals.goal2}
@@ -78,7 +147,7 @@ export default function Goals({ route }) {
                 placeholderTextColor="#8496A6"
                 onFocus={() => handleFocus('goal2')}
               />
-              
+
               <TextInput
                 style={styles.input}
                 value={goals.goal3}
@@ -88,9 +157,9 @@ export default function Goals({ route }) {
                 onFocus={() => handleFocus('goal3')}
               />
             </View>
-            
+
             <Text style={styles.obstacleTitle}>What is you number one obstacle?</Text>
-            
+
             <TextInput
               style={styles.input}
               value={obstacle}
@@ -98,7 +167,7 @@ export default function Goals({ route }) {
               multiline
               onFocus={() => handleFocus('obstacle')}
             />
-            
+
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
             </TouchableOpacity>
@@ -136,7 +205,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#BFC9D1',
     color: '#FFFFFF',
-    fontSize: screenWidth * 0.040,
+    fontSize: screenWidth * 0.04,
     paddingVertical: 12,
     marginBottom: screenHeight * 0.025,
   },

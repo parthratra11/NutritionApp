@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  TextInput,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -9,29 +17,28 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Supplements({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [supplements, setSupplements] = useState('');
 
   const handleNext = () => {
     navigation.navigate('Genetics', {
       ...previousParams,
-      supplements
+      supplements,
     });
   };
 
   return (
     <BackgroundWrapper>
       <ProgressBar progress={0.97} barHeight={8} />
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.questionText}>
             Please list all the supplements you are currently taking.
           </Text>
-          
+
           <TextInput
             style={styles.inputField}
             value={supplements}
@@ -41,7 +48,7 @@ export default function Supplements({ route }) {
             placeholderTextColor="rgba(255, 255, 255, 0.5)"
             textAlignVertical="top"
           />
-          
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>

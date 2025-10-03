@@ -9,22 +9,22 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function Sleep({ route }) {
   const navigation = useNavigation();
   const previousParams = route?.params || {};
-  
+
   const [selectedOption, setSelectedOption] = useState(null);
 
   const sleepOptions = [
     {
       id: 'sleep_deprived',
-      text: 'Chronically sleep deprived (less than 7 hours)'
+      text: 'Chronically sleep deprived (less than 7 hours)',
     },
     {
       id: 'decent_sleep',
-      text: 'Decent sleep quality (7+ hours)'
+      text: 'Decent sleep quality (7+ hours)',
     },
     {
       id: 'excellent_sleep',
-      text: 'Excellent sleep quality (8+ hours)'
-    }
+      text: 'Excellent sleep quality (8+ hours)',
+    },
   ];
 
   const handleSelection = (optionId) => {
@@ -35,39 +35,32 @@ export default function Sleep({ route }) {
     if (selectedOption) {
       navigation.navigate('Caffeine', {
         ...previousParams,
-        sleepQuality: selectedOption
+        sleepQuality: selectedOption,
       });
     }
   };
 
   return (
     <BackgroundWrapper>
-      <ProgressBar progress={0.70} barHeight={8} />
-      <ScrollView 
+      <ProgressBar progress={0.7} barHeight={8} />
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+        contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
-          <Text style={styles.mainTitle}>
-            How is your sleep rhythm and quality? *
-          </Text>
-          
+          <Text style={styles.mainTitle}>How is your sleep rhythm and quality? *</Text>
+
           <View style={styles.optionsContainer}>
             {sleepOptions.map((option) => (
               <TouchableOpacity
                 key={option.id}
-                style={[
-                  styles.optionCard,
-                  selectedOption === option.id && styles.selectedCard
-                ]}
-                onPress={() => handleSelection(option.id)}
-              >
+                style={[styles.optionCard, selectedOption === option.id && styles.selectedCard]}
+                onPress={() => handleSelection(option.id)}>
                 <Text style={styles.optionText}>{option.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          
+
           {selectedOption && (
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>&gt;</Text>
