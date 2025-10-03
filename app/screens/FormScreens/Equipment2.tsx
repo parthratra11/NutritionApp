@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Equipment2({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
+  
+  // Add form data state
+  const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const [selectedEquipment, setSelectedEquipment] = useState([]);
 
@@ -19,6 +27,57 @@ export default function Equipment2({ route }) {
     { id: 'skippingrope', name: 'Skipping Rope' },
   ];
 
+  // Load existing form data from Firestore
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          
+          // Populate form field with existing data
+          if (data.cardioEquipment && Array.isArray(data.cardioEquipment)) {
+            setSelectedEquipment(data.cardioEquipment);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  // Save form data to Firestore
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
+
   const toggleEquipment = (equipmentId) => {
     if (selectedEquipment.includes(equipmentId)) {
       setSelectedEquipment(selectedEquipment.filter((id) => id !== equipmentId));
@@ -27,12 +86,29 @@ export default function Equipment2({ route }) {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Save data to Firestore before navigating
+    await saveFormData({
+      cardioEquipment: selectedEquipment,
+      equipment2Completed: true,
+    });
+    
+    // Navigate to next screen with updated params
     navigation.navigate('Equipment3', {
       ...previousParams,
       cardioEquipment: selectedEquipment,
     });
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -129,5 +205,14 @@ const styles = StyleSheet.create({
     fontSize: screenWidth * 0.07,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.045,
   },
 });
