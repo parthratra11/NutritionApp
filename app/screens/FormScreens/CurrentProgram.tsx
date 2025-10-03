@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,22 +10,135 @@ import {
   Image,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function CurrentProgram({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
+
+  // Add form data state
+  const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [dietDescription, setDietDescription] = useState('');
   const [trainingProgram, setTrainingProgram] = useState('');
   const [photos, setPhotos] = useState([]);
+  const [photoUrls, setPhotoUrls] = useState([]);
+
+  // Load existing form data from Firestore
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          
+          // Populate form fields with existing data
+          if (data.dietDescription) setDietDescription(data.dietDescription);
+          if (data.trainingProgram) setTrainingProgram(data.trainingProgram);
+          if (data.bodyPhotoUrls && Array.isArray(data.bodyPhotoUrls)) {
+            setPhotoUrls(data.bodyPhotoUrls);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  // Save form data to Firestore (without photos)
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
+
+  // Upload a single photo to Firebase Storage
+  const uploadPhoto = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const storageRef = ref(storage, `users/${user.email.toLowerCase()}/bodyPhotos/${filename}`);
+    
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+    
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Upload failed:', error);
+          reject(error);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        }
+      );
+    });
+  };
+
+  // Upload all photos and save their URLs
+  const uploadAllPhotos = async () => {
+    if (photos.length === 0) return photoUrls;
+    
+    try {
+      const uploadPromises = photos.map(photo => uploadPhoto(photo));
+      const uploadedUrls = await Promise.all(uploadPromises);
+      
+      // Combine existing photo URLs with new ones
+      const allPhotoUrls = [...photoUrls, ...uploadedUrls];
+      
+      return allPhotoUrls;
+    } catch (error) {
+      console.error('Error uploading photos:', error);
+      return photoUrls;
+    }
+  };
 
   // Request permission to access the media library
   const requestMediaLibraryPermission = async () => {
@@ -84,14 +197,52 @@ export default function CurrentProgram({ route }) {
     setPhotos(photos.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleNext = () => {
-    navigation.navigate('Welcome', {
-      ...previousParams,
-      dietDescription,
-      trainingProgram,
-      bodyPhotos: photos,
-    });
+  // Function to remove an existing photo from Firebase Storage and Firestore
+  const removeExistingPhoto = (indexToRemove) => {
+    // Remove from photoUrls state
+    setPhotoUrls(photoUrls.filter((_, index) => index !== indexToRemove));
   };
+
+  const handleNext = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Upload all new photos and get their URLs
+      const allPhotoUrls = await uploadAllPhotos();
+      
+      // Save form data with photo URLs
+      await saveFormData({
+        dietDescription,
+        trainingProgram,
+        bodyPhotoUrls: allPhotoUrls,
+        currentProgramCompleted: true,
+        intakeFormCompleted: true,  // Mark the entire form as completed
+      });
+      
+      // Navigate to Welcome screen
+      navigation.navigate('Welcome', {
+        ...previousParams,
+        dietDescription,
+        trainingProgram,
+        bodyPhotoUrls: allPhotoUrls,
+      });
+    } catch (error) {
+      console.error('Error in form submission:', error);
+      alert('There was a problem saving your information. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -161,16 +312,40 @@ export default function CurrentProgram({ route }) {
                 <Text style={styles.uploadButtonText}>Upload Photos</Text>
               </TouchableOpacity>
 
+              {/* Display existing photos from Firebase */}
+              {photoUrls.length > 0 && (
+                <View style={styles.photosPreviewContainer}>
+                  <Text style={styles.photosCountText}>
+                    {photoUrls.length} existing {photoUrls.length === 1 ? 'photo' : 'photos'}
+                  </Text>
+
+                  {/* Display existing photo thumbnails with remove option */}
+                  <View style={styles.photoThumbnailsContainer}>
+                    {photoUrls.map((photoUrl, index) => (
+                      <View key={`existing-${index}`} style={styles.thumbnailContainer}>
+                        <Image source={{ uri: photoUrl }} style={styles.thumbnail} />
+                        <TouchableOpacity
+                          style={styles.removePhotoButton}
+                          onPress={() => removeExistingPhoto(index)}>
+                          <Ionicons name="close-circle" size={22} color="#C7312B" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Display newly selected photos */}
               {photos.length > 0 && (
                 <View style={styles.photosPreviewContainer}>
                   <Text style={styles.photosCountText}>
-                    {photos.length} {photos.length === 1 ? 'photo' : 'photos'} selected
+                    {photos.length} new {photos.length === 1 ? 'photo' : 'photos'} selected
                   </Text>
 
                   {/* Display photo thumbnails with remove option */}
                   <View style={styles.photoThumbnailsContainer}>
                     {photos.map((photo, index) => (
-                      <View key={index} style={styles.thumbnailContainer}>
+                      <View key={`new-${index}`} style={styles.thumbnailContainer}>
                         <Image source={{ uri: photo }} style={styles.thumbnail} />
                         <TouchableOpacity
                           style={styles.removePhotoButton}
@@ -185,9 +360,18 @@ export default function CurrentProgram({ route }) {
             </View>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                <Text style={styles.nextButtonText}>&gt;</Text>
-              </TouchableOpacity>
+              {isSaving ? (
+                <View style={styles.savingContainer}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                  <Text style={styles.savingText}>
+                    Saving... {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                  <Text style={styles.nextButtonText}>&gt;</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -300,5 +484,25 @@ const styles = StyleSheet.create({
     fontSize: screenWidth * 0.07,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.045,
+  },
+  savingContainer: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: screenHeight * 0.1,
+  },
+  savingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.04,
+    marginTop: 10,
   },
 });

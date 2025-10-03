@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,27 +9,107 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Caffeine({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-
+  
+  // Add form data state
+  const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [caffeine, setCaffeine] = useState('');
   const [menstrualInfo, setMenstrualInfo] = useState('');
 
-  const handleNext = () => {
+  // Load existing form data from Firestore
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData(data);
+          
+          // Populate form fields with existing data
+          if (data.caffeine) setCaffeine(data.caffeine);
+          if (data.menstrualInfo) setMenstrualInfo(data.menstrualInfo);
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  // Save form data to Firestore
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      await setDoc(
+        doc(db, 'intakeForms', user.email.toLowerCase()),
+        {
+          ...formData,
+          ...data,
+          email: user.email.toLowerCase(),
+          lastUpdated: new Date(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
+
+  const handleNext = async () => {
+    // Dismiss keyboard if it's open
+    Keyboard.dismiss();
+    
+    // Save data to Firestore before navigating
+    await saveFormData({
+      caffeine,
+      menstrualInfo,
+      caffeineCompleted: true,
+    });
+    
+    // Navigate to next screen with updated params
     navigation.navigate('Equipment1', {
       ...previousParams,
       caffeine,
       menstrualInfo,
     });
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -147,5 +227,14 @@ const styles = StyleSheet.create({
     fontSize: screenWidth * 0.07,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.045,
   },
 });
