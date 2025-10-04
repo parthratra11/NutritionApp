@@ -10,71 +10,131 @@ import Navigation from "@/components/shared/Navigation";
 interface IntakeForm {
   fullName: string;
   email: string;
+  phoneNumber: string;
+  userId: string;
+  createdAt: string;
+
+  // Address fields
+  houseNumber: string;
   street: string;
   postalCode: string;
   city: string;
   country: string;
+  addressUpdatedAt: {
+    toDate: () => Date;
+  };
+
+  // Personal metrics
   age: string;
   height: string;
   weight: string;
   bodyFat: string;
+  measurementSystem: string;
+  weightHeightCompleted: boolean;
+
+  // Body photos
+  bodyPhotoUrls: string[];
+
+  // Genetic data
+  genetics: {
+    wristCircumference: string;
+    ankleCircumference: string;
+  };
+  geneticsCompleted: boolean;
+
+  // Training experience
   strengthTrainingExperience: string;
-  benchPress: string;
-  squat: string;
-  chinUp: string;
-  deadlift: string;
-  overheadPress: string;
-  exerciseCompetency: string;
-  goals: string;
+  strengthCompetency: string;
+  strengthCompetencyValue: number;
+  strengthCompetencyComments: string;
+  strengthChoiceCompleted: boolean;
+
+  // Strength metrics
+  benchPressWeight: string;
+  benchPressReps: string;
+  squatWeight: string;
+  squatReps: string;
+  chinUpWeight: string;
+  chinUpReps: string;
+  deadliftWeight: string;
+  deadliftReps: string;
+  overheadPressWeight: string;
+  overheadPressReps: string;
+  strength1Completed: boolean;
+  strength2Completed: boolean;
+
+  // Training preferences
+  goal1: string;
+  goal2: string;
+  goal3: string;
+  goalsCompleted: boolean;
   obstacle: string;
   otherExercises: string;
+  otherExerciseCompleted: boolean;
   dedicationLevel: string;
+  dedicationLevelCompleted: boolean;
   weeklyFrequency: string;
+  trainingFrequencyCompleted: boolean;
+  trainingProgram: string;
+  currentProgramCompleted: boolean;
+
+  // Lifestyle and health
   occupation: string;
+  occupationCompleted: boolean;
   medicalConditions: string;
-  specialDiet: string;
+  diet: string;
+  dietDescription: string;
   trainingTimePreference: string;
+  trainingTimeCompleted: boolean;
   activityLevel: string;
+  activityLevelCompleted: boolean;
   stressLevel: string;
-  sleepQuality: string;
-  caffeineIntake: string;
-  menstrualCycle: string;
-  squatRack: boolean;
-  hyperBench: boolean;
-  gluteHam: boolean;
-  standingCalf: boolean;
-  dipBelt: boolean;
-  legCurl: boolean;
-  gymRings: boolean;
-  trx: boolean;
-  resistanceBands: boolean;
-  pullUpBar: boolean;
-  seatedCalf: boolean;
-  cableTower: boolean;
+  stressLevelCompleted: boolean;
+  caffeine: string;
+  caffeineCompleted: boolean;
+  menstrualInfo: string;
+
+  // Equipment
+  hasMeasuringTape: boolean;
+  skinfoldCalipers: string;
+  gymEquipment: string[];
+  cardioEquipment: string[];
+  dumbbellInfo: {
+    isFullSet: boolean;
+    minWeight: string;
+    maxWeight: string;
+  };
+  additionalEquipmentInfo: string;
+  legCurlType: string;
+  equipment1Completed: boolean;
+  equipment2Completed: boolean;
+  equipment3Completed: boolean;
+  equipment4Completed: boolean;
+
+  // Additional information
   supplements: string;
-  wristCircumference: string;
-  ankleCircumference: string;
-  typicalDiet: string;
-  currentTraining: string;
+  supplementsCompleted: boolean;
+  fitnessTech: string;
+
+  // System fields
+  intakeFormCompleted: boolean;
+  isSignupOnly: boolean;
+  lastUpdated: {
+    toDate: () => Date;
+  };
   timestamp: {
     toDate: () => Date;
   };
 }
 
-const equipmentFields = [
-  { field: "squatRack", label: "Squat cage or rack" },
-  { field: "hyperBench", label: "45° hyperextension bench" },
-  { field: "gluteHam", label: "Glute-ham raise" },
-  { field: "standingCalf", label: "Standing calf raise machine" },
-  { field: "dipBelt", label: "Dip/chin-up belt" },
-  { field: "legCurl", label: "Leg curl machine" },
-  { field: "gymRings", label: "Gymnastic rings" },
-  { field: "trx", label: "TRX" },
-  { field: "resistanceBands", label: "Resistance bands" },
-  { field: "pullUpBar", label: "Pull-up bar" },
-  { field: "seatedCalf", label: "Seated calf raise machine" },
-  { field: "cableTower", label: "Cable tower" },
-];
+// Helper function to format equipment names
+const formatEquipment = (key: string): string => {
+  return key
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
 
 export default function UserDetails() {
   const params = useParams();
@@ -105,7 +165,7 @@ export default function UserDetails() {
     };
 
     fetchUserDetails();
-  }, [params?.id]);
+  }, [params?.email]);
 
   if (loading)
     return <div className="p-6 text-white bg-[#07172C]">Loading...</div>;
@@ -113,6 +173,23 @@ export default function UserDetails() {
     return <div className="p-6 text-red-500 bg-[#07172C]">{error}</div>;
   if (!form)
     return <div className="p-6 text-white bg-[#07172C]">No data found</div>;
+
+  // Format date function
+  const formatDate = (dateObj: { toDate: () => Date } | undefined) => {
+    if (!dateObj) return "N/A";
+    try {
+      const date = dateObj.toDate();
+      return date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "Invalid date";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
@@ -124,8 +201,32 @@ export default function UserDetails() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-       
+        {/* Account Status */}
+        <div className="bg-[#142437] rounded-lg shadow-sm p-6 mb-6 border border-[#22364F]">
+          <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
+            Account Status
+          </h2>
+          <div className="grid grid-row-1 md:grid-row-2 gap-6">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Signup Status</span>
+              <span
+                className={`font-medium ${
+                  form?.intakeFormCompleted
+                    ? "text-green-400"
+                    : "text-yellow-400"
+                }`}
+              >
+                {form?.intakeFormCompleted ? "Completed" : "Incomplete"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Last Updated</span>
+              <span className="font-medium text-white">
+                {formatDate(form?.lastUpdated)}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -139,17 +240,19 @@ export default function UserDetails() {
                 [
                   { label: "Name", value: form?.fullName },
                   { label: "Email", value: form?.email },
+                  { label: "Phone", value: form?.phoneNumber },
                   { label: "Age", value: form?.age },
                   { label: "Height", value: form?.height },
                   { label: "Weight", value: form?.weight },
                   { label: "Body Fat", value: form?.bodyFat },
+                  { label: "System", value: form?.measurementSystem },
                   { label: "Occupation", value: form?.occupation },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
                   <span className="text-gray-400">{item.label}</span>
                   <span className="font-medium text-white">
-                    {item.value}
+                    {item.value || "N/A"}
                   </span>
                 </div>
               ))}
@@ -168,20 +271,23 @@ export default function UserDetails() {
                     label: "Medical Conditions",
                     value: form?.medicalConditions,
                   },
-                  { label: "Special Diet", value: form?.specialDiet },
-                  { label: "Sleep Quality", value: form?.sleepQuality },
-                  { label: "Stress Level", value: form?.stressLevel },
+                  { label: "Diet Type", value: form?.diet },
+                  { label: "Diet Details", value: form?.dietDescription },
+                  { label: "Sleep Quality", value: form?.stressLevel },
                   { label: "Activity Level", value: form?.activityLevel },
-                  { label: "Caffeine Intake", value: form?.caffeineIntake },
+                  { label: "Caffeine Intake", value: form?.caffeine },
                   {
                     label: "Training Time",
                     value: form?.trainingTimePreference,
                   },
+                  { label: "Menstrual Info", value: form?.menstrualInfo },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="space-y-1">
                   <span className="text-gray-400 text-sm">{item.label}</span>
-                  <p className="font-medium text-white">{item.value}</p>
+                  <p className="font-medium text-white">
+                    {item.value || "N/A"}
+                  </p>
                 </div>
               ))}
             </div>
@@ -195,16 +301,21 @@ export default function UserDetails() {
             <div className="space-y-4">
               {(
                 [
+                  { label: "House Number", value: form?.houseNumber },
                   { label: "Street", value: form?.street },
                   { label: "City", value: form?.city },
                   { label: "Postal Code", value: form?.postalCode },
                   { label: "Country", value: form?.country },
+                  {
+                    label: "Address Updated",
+                    value: formatDate(form?.addressUpdatedAt),
+                  },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
                   <span className="text-gray-400">{item.label}</span>
                   <span className="font-medium text-white">
-                    {item.value}
+                    {item.value || "N/A"}
                   </span>
                 </div>
               ))}
@@ -223,17 +334,36 @@ export default function UserDetails() {
                     label: "Experience",
                     value: form?.strengthTrainingExperience,
                   },
-                  { label: "Competency", value: form?.exerciseCompetency },
+                  { label: "Competency", value: form?.strengthCompetency },
+                  {
+                    label: "Competency Level",
+                    value: form?.strengthCompetencyValue
+                      ? `${Math.round(form.strengthCompetencyValue * 100)}%`
+                      : "N/A",
+                  },
                   { label: "Weekly Frequency", value: form?.weeklyFrequency },
                   { label: "Dedication Level", value: form?.dedicationLevel },
-                  { label: "Current Training", value: form?.currentTraining },
+                  { label: "Current Program", value: form?.trainingProgram },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="space-y-1">
                   <span className="text-gray-400 text-sm">{item.label}</span>
-                  <p className="font-medium text-white">{item.value}</p>
+                  <p className="font-medium text-white">
+                    {item.value || "N/A"}
+                  </p>
                 </div>
               ))}
+
+              {form?.strengthCompetencyComments && (
+                <div className="space-y-1 mt-2">
+                  <span className="text-gray-400 text-sm">
+                    Additional Comments
+                  </span>
+                  <p className="font-medium text-white">
+                    {form.strengthCompetencyComments}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,18 +375,46 @@ export default function UserDetails() {
             <div className="space-y-4">
               {(
                 [
-                  { label: "Bench Press", value: form?.benchPress },
-                  { label: "Squat", value: form?.squat },
-                  { label: "Chin-up", value: form?.chinUp },
-                  { label: "Deadlift", value: form?.deadlift },
-                  { label: "Overhead Press", value: form?.overheadPress },
+                  {
+                    label: "Bench Press",
+                    value:
+                      form?.benchPressWeight && form?.benchPressReps
+                        ? `${form.benchPressWeight}kg × ${form.benchPressReps} reps`
+                        : "N/A",
+                  },
+                  {
+                    label: "Squat",
+                    value:
+                      form?.squatWeight && form?.squatReps
+                        ? `${form.squatWeight}kg × ${form.squatReps} reps`
+                        : "N/A",
+                  },
+                  {
+                    label: "Chin-up",
+                    value:
+                      form?.chinUpWeight && form?.chinUpReps
+                        ? `${form.chinUpWeight}kg × ${form.chinUpReps} reps`
+                        : "N/A",
+                  },
+                  {
+                    label: "Deadlift",
+                    value:
+                      form?.deadliftWeight && form?.deadliftReps
+                        ? `${form.deadliftWeight}kg × ${form.deadliftReps} reps`
+                        : "N/A",
+                  },
+                  {
+                    label: "Overhead Press",
+                    value:
+                      form?.overheadPressWeight && form?.overheadPressReps
+                        ? `${form.overheadPressWeight}kg × ${form.overheadPressReps} reps`
+                        : "N/A",
+                  },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
                   <span className="text-gray-400">{item.label}</span>
-                  <span className="font-medium text-white">
-                    {item.value}
-                  </span>
+                  <span className="font-medium text-white">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -272,43 +430,139 @@ export default function UserDetails() {
                 [
                   {
                     label: "Wrist Circumference",
-                    value: form?.wristCircumference,
+                    value: form?.genetics?.wristCircumference,
                   },
                   {
                     label: "Ankle Circumference",
-                    value: form?.ankleCircumference,
+                    value: form?.genetics?.ankleCircumference,
                   },
-                  { label: "Menstrual Cycle", value: form?.menstrualCycle },
+                  {
+                    label: "Measuring Tools",
+                    value: form?.hasMeasuringTape
+                      ? "Has measuring tape"
+                      : "No measuring tape",
+                  },
+                  {
+                    label: "Skinfold Calipers",
+                    value: form?.skinfoldCalipers,
+                  },
                 ] as const
               ).map((item) => (
                 <div key={item.label} className="flex justify-between">
                   <span className="text-gray-400">{item.label}</span>
                   <span className="font-medium text-white">
-                    {item.value}
+                    {item.value || "N/A"}
                   </span>
                 </div>
               ))}
+
+              {form?.bodyPhotoUrls && form.bodyPhotoUrls.length > 0 && (
+                <div className="space-y-1 mt-2">
+                  <span className="text-gray-400 text-sm">Body Photos</span>
+                  <p className="font-medium text-white">
+                    {form.bodyPhotoUrls.length} photo(s) uploaded
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Equipment Access */}
-          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F]">
+          <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F] col-span-full">
             <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
               Equipment Access
             </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {equipmentFields.map(({ field, label }) => (
-                <div key={field} className="flex items-center gap-2">
-                  <div
-                    className={`w-4 h-4 rounded-full ${
-                      form?.[field as keyof IntakeForm]
-                        ? "bg-green-500"
-                        : "bg-red-500"
-                    }`}
-                  />
-                  <span className="text-sm text-gray-300">{label}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Gym Equipment */}
+              <div>
+                <h3 className="text-md font-medium mb-3 text-blue-300">
+                  Gym Equipment
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {form?.gymEquipment?.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-sm text-gray-300">
+                        {formatEquipment(item)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Cardio Equipment */}
+              <div>
+                <h3 className="text-md font-medium mb-3 text-blue-300">
+                  Cardio Equipment
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {form?.cardioEquipment?.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-sm text-gray-300">
+                        {formatEquipment(item)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dumbbell Information */}
+              <div className="col-span-full mt-4">
+                <h3 className="text-md font-medium mb-3 text-blue-300">
+                  Dumbbell Set
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-300">Full Set:</span>
+                    <span className="text-white">
+                      {form?.dumbbellInfo?.isFullSet ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-300">Min Weight:</span>
+                    <span className="text-white">
+                      {form?.dumbbellInfo?.minWeight || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-300">Max Weight:</span>
+                    <span className="text-white">
+                      {form?.dumbbellInfo?.maxWeight || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Equipment Info */}
+              {form?.additionalEquipmentInfo && (
+                <div className="col-span-full mt-4">
+                  <h3 className="text-md font-medium mb-2 text-blue-300">
+                    Additional Equipment Info
+                  </h3>
+                  <p className="text-white">{form.additionalEquipmentInfo}</p>
+                </div>
+              )}
+
+              {/* Leg Curl Type */}
+              {form?.legCurlType && (
+                <div className="col-span-full mt-4">
+                  <h3 className="text-md font-medium mb-2 text-blue-300">
+                    Leg Curl Type
+                  </h3>
+                  <p className="text-white">{form.legCurlType}</p>
+                </div>
+              )}
+
+              {/* Fitness Technology */}
+              {form?.fitnessTech && (
+                <div className="col-span-full mt-4">
+                  <h3 className="text-md font-medium mb-2 text-blue-300">
+                    Fitness Technology
+                  </h3>
+                  <p className="text-white">{form.fitnessTech}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -320,23 +574,37 @@ export default function UserDetails() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <span className="text-gray-400">Goals</span>
+                  <span className="text-gray-400">Primary Goal</span>
                   <p className="font-medium text-white mt-1">
-                    {form?.goals}
+                    {form?.goal1 || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Main Obstacle</span>
+                  <span className="text-gray-400">Secondary Goal</span>
                   <p className="font-medium text-white mt-1">
-                    {form?.obstacle}
+                    {form?.goal2 || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Tertiary Goal</span>
+                  <p className="font-medium text-white mt-1">
+                    {form?.goal3 || "N/A"}
                   </p>
                 </div>
               </div>
-              <div>
-                <span className="text-gray-400">Other Exercises</span>
-                <p className="font-medium text-white mt-1">
-                  {form?.otherExercises}
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <span className="text-gray-400">Main Obstacle</span>
+                  <p className="font-medium text-white mt-1">
+                    {form?.obstacle || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Other Exercises</span>
+                  <p className="font-medium text-white mt-1">
+                    {form?.otherExercises || "N/A"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -350,13 +618,13 @@ export default function UserDetails() {
               <div>
                 <span className="text-gray-400">Supplements</span>
                 <p className="font-medium text-white mt-1">
-                  {form?.supplements}
+                  {form?.supplements || "N/A"}
                 </p>
               </div>
-              <div>
-                <span className="text-gray-400">Typical Diet</span>
+              <div className="mt-4">
+                <span className="text-gray-400">Account Created</span>
                 <p className="font-medium text-white mt-1">
-                  {form?.typicalDiet}
+                  {formatDate(form?.timestamp)}
                 </p>
               </div>
             </div>
