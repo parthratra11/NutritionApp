@@ -6,6 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Navigation from "@/components/shared/Navigation";
+import Image from "next/image";
 
 interface IntakeForm {
   fullName: string;
@@ -141,6 +142,7 @@ export default function UserDetails() {
   const [form, setForm] = useState<IntakeForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -191,6 +193,35 @@ export default function UserDetails() {
     }
   };
 
+  // Photo gallery modal
+  const PhotoModal = ({ url, onClose }: { url: string; onClose: () => void }) => {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
+        <div className="max-w-4xl max-h-[90vh] relative">
+          <button
+            className="absolute top-4 right-4 text-white bg-red-600 rounded-full p-1 z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="rounded-lg overflow-hidden bg-[#07172C] p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt="Body photo"
+              className="max-h-[85vh] max-w-full object-contain"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#07172C] text-white">
       <Navigation
@@ -199,6 +230,11 @@ export default function UserDetails() {
         email={params.email as string}
         userName={form?.fullName || "User"}
       />
+
+      {/* Show selected photo modal if a photo is selected */}
+      {selectedPhoto && (
+        <PhotoModal url={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Account Status */}
@@ -466,6 +502,35 @@ export default function UserDetails() {
               )}
             </div>
           </div>
+
+          {/* Body Photos Section - Add this section before Equipment Access */}
+          {form?.bodyPhotoUrls && form.bodyPhotoUrls.length > 0 && (
+            <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F] col-span-full">
+              <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
+                Body Photos ({form.bodyPhotoUrls.length})
+              </h2>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {form.bodyPhotoUrls.map((photoUrl, index) => (
+                  <div 
+                    key={index} 
+                    className="relative aspect-[3/4] bg-[#0A1B30] rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedPhoto(photoUrl)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={photoUrl} 
+                      alt={`Body photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 px-2">
+                      Photo {index + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Equipment Access */}
           <div className="bg-[#142437] rounded-lg shadow-sm p-6 border border-[#22364F] col-span-full">
