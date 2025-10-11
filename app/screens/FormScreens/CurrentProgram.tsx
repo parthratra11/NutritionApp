@@ -94,33 +94,36 @@ export default function CurrentProgram({ route }) {
   };
 
   // Upload a single photo to Firebase Storage
-  const uploadPhoto = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+const uploadPhoto = async (uri) => {
+  if (!user?.uid) throw new Error('User not authenticated');
 
-    const filename = uri.substring(uri.lastIndexOf('/') + 1);
-    const storageRef = ref(storage, `users/${user.email.toLowerCase()}/bodyPhotos/${filename}`);
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
-    const uploadTask = uploadBytesResumable(storageRef, blob);
+  const filename = uri.substring(uri.lastIndexOf('/') + 1);
+  const storageRef = ref(storage, `users/${user.uid}/bodyPhotos/${filename}`);
 
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error('Upload failed:', error);
-          reject(error);
-        },
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        }
-      );
-    });
-  };
+  const uploadTask = uploadBytesResumable(storageRef, blob);
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error('Upload failed:', error);
+        reject(error);
+      },
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        resolve(downloadURL);
+      }
+    );
+  });
+};
+
 
   // Upload all photos and save their URLs
   const uploadAllPhotos = async () => {
