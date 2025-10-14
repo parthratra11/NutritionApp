@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Sleep({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-
+  const [formData, setFormData] = useState<any>({});
   const [selectedOption, setSelectedOption] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const sleepOptions = [
     {
@@ -27,12 +30,74 @@ export default function Sleep({ route }) {
     },
   ];
 
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setFormData(data);
+
+          if (data.sleep_quality) {
+            setSelectedOption(data.sleep_quality);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.id]);
+
+  const saveFormData = async (data: any) => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          ...formData,
+          ...data,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    }
+  };
+
   const handleSelection = (optionId) => {
     setSelectedOption(optionId);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedOption) {
+      await saveFormData({
+        sleep_quality: selectedOption,
+        sleep_form_completed: true,
+      });
+
       navigation.navigate('Caffeine', {
         ...previousParams,
         sleepQuality: selectedOption,

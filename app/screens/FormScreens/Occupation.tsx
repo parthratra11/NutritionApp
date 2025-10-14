@@ -14,8 +14,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -52,23 +50,26 @@ export default function Occupation({ route }) {
     };
   }, []);
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form fields with existing data
           if (data.occupation) setOccupation(data.occupation);
           if (data.diet) setDiet(data.diet);
-          if (data.medicalConditions) setMedicalConditions(data.medicalConditions);
+          if (data.medical_conditions) setMedicalConditions(data.medical_conditions);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -78,7 +79,7 @@ export default function Occupation({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   // Scroll to active input when keyboard appears
   useEffect(() => {
@@ -89,21 +90,27 @@ export default function Occupation({ route }) {
     }
   }, [keyboardVisible, activeInput]);
 
-  // Save form data to Firestore
+  // Save form data to API
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -113,12 +120,12 @@ export default function Occupation({ route }) {
     // Dismiss keyboard if visible
     Keyboard.dismiss();
 
-    // Save data to Firestore before navigating
+    // Save data to API before navigating
     await saveFormData({
       occupation,
       diet,
-      medicalConditions,
-      occupationCompleted: true,
+      medical_conditions: medicalConditions,
+      occupation_completed: true,
     });
 
     // Navigate to next screen with updated params

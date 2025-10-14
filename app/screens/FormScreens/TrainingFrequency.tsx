@@ -3,8 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -19,16 +17,19 @@ export default function TrainingFrequency({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
-          setFrequency(data.weeklyFrequency ? parseInt(data.weeklyFrequency) : 1);
+          setFrequency(data.weekly_frequency ? parseInt(data.weekly_frequency) : 1);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -38,22 +39,28 @@ export default function TrainingFrequency({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -73,8 +80,8 @@ export default function TrainingFrequency({ route }) {
 
   const handleNext = async () => {
     await saveFormData({
-      weeklyFrequency: frequency.toString(),
-      trainingFrequencyCompleted: true,
+      weekly_frequency: frequency.toString(),
+      training_frequency_completed: true,
     });
     navigation.navigate('Occupation', {
       ...previousParams,

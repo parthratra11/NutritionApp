@@ -16,8 +16,6 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig.js';
 
 export default function AddressScreen() {
   const { isDarkMode } = useTheme();
@@ -34,24 +32,27 @@ export default function AddressScreen() {
   // Check if user already has address information
   useEffect(() => {
     const checkExistingAddress = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const userDocSnap = await getDoc(userDocRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
+        if (response.ok) {
+          const data = await response.json();
 
           // Load existing address data if available
-          if (data.houseNumber) setHouseNumber(data.houseNumber);
+          if (data.house_number) setHouseNumber(data.house_number);
           if (data.street) setStreet(data.street);
-          if (data.postalCode) setPostalCode(data.postalCode);
+          if (data.postal_code) setPostalCode(data.postal_code);
           if (data.city) setCity(data.city);
           if (data.country) setCountry(data.country);
 
           // If user has completed payment, redirect to Reports
-          if (data.hasCompletedPayment) {
+          if (data.has_completed_payment) {
             navigation.navigate('Reports');
             return;
           }
@@ -64,7 +65,7 @@ export default function AddressScreen() {
     };
 
     checkExistingAddress();
-  }, [user?.email, navigation]);
+  }, [user?.id, navigation]);
 
   const handleContinue = async () => {
     if (!houseNumber || !street || !postalCode || !city || !country) {
@@ -72,7 +73,7 @@ export default function AddressScreen() {
       return;
     }
 
-    if (!user?.email) {
+    if (!user?.id) {
       Alert.alert('Error', 'User not found. Please login again.');
       return;
     }
@@ -80,29 +81,28 @@ export default function AddressScreen() {
     setLoading(true);
 
     try {
-      const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
-      const userDocSnap = await getDoc(userDocRef);
-
       const addressData = {
-        houseNumber,
+        house_number: houseNumber,
         street,
-        postalCode,
+        postal_code: postalCode,
         city,
         country,
-        email: user.email.toLowerCase(),
-        addressUpdatedAt: new Date(),
-        lastUpdated: new Date(),
+        user_id: user.id,
+        address_updated_at: new Date().toISOString(),
       };
 
-      if (userDocSnap.exists()) {
-        // Update existing document with address information
-        await setDoc(userDocRef, addressData, { merge: true });
-      } else {
-        // Create new document with address information
-        await setDoc(userDocRef, {
-          ...addressData,
-          isSignupOnly: true,
-        });
+      // Update or create the intake form
+      const response = await fetch('http://localhost:8000/intake_forms/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(addressData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save address');
       }
 
       Alert.alert('Success', 'Address information saved successfully!', [

@@ -14,8 +14,6 @@ import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import Slider from '@react-native-community/slider';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -31,23 +29,26 @@ export default function Strength1({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
           // Convert text back to slider value for display
-          const savedCompetency = data.strengthCompetency;
+          const savedCompetency = data.strength_competency;
           if (savedCompetency === 'Novice') setCompetencyLevel(0.2);
           else if (savedCompetency === 'Intermediate') setCompetencyLevel(0.5);
           else if (savedCompetency === 'Advanced') setCompetencyLevel(0.8);
-          else setCompetencyLevel(data.strengthCompetencyValue || 0.5);
+          else setCompetencyLevel(data.strength_competency_value || 0.5);
 
-          setComments(data.strengthCompetencyComments || '');
+          setComments(data.strength_competency_comments || '');
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -57,22 +58,28 @@ export default function Strength1({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -89,10 +96,10 @@ export default function Strength1({ route }) {
     const competencyText = getCompetencyText();
 
     await saveFormData({
-      strengthCompetency: competencyText, // Save text instead of number
-      strengthCompetencyValue: competencyLevel, // Keep numeric for reference
-      strengthCompetencyComments: comments,
-      strength1Completed: true,
+      strength_competency: competencyText, // Save text instead of number
+      strength_competency_value: competencyLevel, // Keep numeric for reference
+      strength_competency_comments: comments,
+      strength1_completed: true,
     });
 
     navigation.navigate('Strength2', {

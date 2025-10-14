@@ -9,12 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -37,14 +36,17 @@ export default function Goals({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
           setGoals({
             goal1: data.goal1 || '',
@@ -52,6 +54,25 @@ export default function Goals({ route }) {
             goal3: data.goal3 || '',
           });
           setObstacle(data.obstacle || '');
+        }
+
+        // Try to load goals from goals API endpoint
+        const goalsResponse = await fetch(`http://localhost:8000/goals/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (goalsResponse.ok) {
+          const goalsData = await goalsResponse.json();
+          if (goalsData && goalsData.length > 0) {
+            const newGoals = {
+              goal1: goalsData[0]?.description || '',
+              goal2: goalsData[1]?.description || '',
+              goal3: goalsData[2]?.description || '',
+            };
+            setGoals(newGoals);
+          }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -61,24 +82,54 @@ export default function Goals({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      // Save to intake form
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
+
+      // Save goals to goals endpoint
+      const goalsToSave = [
+        { description: goals.goal1, priority: 1, user_id: user.id },
+        { description: goals.goal2, priority: 2, user_id: user.id },
+        { description: goals.goal3, priority: 3, user_id: user.id },
+      ].filter((goal) => goal.description);
+
+      if (goalsToSave.length > 0) {
+        const goalsResponse = await fetch(`http://localhost:8000/goals/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify(goalsToSave),
+        });
+
+        if (!goalsResponse.ok) {
+          console.warn('Failed to save goals to dedicated endpoint');
+        }
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Failed to save goals. Please try again.');
     }
   };
 
@@ -95,7 +146,7 @@ export default function Goals({ route }) {
       goal2: goals.goal2,
       goal3: goals.goal3,
       obstacle,
-      goalsCompleted: true,
+      goals_completed: true,
     });
 
     navigation.navigate('OtherExercise', {

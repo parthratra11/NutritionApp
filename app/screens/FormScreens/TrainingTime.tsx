@@ -13,8 +13,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -30,25 +28,28 @@ export default function TrainingTime({ route }) {
 
   const [trainingTimePreference, setTrainingTimePreference] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) {
+      if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form field with existing data
-          if (data.trainingTimePreference) {
-            setTrainingTimePreference(data.trainingTimePreference);
+          if (data.training_time_preference) {
+            setTrainingTimePreference(data.training_time_preference);
           }
         }
       } catch (error) {
@@ -59,33 +60,39 @@ export default function TrainingTime({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
-  // Save form data to Firestore
+  // Save form data to API
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
   };
 
   const handleNext = async () => {
-    // Save data to Firestore before navigating
+    // Save data to API before navigating
     await saveFormData({
-      trainingTimePreference,
-      trainingTimeCompleted: true,
+      training_time_preference: trainingTimePreference,
+      training_time_completed: true,
     });
 
     // Navigate to next screen with updated params

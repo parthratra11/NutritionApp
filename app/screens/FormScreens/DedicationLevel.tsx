@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -19,16 +17,19 @@ export default function DedicationLevel({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
-          setSelectedLevel(data.dedicationLevel || null);
+          setSelectedLevel(data.dedication_level || null);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -38,24 +39,31 @@ export default function DedicationLevel({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Failed to save form data. Please try again.');
     }
   };
 
@@ -80,14 +88,24 @@ export default function DedicationLevel({ route }) {
 
   const handleNext = async () => {
     await saveFormData({
-      dedicationLevel: selectedLevel,
-      dedicationLevelCompleted: true,
+      dedication_level: selectedLevel,
+      dedication_level_completed: true,
     });
     navigation.navigate('TrainingFrequency', {
       ...previousParams,
       dedicationLevel: selectedLevel,
     });
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -169,5 +187,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Texta',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.05,
   },
 });

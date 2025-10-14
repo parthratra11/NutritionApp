@@ -1,84 +1,133 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../firebaseConfig';
-import { onAuthStateChanged, signInWithEmailAndPassword, User } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
+// Define the user type
+type User = {
+  id: number;
+  email: string;
+  fullName?: string;
+  token: string;
+};
+
+// Define the Auth Context type
 type AuthContextType = {
   user: User | null;
   setUser: (user: User | null) => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  isLoading: boolean;
 };
 
+// Create the Auth Context with default values
 const AuthContext = createContext<AuthContextType>({
   user: null,
   setUser: () => {},
-  login: async () => {},
+  login: async () => ({}) as User,
   logout: async () => {},
+  isLoading: true,
 });
 
-export const useAuth = () => useContext(AuthContext);
+// API base URL configuration
+const API_BASE_URL = 'http://10.0.2.2:8000'; // Use this for Android emulator
+// const API_BASE_URL = 'http://localhost:8000'; // Use this for iOS simulator
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// Auth Provider Component
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Function to store auth credentials
-  const storeCredentials = async (email: string, password: string) => {
-    try {
-      await AsyncStorage.setItem('authCredentials', JSON.stringify({ email, password }));
-    } catch (error) {
-      console.error('Error storing credentials:', error);
-    }
-  };
-
-  // Function to restore auth state
-  const restoreAuthState = async () => {
-    try {
-      const credentialsString = await AsyncStorage.getItem('authCredentials');
-      if (credentialsString) {
-        const { email, password } = JSON.parse(credentialsString);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        setUser(userCredential.user);
+  // Load user data from AsyncStorage on app startup
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error('Error loading user from AsyncStorage:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error restoring auth state:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadUser();
+  }, []);
 
   // Login function
-  const login = async (email: string, password: string) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    // Removed email verification check
-    setUser(userCredential.user);
-    await storeCredentials(email, password);
+  const login = async (email: string, password: string): Promise<User> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Login failed');
+      }
+
+      const userData = await response.json();
+      const loggedInUser = {
+        id: userData.id,
+        email: userData.email,
+        fullName: userData.full_name,
+        token: userData.access_token,
+      };
+
+      // Save user to state and AsyncStorage
+      setUser(loggedInUser);
+      await AsyncStorage.setItem('user', JSON.stringify(loggedInUser));
+
+      return loggedInUser;
+    } catch (error) {
+      console.error('Login error:', error);
+
+      // Improved error handling
+      if (error.message.includes('Network request failed')) {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection or try again later.'
+        );
+      } else {
+        Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      }
+
+      throw error;
+    }
   };
 
   // Logout function
   const logout = async () => {
-    await auth.signOut();
-    await AsyncStorage.removeItem('authCredentials');
-    setUser(null);
+    try {
+      // Clear user from state and AsyncStorage
+      setUser(null);
+      await AsyncStorage.removeItem('user');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
-  useEffect(() => {
-    restoreAuthState();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      // Set user regardless of email verification
-      setUser(firebaseUser);
-    });
+  // The value provided to the context
+  const authContextValue = {
+    user,
+    setUser,
+    login,
+    logout,
+    isLoading,
+  };
 
-    return unsubscribe;
-  }, []);
+  return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
+};
 
-  if (loading) {
-    // Return a loading spinner or null
-    return null;
-  }
+// Custom hook to use the Auth Context
+export const useAuth = () => useContext(AuthContext);
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, login, logout }}>{children}</AuthContext.Provider>
-  );
-}
+export default AuthContext;

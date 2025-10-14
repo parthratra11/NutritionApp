@@ -11,15 +11,13 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -40,27 +38,30 @@ export default function CurrentProgram({ route }) {
   const [photos, setPhotos] = useState([]);
   const [photoUrls, setPhotoUrls] = useState([]);
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) {
+      if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form fields with existing data
-          if (data.dietDescription) setDietDescription(data.dietDescription);
-          if (data.trainingProgram) setTrainingProgram(data.trainingProgram);
-          if (data.bodyPhotoUrls && Array.isArray(data.bodyPhotoUrls)) {
-            setPhotoUrls(data.bodyPhotoUrls);
+          if (data.diet_description) setDietDescription(data.diet_description);
+          if (data.training_program) setTrainingProgram(data.training_program);
+          if (data.body_photo_urls && Array.isArray(data.body_photo_urls)) {
+            setPhotoUrls(data.body_photo_urls);
           }
         }
       } catch (error) {
@@ -71,66 +72,62 @@ export default function CurrentProgram({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
-  // Save form data to Firestore (without photos)
-  const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+  // Upload a single photo to the API server
+  const uploadPhoto = async (uri) => {
+    if (!user?.id) throw new Error('User not authenticated');
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
+      // Create a FormData object for the file upload
+      const formData = new FormData();
+      const fileType = uri.split('.').pop();
+      const filename = uri.split('/').pop();
+
+      formData.append('file', {
+        uri,
+        name: filename,
+        type: `image/${fileType}`,
+      });
+
+      // Upload the file
+      const uploadResponse = await fetch(`http://localhost:8000/uploads/photo/${user.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        { merge: true }
-      );
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload photo');
+      }
+
+      // Return the URL of the uploaded file
+      const uploadResult = await uploadResponse.json();
+      return uploadResult.url;
     } catch (error) {
-      console.error('Error saving form data:', error);
+      console.error('Error uploading photo:', error);
+      throw error;
     }
   };
-
-  // Upload a single photo to Firebase Storage
-const uploadPhoto = async (uri) => {
-  if (!user?.uid) throw new Error('User not authenticated');
-
-  const response = await fetch(uri);
-  const blob = await response.blob();
-
-  const filename = uri.substring(uri.lastIndexOf('/') + 1);
-  const storageRef = ref(storage, `users/${user.uid}/bodyPhotos/${filename}`);
-
-  const uploadTask = uploadBytesResumable(storageRef, blob);
-
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      },
-      (error) => {
-        console.error('Upload failed:', error);
-        reject(error);
-      },
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(downloadURL);
-      }
-    );
-  });
-};
-
 
   // Upload all photos and save their URLs
   const uploadAllPhotos = async () => {
     if (photos.length === 0) return photoUrls;
 
     try {
-      const uploadPromises = photos.map((photo) => uploadPhoto(photo));
+      setUploadProgress(0);
+      let completedUploads = 0;
+
+      const uploadPromises = photos.map(async (photo) => {
+        const url = await uploadPhoto(photo);
+        completedUploads++;
+        setUploadProgress((completedUploads / photos.length) * 100);
+        return url;
+      });
+
       const uploadedUrls = await Promise.all(uploadPromises);
 
       // Combine existing photo URLs with new ones
@@ -149,19 +146,6 @@ const uploadPhoto = async (uri) => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera roll permissions to upload photos!');
-        return false;
-      }
-      return true;
-    }
-    return true;
-  };
-
-  // Request permission to access the camera
-  const requestCameraPermission = async () => {
-    if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Sorry, we need camera permissions to take photos!');
         return false;
       }
       return true;
@@ -200,10 +184,37 @@ const uploadPhoto = async (uri) => {
     setPhotos(photos.filter((_, index) => index !== indexToRemove));
   };
 
-  // Function to remove an existing photo from Firebase Storage and Firestore
+  // Function to remove an existing photo
   const removeExistingPhoto = (indexToRemove) => {
     // Remove from photoUrls state
     setPhotoUrls(photoUrls.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Save form data to API
+  const saveFormData = async (data: any) => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          ...formData,
+          ...data,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
+    } catch (error) {
+      console.error('Error saving form data:', error);
+      throw error;
+    }
   };
 
   const handleNext = async () => {
@@ -215,11 +226,11 @@ const uploadPhoto = async (uri) => {
 
       // Save form data with photo URLs
       await saveFormData({
-        dietDescription,
-        trainingProgram,
-        bodyPhotoUrls: allPhotoUrls,
-        currentProgramCompleted: true,
-        intakeFormCompleted: true, // Mark the entire form as completed
+        diet_description: dietDescription,
+        training_program: trainingProgram,
+        body_photo_urls: allPhotoUrls,
+        current_program_completed: true,
+        intake_form_completed: true, // Mark the entire form as completed
       });
 
       // Navigate to Welcome screen
@@ -231,7 +242,7 @@ const uploadPhoto = async (uri) => {
       });
     } catch (error) {
       console.error('Error in form submission:', error);
-      alert('There was a problem saving your information. Please try again.');
+      Alert.alert('Error', 'There was a problem saving your information. Please try again.');
     } finally {
       setIsSaving(false);
     }

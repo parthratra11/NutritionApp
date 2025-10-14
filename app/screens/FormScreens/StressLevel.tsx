@@ -3,8 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -38,25 +36,28 @@ export default function StressLevel({ route }) {
     },
   ];
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) {
+      if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form field with existing data
-          if (data.stressLevel) {
-            setSelectedLevel(data.stressLevel);
+          if (data.stress_level) {
+            setSelectedLevel(data.stress_level);
           }
         }
       } catch (error) {
@@ -67,23 +68,29 @@ export default function StressLevel({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
-  // Save form data to Firestore
+  // Save form data to API
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -95,15 +102,14 @@ export default function StressLevel({ route }) {
 
   const handleNext = async () => {
     if (selectedLevel) {
-      // Save data to Firestore before navigating
+      // Save data to API before navigating
       await saveFormData({
-        stressLevel: selectedLevel,
-        stressLevelCompleted: true,
+        stress_level: selectedLevel,
+        stress_level_completed: true,
       });
 
-      // Navigate to next screen with updated params
-      navigation.navigate('SleepForm', {
-        // Changed from 'SleepForm' to 'Sleep' based on your file structure
+      // Navigate to Sleep screen (fixed from SleepForm to Sleep)
+      navigation.navigate('Sleep', {
         ...previousParams,
         stressLevel: selectedLevel,
       });

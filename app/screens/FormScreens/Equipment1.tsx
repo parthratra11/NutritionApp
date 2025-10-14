@@ -7,12 +7,11 @@ import {
   Dimensions,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -30,27 +29,30 @@ export default function Equipment1({ route }) {
   const [skinfoldCalipers, setSkinfoldCalipers] = useState('');
   const [hasMeasuringTape, setHasMeasuringTape] = useState(null);
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) {
+      if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form fields with existing data
-          if (data.fitnessTech) setFitnessTech(data.fitnessTech);
-          if (data.skinfoldCalipers) setSkinfoldCalipers(data.skinfoldCalipers);
-          if (data.hasMeasuringTape !== undefined && data.hasMeasuringTape !== null) {
-            setHasMeasuringTape(data.hasMeasuringTape);
+          if (data.fitness_tech) setFitnessTech(data.fitness_tech);
+          if (data.skinfold_calipers) setSkinfoldCalipers(data.skinfold_calipers);
+          if (data.has_measuring_tape !== undefined && data.has_measuring_tape !== null) {
+            setHasMeasuringTape(data.has_measuring_tape);
           }
         }
       } catch (error) {
@@ -61,35 +63,42 @@ export default function Equipment1({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
-  // Save form data to Firestore
+  // Save form data to API
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Failed to save form data. Please try again.');
     }
   };
 
   const handleNext = async () => {
-    // Save data to Firestore before navigating
+    // Save data to API before navigating
     await saveFormData({
-      fitnessTech,
-      skinfoldCalipers,
-      hasMeasuringTape,
-      equipment1Completed: true,
+      fitness_tech: fitnessTech,
+      skinfold_calipers: skinfoldCalipers,
+      has_measuring_tape: hasMeasuringTape,
+      equipment1_completed: true,
     });
 
     // Navigate to next screen with updated params

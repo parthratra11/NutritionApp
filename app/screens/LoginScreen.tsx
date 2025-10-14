@@ -1,273 +1,250 @@
 import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
-  Alert,
   SafeAreaView,
   Platform,
   StatusBar,
-  KeyboardAvoidingView,
-  ScrollView,
+  Alert,
+  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { auth } from '../firebaseConfig.js';
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Font from 'expo-font';
-import { useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig.js';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const { isDarkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState(''); // Add this
-  const [phoneNumber, setPhoneNumber] = useState(''); // Add this
-  //const [isSignup, setIsSignup] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptPolicy, setAcceptPolicy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
   const { setUser } = useAuth();
   const { login } = useAuth();
   const route = useRoute();
-  const initialMode = route.params?.mode === 'signup';
-  const [isSignup, setIsSignup] = useState(initialMode);
 
-  const handleSubmit = async () => {
+  const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
-    
-    if (isSignup) {
-      if (!fullName || !phoneNumber) {
-        Alert.alert('Error', 'Please fill in all fields');
-        return;
-      }
-      if (!acceptPolicy) {
-        Alert.alert('Required', 'You must accept the Privacy Policy to sign up.');
-        return;
-      }
-    }
 
+    setLoading(true);
     try {
-      if (isSignup) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Save user data to Firestore with a flag indicating it's just signup data
-        try {
-          await setDoc(doc(db, 'intakeForms', email), {
-            fullName,
-            phoneNumber,
-            email,
-            createdAt: new Date().toISOString(),
-            userId: userCredential.user.uid,
-            isSignupOnly: true // Add this flag to distinguish from completed forms
-          });
-        } catch (dbError) {
-          console.error('Error saving user data:', dbError);
-          Alert.alert(
-            'Warning',
-            'Account created but failed to save additional information. Please update your profile later.'
-          );
-        }
-
-        navigation.navigate('Address')
-      } else {
-        await login(email, password);
-       
-        navigation.navigate('Reports');
-      }
-    } catch (error: any) {
-      if (isSignup && error.code === 'auth/email-already-in-use') {
-        Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
-      } else if (
-        !isSignup &&
-        (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password')
-      ) {
-        Alert.alert('Login Failed', 'Incorrect email or password.');
-      } else {
-        Alert.alert('Error', 'Please enter valid credentials');
-      }
+      await login(email, password);
+      navigation.navigate('MainTabs');
+    } catch (error) {
+      console.error('Login error:', error);
+      // Error alert is handled in the AuthContext login function
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Forgot Password', 'Please enter your email address above first.');
+  const handleSignup = async () => {
+    if (!email || !password || !fullName) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+
+    if (!acceptPolicy) {
+      Alert.alert('Error', 'Please accept the privacy policy');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
-      Alert.alert(
-        'Password Reset',
-        'A password reset email has been sent. Please check your inbox.'
-      );
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        Alert.alert('Error', 'No user found with this email address.');
-      } else {
-        Alert.alert('Error', 'Failed to send password reset email.');
+      const response = await fetch('http://10.0.2.2:8000/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName,
+          phone_number: phoneNumber || '',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Registration failed');
       }
+
+      // After successful signup, login the user automatically
+      await login(email, password);
+
+      navigation.navigate('Greetings');
+    } catch (error) {
+      console.error('Signup error:', error);
+      if (error.message && error.message.includes('Network request failed')) {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection or try again later.'
+        );
+      } else {
+        Alert.alert('Signup Failed', error.message || 'Registration failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle forgot password
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://10.0.2.2:8000/users/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Password reset failed');
+      }
+
+      Alert.alert('Success', 'Password reset instructions have been sent to your email');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      if (error.message && error.message.includes('Network request failed')) {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection or try again later.'
+        );
+      } else {
+        Alert.alert('Password Reset Failed', error.message || 'Please try again later');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={['#081A2F', '#0D2A4C', '#195295']}
-        style={styles.gradient}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.container}>
-              <Text style={styles.title}>{isSignup ? 'Signup' : 'Login'}</Text>
-              {isSignup && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name"
-                  placeholderTextColor="#B6C3D1"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                />
-              )}
+      <LinearGradient colors={['#081A2F', '#0D2A4C', '#195295']} style={styles.gradient}>
+        <View style={styles.container}>
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            {/* Replace with logo that exists in your assets folder */}
+            <Text style={styles.logoText}>CYMRON</Text>
+          </View>
+
+          {/* Title */}
+          <Text style={styles.title}>{isSignup ? 'Create Account' : 'Welcome Back'}</Text>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {isSignup && (
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder="Full Name"
                 placeholderTextColor="#B6C3D1"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={fullName}
+                onChangeText={setFullName}
+                autoCapitalize="words"
+              />
+            )}
+
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#B6C3D1"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                placeholderTextColor="#B6C3D1"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
-              {isSignup && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone Number"
-                  placeholderTextColor="#B6C3D1"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                />
-              )}
-              <View style={styles.inputPasswordContainer}>
-                <TextInput
-                  style={[styles.input, { marginBottom: 0, flex: 1 }]}
-                  placeholder="Password"
-                  placeholderTextColor="#B6C3D1"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={22}
-                    color="#B6C3D1"
-                  />
-                </TouchableOpacity>
-              </View>
-              {/* Privacy Policy for Signup */}
-              {isSignup && (
-                <TouchableOpacity
-                  style={styles.privacyRow}
-                  onPress={() => setAcceptPolicy(!acceptPolicy)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={acceptPolicy ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={20}
-                    color={acceptPolicy ? '#4ade80' : '#fff'}
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.privacyText}>
-                    By continuing you accept our <Text style={styles.link}>Privacy Policy</Text>
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.buttonMain} onPress={handleSubmit}>
-                <Text style={styles.buttonMainText}>{isSignup ? 'Signup' : 'Login'}</Text>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#B6C3D1" />
               </TouchableOpacity>
-              {/* Forgot Password */}
-              {!isSignup && (
-                <TouchableOpacity
-                  style={styles.forgotPasswordButton}
-                  onPress={handleForgotPassword}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              )}
-              {/* Switch between Login/Signup */}
-              <View style={styles.switchRow}>
-                <Text style={styles.switchText}>
-                  {isSignup
-                    ? 'Already have an account? '
-                    : "Don't have an account? "}
-                </Text>
-                <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
-                  <Text style={styles.switchLink}>
-                    {isSignup ? 'Login' : 'Sign Up'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {/* Social Login */}
-              <Text style={styles.signInWithText}>
-                {isSignup ? 'Sign Up with' : 'Sign in with'}
-              </Text>
-              <View style={styles.socialRow}>
-                <TouchableOpacity>
-                  <Image
-                    source={require('../assets/apple.png')}
-                    style={styles.socialIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Image
-                    source={require('../assets/facebook.png')}
-                    style={styles.socialIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Image
-                    source={require('../assets/google.png')}
-                    style={styles.socialIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-              {/* Cymron Logo */}
-              <Image
-                source={require('../assets/cymron-logo.png')}
-                style={styles.cymronLogo}
-                resizeMode="contain"
-              />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+
+            {isSignup && (
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number (Optional)"
+                placeholderTextColor="#B6C3D1"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+              />
+            )}
+
+            {isSignup && (
+              <View style={styles.privacyRow}>
+                <TouchableOpacity
+                  style={styles.checkbox}
+                  onPress={() => setAcceptPolicy(!acceptPolicy)}>
+                  {acceptPolicy && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </TouchableOpacity>
+                <Text style={styles.privacyText}>
+                  I accept the <Text style={styles.link}>Privacy Policy</Text>
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={isSignup ? handleSignup : handleLogin}
+              disabled={loading}>
+              <Text style={styles.buttonText}>
+                {loading ? 'Please wait...' : isSignup ? 'Sign Up' : 'Login'}
+              </Text>
+            </TouchableOpacity>
+
+            {!isSignup && (
+              <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Toggle login/signup */}
+          <View style={styles.toggleContainer}>
+            <Text style={styles.toggleText}>
+              {isSignup ? 'Already have an account?' : "Don't have an account?"}
+            </Text>
+            <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
+              <Text style={styles.toggleLink}>{isSignup ? 'Login' : 'Sign Up'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -284,108 +261,108 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 28,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logo: {
+    width: 150,
+    height: 150,
+  },
+  logoText: {
+    color: '#FFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+    letterSpacing: 2,
   },
   title: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 28,
-    marginTop: 10,
-    alignSelf: 'center',
+    marginBottom: 30,
+  },
+  form: {
+    width: '100%',
+    maxWidth: 320,
   },
   input: {
-    width: 300,
-    height: 44,
     backgroundColor: '#0D2A4C',
-    borderRadius: 22,
-    paddingHorizontal: 20,
-    color: '#fff',
+    borderRadius: 8,
+    color: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
     fontSize: 16,
-    marginBottom: 18,
-    alignSelf: 'center',
   },
-  inputPasswordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 300,
-    marginBottom: 18,
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
     backgroundColor: '#0D2A4C',
-    borderRadius: 22,
-    paddingRight: 10,
+    borderRadius: 8,
+    color: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    paddingRight: 50, // Make room for the eye icon
   },
   eyeIcon: {
-    padding: 8,
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    transform: [{ translateY: -12 }],
   },
-  buttonMain: {
-    width: 300,
-    height: 44,
-    backgroundColor: '#111',
-    borderRadius: 22,
+  button: {
+    backgroundColor: '#C7312B',
+    borderRadius: 8,
+    paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 10,
-    alignSelf: 'center',
+    marginTop: 10,
   },
-  buttonMainText: {
-    color: '#fff',
+  buttonDisabled: {
+    backgroundColor: '#6E7E92',
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  forgotPasswordButton: {
-    alignSelf: 'center',
-    marginBottom: 10,
+  forgotPassword: {
+    alignItems: 'center',
+    marginTop: 16,
   },
   forgotPasswordText: {
-    color: '#fff',
+    color: '#B6C3D1',
     fontSize: 14,
-    textAlign: 'center',
-    marginTop: 2,
-    textDecorationLine: 'underline',
   },
-  switchRow: {
+  toggleContainer: {
     flexDirection: 'row',
+    marginTop: 30,
+  },
+  toggleText: {
+    color: '#B6C3D1',
+    fontSize: 14,
+    marginRight: 5,
+  },
+  toggleLink: {
+    color: '#C7312B',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
-  },
-  switchText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  switchLink: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-    marginLeft: 2,
-  },
-  signInWithText: {
-    color: '#fff',
-    fontSize: 14,
-    marginBottom: 10,
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 30,
-    gap: 18,
-  },
-  socialIcon: {
-    width: 25,
-    height: 25,
-    marginHorizontal: 8,
-  },
-  cymronLogo: {
-    width: 160,
-    height: 60,
-    alignSelf: 'center',
-    marginTop: 10,
   },
   privacyRow: {
     flexDirection: 'row',

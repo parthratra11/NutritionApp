@@ -11,8 +11,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -33,35 +31,38 @@ export default function Strength2({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
           setExerciseData({
             benchPress: {
-              weight: data.benchPressWeight || '',
-              reps: data.benchPressReps || '',
+              weight: data.bench_press_weight || '',
+              reps: data.bench_press_reps || '',
             },
             backSquat: {
-              weight: data.squatWeight || '',
-              reps: data.squatReps || '',
+              weight: data.squat_weight || '',
+              reps: data.squat_reps || '',
             },
             chinUp: {
-              weight: data.chinUpWeight || '',
-              reps: data.chinUpReps || '',
+              weight: data.chin_up_weight || '',
+              reps: data.chin_up_reps || '',
             },
             deadlift: {
-              weight: data.deadliftWeight || '',
-              reps: data.deadliftReps || '',
+              weight: data.deadlift_weight || '',
+              reps: data.deadlift_reps || '',
             },
             overheadPress: {
-              weight: data.overheadPressWeight || '',
-              reps: data.overheadPressReps || '',
+              weight: data.overhead_press_weight || '',
+              reps: data.overhead_press_reps || '',
             },
           });
         }
@@ -73,22 +74,28 @@ export default function Strength2({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -109,17 +116,17 @@ export default function Strength2({ route }) {
   const handleNext = async () => {
     // Convert exercise data to individual fields for database
     const dataToSave = {
-      benchPressWeight: exerciseData.benchPress.weight,
-      benchPressReps: exerciseData.benchPress.reps,
-      squatWeight: exerciseData.backSquat.weight,
-      squatReps: exerciseData.backSquat.reps,
-      chinUpWeight: exerciseData.chinUp.weight,
-      chinUpReps: exerciseData.chinUp.reps,
-      deadliftWeight: exerciseData.deadlift.weight,
-      deadliftReps: exerciseData.deadlift.reps,
-      overheadPressWeight: exerciseData.overheadPress.weight,
-      overheadPressReps: exerciseData.overheadPress.reps,
-      strength2Completed: true,
+      bench_press_weight: exerciseData.benchPress.weight,
+      bench_press_reps: exerciseData.benchPress.reps,
+      squat_weight: exerciseData.backSquat.weight,
+      squat_reps: exerciseData.backSquat.reps,
+      chin_up_weight: exerciseData.chinUp.weight,
+      chin_up_reps: exerciseData.chinUp.reps,
+      deadlift_weight: exerciseData.deadlift.weight,
+      deadlift_reps: exerciseData.deadlift.reps,
+      overhead_press_weight: exerciseData.overheadPress.weight,
+      overhead_press_reps: exerciseData.overheadPress.reps,
+      strength2_completed: true,
     };
 
     await saveFormData(dataToSave);

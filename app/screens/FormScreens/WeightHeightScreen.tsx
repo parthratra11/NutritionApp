@@ -13,8 +13,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -32,19 +30,22 @@ export default function WeightHeightScreen({ route }) {
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.id) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
           setHeight(data.height || '');
           setWeight(data.weight || '');
           setAge(data.age || '');
-          setBodyFat(data.bodyFat || '');
+          setBodyFat(data.body_fat || '');
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -54,22 +55,28 @@ export default function WeightHeightScreen({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
     }
@@ -77,7 +84,7 @@ export default function WeightHeightScreen({ route }) {
 
   // Get measurement system from route params or form data
   const measurementSystem =
-    previousParams.measurementSystem || formData.measurementSystem || 'imperial';
+    previousParams.measurementSystem || formData.measurement_system || 'imperial';
 
   // Correct unit labels based on measurement system
   const heightUnit = measurementSystem === 'imperial' ? 'ft & in' : 'cm';
@@ -88,9 +95,9 @@ export default function WeightHeightScreen({ route }) {
       height,
       weight,
       age,
-      bodyFat,
-      measurementSystem,
-      weightHeightCompleted: true,
+      body_fat: bodyFat,
+      measurement_system: measurementSystem,
+      weight_height_completed: true,
     });
 
     navigation.navigate('StrengthChoice', {

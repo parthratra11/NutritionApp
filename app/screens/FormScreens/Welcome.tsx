@@ -4,11 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import ProgressBar from '../../components/ProgressBar';
 import LinearGradient from 'react-native-linear-gradient';
+import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Welcome({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
 
   // Animation values
@@ -21,6 +23,25 @@ export default function Welcome({ route }) {
   const textTranslateY = new Animated.Value(20);
 
   useEffect(() => {
+    // Mark intake form as completed
+    const completeIntakeForm = async () => {
+      if (!user?.id || !user?.token) return;
+
+      try {
+        await fetch(`http://localhost:8000/intake_forms/complete/${user.id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (error) {
+        console.error('Error marking form as complete:', error);
+      }
+    };
+
+    completeIntakeForm();
+
     // Card animation
     Animated.sequence([
       Animated.timing(opacity, {

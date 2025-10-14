@@ -10,12 +10,11 @@ import {
   Platform,
   TextInput,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -32,25 +31,28 @@ export default function Caffeine({ route }) {
   const [caffeine, setCaffeine] = useState('');
   const [menstrualInfo, setMenstrualInfo] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from API
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) {
+      if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const response = await fetch(`http://localhost:8000/intake_forms/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (response.ok) {
+          const data = await response.json();
           setFormData(data);
 
           // Populate form fields with existing data
           if (data.caffeine) setCaffeine(data.caffeine);
-          if (data.menstrualInfo) setMenstrualInfo(data.menstrualInfo);
+          if (data.menstrual_info) setMenstrualInfo(data.menstrual_info);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
@@ -60,25 +62,32 @@ export default function Caffeine({ route }) {
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.id]);
 
-  // Save form data to Firestore
+  // Save form data to API
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
+      const response = await fetch(`http://localhost:8000/intake_forms/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
           ...formData,
           ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save form data');
+      }
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Failed to save form data. Please try again.');
     }
   };
 
@@ -86,11 +95,11 @@ export default function Caffeine({ route }) {
     // Dismiss keyboard if it's open
     Keyboard.dismiss();
 
-    // Save data to Firestore before navigating
+    // Save data to API before navigating
     await saveFormData({
       caffeine,
-      menstrualInfo,
-      caffeineCompleted: true,
+      menstrual_info: menstrualInfo,
+      caffeine_completed: true,
     });
 
     // Navigate to next screen with updated params

@@ -1,113 +1,74 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import func  # Import func directly
+import json
 from typing import List, Optional
-from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
-from app.models import intake_models, user_models
-from app.models.schemas import IntakeFormResponse, IntakeFormUpdate  # Add IntakeFormUpdate import
+from app.models.user_models import IntakeForm
 
-router = APIRouter(
-    prefix="/intake",
-    tags=["intake forms"],
-    responses={404: {"description": "Not found"}},
-)
+router = APIRouter(prefix="/intake_forms", tags=["intake_forms"])
 
-@router.put("/{email}", response_model=IntakeFormResponse)
-def update_intake_form(email: str, form_data: IntakeFormUpdate, db: Session = Depends(get_db)):
-    """
-    Update intake form with all fields
-    """
-    try:
-        # Check if form exists
-        intake_form = db.query(intake_models.IntakeForm).filter(intake_models.IntakeForm.email == email).first()
-        if not intake_form:
-            raise HTTPException(status_code=404, detail="Intake form not found")
-        
-        # Update all form fields from the request data
-        form_data_dict = form_data.dict(exclude_unset=True)
-        
-        # Handle nested objects separately
-        nested_objects = ['strength_measurement', 'genetics_data', 'dumbbell_info', 
-                         'gym_equipment', 'cardio_equipment', 'address', 'body_photos']
-        
-        # Update main form fields
-        for key, value in form_data_dict.items():
-            if key not in nested_objects and hasattr(intake_form, key):
-                setattr(intake_form, key, value)
-        
-        # Update last_updated timestamp
-        intake_form.last_updated = func.now()
-        
-        # Commit changes to database
+@router.get("/{user_id}")
+async def get_intake_form(user_id: str, db: Session = Depends(get_db)):
+    """Get intake form data by user_id"""
+    form = db.query(IntakeForm).filter(IntakeForm.user_id == user_id).first()
+    
+    if not form:
+        return {}
+    
+    # Parse string fields that store JSON
+    result = {c.name: getattr(form, c.name) for c in form.__table__.columns}
+    
+    # Convert list or dict strings to actual objects
+    for field in ["cardio_equipment", "gym_equipment", "body_photo_urls"]:
+        if result.get(field) and isinstance(result[field], str):
+            try:
+                result[field] = json.loads(result[field])
+            except:
+                pass
+    
+    return result
+
+@router.post("/")
+async def create_or_update_intake_form(form_data: dict, db: Session = Depends(get_db)):
+    """Create or update intake form data"""
+    user_id = form_data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    # Check if form already exists for this user
+    existing_form = db.query(IntakeForm).filter(IntakeForm.user_id == user_id).first()
+    
+    # Convert list or dict fields to JSON strings
+    for field in ["cardio_equipment", "gym_equipment", "body_photo_urls", "dumbbell_info"]:
+        if field in form_data and (isinstance(form_data[field], list) or isinstance(form_data[field], dict)):
+            form_data[field] = json.dumps(form_data[field])
+    
+    if existing_form:
+        # Update existing form
+        for key, value in form_data.items():
+            if key != "user_id" and key != "form_id" and hasattr(existing_form, key):
+                setattr(existing_form, key, value)
         db.commit()
-        db.refresh(intake_form)
-        
-        return intake_form
-        
-    except Exception as e:
-        db.rollback()
-        print(f"Error updating intake form: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-@router.post("/initialize/{email}")
-def initialize_intake_form(email: str, db: Session = Depends(get_db)):
-    """
-    Initialize an empty intake form for a user
-    """
-    try:
-        # Check if user exists
-        user = db.query(user_models.User).filter(user_models.User.email == email).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        # Check if form already exists
-        form = db.query(intake_models.IntakeForm).filter(intake_models.IntakeForm.email == email).first()
-        if form:
-            return {"message": "Intake form already exists"}
-        
-        # Create new form with correct func.now() usage
-        new_form = intake_models.IntakeForm(
-            user_id=user.user_id,
-            email=email.lower(),
-            last_updated=func.now(),  # Use func.now() directly, not db.func.now()
-            # Set default values for all non-nullable fields
-            goals_completed=False,
-            weight_height_completed=False,
-            occupation_completed=False,
-            activity_level_completed=False,
-            dedication_level_completed=False,
-            stress_level_completed=False,
-            caffeine_completed=False,
-            intake_form_completed=False
-        )
-        
+        db.refresh(existing_form)
+        return {"message": "Form updated successfully"}
+    else:
+        # Create new form
+        new_form = IntakeForm(**form_data)
         db.add(new_form)
         db.commit()
         db.refresh(new_form)
-        
-        return {"message": "Intake form initialized successfully"}
-    except IntegrityError as e:
-        db.rollback()
-        print(f"IntegrityError: {str(e)}")
-        raise HTTPException(status_code=400, detail="Database integrity error. Form might already exist.")
-    except Exception as e:
-        db.rollback()
-        print(f"Error initializing form: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        return {"message": "Form created successfully"}
 
-@router.get("/{email}", response_model=IntakeFormResponse)
-def get_intake_form(email: str, db: Session = Depends(get_db)):
-    """
-    Get intake form data for a user
-    """
-    try:
-        form = db.query(intake_models.IntakeForm).filter(intake_models.IntakeForm.email == email).first()
-        if not form:
-            raise HTTPException(status_code=404, detail="Intake form not found")
-        
-        return form
-    except Exception as e:
-        print(f"Error getting form: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+@router.put("/complete/{user_id}")
+async def mark_form_as_complete(user_id: str, db: Session = Depends(get_db)):
+    """Mark a form as complete"""
+    form = db.query(IntakeForm).filter(IntakeForm.user_id == user_id).first()
+    
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    form.intake_form_completed = True
+    db.commit()
+    
+    return {"message": "Form marked as complete"}
