@@ -4,7 +4,7 @@ import json
 from typing import List, Optional
 
 from app.database import get_db
-from app.models.user_models import IntakeForm
+from app.models.intake_models import IntakeForm  # Changed import path from user_models to intake_models
 
 router = APIRouter(prefix="/intake_forms", tags=["intake_forms"])
 
