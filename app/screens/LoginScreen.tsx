@@ -50,7 +50,7 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    
+
     if (isSignup) {
       if (!fullName || !phoneNumber) {
         Alert.alert('Error', 'Please fill in all fields');
@@ -65,7 +65,7 @@ export default function LoginScreen() {
     try {
       if (isSignup) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
+
         // Save user data to Firestore with a flag indicating it's just signup data
         try {
           await setDoc(doc(db, 'intakeForms', email), {
@@ -74,7 +74,7 @@ export default function LoginScreen() {
             email,
             createdAt: new Date().toISOString(),
             userId: userCredential.user.uid,
-            isSignupOnly: true // Add this flag to distinguish from completed forms
+            isSignupOnly: true, // Add this flag to distinguish from completed forms
           });
         } catch (dbError) {
           console.error('Error saving user data:', dbError);
@@ -84,10 +84,10 @@ export default function LoginScreen() {
           );
         }
 
-        navigation.navigate('Address')
+        navigation.navigate('Address');
       } else {
         await login(email, password);
-       
+
         navigation.navigate('Reports');
       }
     } catch (error: any) {
@@ -130,17 +130,14 @@ export default function LoginScreen() {
         colors={['#081A2F', '#0D2A4C', '#195295']}
         style={styles.gradient}
         start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
+        end={{ x: 0.5, y: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <ScrollView
             contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-            keyboardShouldPersistTaps="handled"
-          >
+            keyboardShouldPersistTaps="handled">
             <View style={styles.container}>
               <Text style={styles.title}>{isSignup ? 'Signup' : 'Login'}</Text>
               {isSignup && (
@@ -183,13 +180,8 @@ export default function LoginScreen() {
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={22}
-                    color="#B6C3D1"
-                  />
+                  onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#B6C3D1" />
                 </TouchableOpacity>
               </View>
               {/* Privacy Policy for Signup */}
@@ -197,8 +189,7 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   style={styles.privacyRow}
                   onPress={() => setAcceptPolicy(!acceptPolicy)}
-                  activeOpacity={0.8}
-                >
+                  activeOpacity={0.8}>
                   <Ionicons
                     name={acceptPolicy ? 'checkmark-circle' : 'ellipse-outline'}
                     size={20}
@@ -217,22 +208,17 @@ export default function LoginScreen() {
               {!isSignup && (
                 <TouchableOpacity
                   style={styles.forgotPasswordButton}
-                  onPress={handleForgotPassword}
-                >
+                  onPress={handleForgotPassword}>
                   <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                 </TouchableOpacity>
               )}
               {/* Switch between Login/Signup */}
               <View style={styles.switchRow}>
                 <Text style={styles.switchText}>
-                  {isSignup
-                    ? 'Already have an account? '
-                    : "Don't have an account? "}
+                  {isSignup ? 'Already have an account? ' : "Don't have an account? "}
                 </Text>
                 <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
-                  <Text style={styles.switchLink}>
-                    {isSignup ? 'Login' : 'Sign Up'}
-                  </Text>
+                  <Text style={styles.switchLink}>{isSignup ? 'Login' : 'Sign Up'}</Text>
                 </TouchableOpacity>
               </View>
               {/* Social Login */}
@@ -241,22 +227,13 @@ export default function LoginScreen() {
               </Text>
               <View style={styles.socialRow}>
                 <TouchableOpacity>
-                  <Image
-                    source={require('../assets/apple.png')}
-                    style={styles.socialIcon}
-                  />
+                  <Image source={require('../assets/apple.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
                 <TouchableOpacity>
-                  <Image
-                    source={require('../assets/facebook.png')}
-                    style={styles.socialIcon}
-                  />
+                  <Image source={require('../assets/facebook.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
                 <TouchableOpacity>
-                  <Image
-                    source={require('../assets/google.png')}
-                    style={styles.socialIcon}
-                  />
+                  <Image source={require('../assets/google.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
               </View>
               {/* Cymron Logo */}

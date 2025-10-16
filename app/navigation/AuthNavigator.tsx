@@ -132,28 +132,72 @@ export default function AuthNavigator() {
 
           {/* New form flow screens */}
           <Stack.Screen name="Greetings" component={Greetings} options={{ headerShown: false }} />
-          <Stack.Screen name="MeasurementChoice" component={MeasurementChoice} options={{ headerShown: false }} />
-          <Stack.Screen name="WeightHeight" component={WeightHeightScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="StrengthChoice" component={StrengthChoice} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="MeasurementChoice"
+            component={MeasurementChoice}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="WeightHeight"
+            component={WeightHeightScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="StrengthChoice"
+            component={StrengthChoice}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Strength1" component={Strength1} options={{ headerShown: false }} />
           <Stack.Screen name="Strength2" component={Strength2} options={{ headerShown: false }} />
           <Stack.Screen name="Goals" component={Goals} options={{ headerShown: false }} />
-          <Stack.Screen name="OtherExercise" component={OtherExercise} options={{ headerShown: false }} />
-          <Stack.Screen name="DedicationLevel" component={DedicationLevel} options={{ headerShown: false }} />
-          <Stack.Screen name="TrainingFrequency" component={TrainingFrequency} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="OtherExercise"
+            component={OtherExercise}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="DedicationLevel"
+            component={DedicationLevel}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="TrainingFrequency"
+            component={TrainingFrequency}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Occupation" component={Occupation} options={{ headerShown: false }} />
-          <Stack.Screen name="TrainingTime" component={TrainingTime} options={{ headerShown: false }} />
-          <Stack.Screen name="ActivityLevel" component={ActivityLevel} options={{ headerShown: false }} />
-          <Stack.Screen name="StressLevel" component={StressLevel} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="TrainingTime"
+            component={TrainingTime}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ActivityLevel"
+            component={ActivityLevel}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="StressLevel"
+            component={StressLevel}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="SleepForm" component={Sleep} options={{ headerShown: false }} />
           <Stack.Screen name="Caffeine" component={Caffeine} options={{ headerShown: false }} />
           <Stack.Screen name="Equipment1" component={Equipment1} options={{ headerShown: false }} />
           <Stack.Screen name="Equipment2" component={Equipment2} options={{ headerShown: false }} />
           <Stack.Screen name="Equipment3" component={Equipment3} options={{ headerShown: false }} />
           <Stack.Screen name="Equipment4" component={Equipment4} options={{ headerShown: false }} />
-          <Stack.Screen name="Supplements" component={Supplements} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Supplements"
+            component={Supplements}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Genetics" component={Genetics} options={{ headerShown: false }} />
-          <Stack.Screen name="CurrentProgram" component={CurrentProgram} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="CurrentProgram"
+            component={CurrentProgram}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Welcome" component={Welcome} options={{ headerShown: false }} />
 
           {/* Main app screens */}
