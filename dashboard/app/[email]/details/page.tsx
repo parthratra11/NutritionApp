@@ -194,9 +194,18 @@ export default function UserDetails() {
   };
 
   // Photo gallery modal
-  const PhotoModal = ({ url, onClose }: { url: string; onClose: () => void }) => {
+  const PhotoModal = ({
+    url,
+    onClose,
+  }: {
+    url: string;
+    onClose: () => void;
+  }) => {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80"
+        onClick={onClose}
+      >
         <div className="max-w-4xl max-h-[90vh] relative">
           <button
             className="absolute top-4 right-4 text-white bg-red-600 rounded-full p-1 z-10"
@@ -205,8 +214,19 @@ export default function UserDetails() {
               onClose();
             }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <div className="rounded-lg overflow-hidden bg-[#07172C] p-1">
@@ -233,7 +253,10 @@ export default function UserDetails() {
 
       {/* Show selected photo modal if a photo is selected */}
       {selectedPhoto && (
-        <PhotoModal url={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+        <PhotoModal
+          url={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+        />
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -509,17 +532,17 @@ export default function UserDetails() {
               <h2 className="text-lg font-semibold mb-4 text-white border-b border-[#22364F] pb-2">
                 Body Photos ({form.bodyPhotoUrls.length})
               </h2>
-              
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {form.bodyPhotoUrls.map((photoUrl, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className="relative aspect-[3/4] bg-[#0A1B30] rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => setSelectedPhoto(photoUrl)}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={photoUrl} 
+                    <img
+                      src={photoUrl}
                       alt={`Body photo ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
