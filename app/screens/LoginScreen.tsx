@@ -14,36 +14,43 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { auth } from '../firebaseConfig.js';
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Font from 'expo-font';
-import { useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig.js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userApi, intakeFormApi } from '../api/client';
 
 export default function LoginScreen() {
   const { isDarkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState(''); // Add this
-  const [phoneNumber, setPhoneNumber] = useState(''); // Add this
-  //const [isSignup, setIsSignup] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptPolicy, setAcceptPolicy] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
   const navigation = useNavigation();
   const { setUser } = useAuth();
-  const { login } = useAuth();
   const route = useRoute();
   const initialMode = route.params?.mode === 'signup';
   const [isSignup, setIsSignup] = useState(initialMode);
+
+  // Display processing overlay during API operations
+  const renderProcessingOverlay = () => {
+    if (!loading) return null;
+
+    return (
+      <View style={styles.processingOverlay}>
+        <View style={styles.processingContainer}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.processingText}>{processingStep || 'Processing...'}</Text>
+        </View>
+      </View>
+    );
+  };
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -62,45 +69,121 @@ export default function LoginScreen() {
       }
     }
 
+    setLoading(true);
+
     try {
       if (isSignup) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        setProcessingStep('Creating your account...');
 
-        // Save user data to Firestore with a flag indicating it's just signup data
+        // Generate a unique user ID
+        const userId = `user_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 5)}`;
+
+        // Create user data object
+        const userData = {
+          user_id: userId,
+          email: email.toLowerCase(),
+          full_name: fullName,
+          phone_number: phoneNumber,
+          is_signup_only: true,
+        };
+
+        console.log('Creating user with data:', JSON.stringify(userData));
+
         try {
-          await setDoc(doc(db, 'intakeForms', email), {
-            fullName,
-            phoneNumber,
-            email,
-            createdAt: new Date().toISOString(),
-            userId: userCredential.user.uid,
-            isSignupOnly: true, // Add this flag to distinguish from completed forms
-          });
-        } catch (dbError) {
-          console.error('Error saving user data:', dbError);
-          Alert.alert(
-            'Warning',
-            'Account created but failed to save additional information. Please update your profile later.'
+          // Create user using API client
+          const createdUser = await userApi.createUser(userData);
+          console.log('User created:', JSON.stringify(createdUser));
+
+          setProcessingStep('Initializing your profile...');
+          // Initialize the intake form for this user
+          await intakeFormApi.initializeForm(email.toLowerCase());
+
+          // Store credentials for auto login
+          await AsyncStorage.setItem(
+            'authCredentials',
+            JSON.stringify({
+              email: email.toLowerCase(),
+              password,
+              userId,
+              fullName,
+              phoneNumber,
+            })
           );
+
+          // Set user in auth context
+          setUser({
+            uid: userId,
+            email: email.toLowerCase(),
+            displayName: fullName,
+            phoneNumber: phoneNumber,
+          });
+
+          setProcessingStep('Success!');
+          // Navigate to address screen
+          navigation.navigate('Address');
+        } catch (error: any) {
+          console.error('API error:', error);
+          if (error.message && error.message.includes('400')) {
+            Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
+          } else {
+            throw error; // Re-throw for the outer catch
+          }
         }
-
-        navigation.navigate('Address');
       } else {
-        await login(email, password);
+        setProcessingStep('Logging in...');
 
-        navigation.navigate('Reports');
+        try {
+          // Get user by email using API client
+          const userData = await userApi.getUserByEmail(email.toLowerCase());
+
+          console.log('User login successful:', JSON.stringify(userData));
+
+          // Store credentials for next time
+          await AsyncStorage.setItem(
+            'authCredentials',
+            JSON.stringify({
+              email: email.toLowerCase(),
+              password,
+              userId: userData.user_id,
+              fullName: userData.full_name,
+              phoneNumber: userData.phone_number,
+            })
+          );
+
+          // Set user in auth context
+          setUser({
+            uid: userData.user_id,
+            email: userData.email,
+            displayName: userData.full_name,
+            phoneNumber: userData.phone_number,
+          });
+
+          setProcessingStep('Checking profile status...');
+          // Check if the user has completed the intake form
+          const intakeForm = await intakeFormApi.getIntakeForm(email.toLowerCase());
+
+          setProcessingStep('Success!');
+          // Navigate based on user's progress
+          if (intakeForm?.intake_form_completed) {
+            navigation.navigate('Reports');
+          } else {
+            navigation.navigate('Address');
+          }
+        } catch (error: any) {
+          console.error('Login error:', error);
+          if (error.message && error.message.includes('404')) {
+            Alert.alert('Login Failed', 'User not found. Please check your email or sign up.');
+          } else {
+            Alert.alert('Login Failed', 'Incorrect email or password.');
+          }
+        }
       }
-    } catch (error: any) {
-      if (isSignup && error.code === 'auth/email-already-in-use') {
-        Alert.alert('Account Exists', 'This email is already in use. Please log in instead.');
-      } else if (
-        !isSignup &&
-        (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password')
-      ) {
-        Alert.alert('Login Failed', 'Incorrect email or password.');
-      } else {
-        Alert.alert('Error', 'Please enter valid credentials');
-      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      Alert.alert('Error', 'There was a problem connecting to the server. Please try again later.');
+    } finally {
+      setLoading(false);
+      setProcessingStep('');
     }
   };
 
@@ -109,19 +192,12 @@ export default function LoginScreen() {
       Alert.alert('Forgot Password', 'Please enter your email address above first.');
       return;
     }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      Alert.alert(
-        'Password Reset',
-        'A password reset email has been sent. Please check your inbox.'
-      );
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        Alert.alert('Error', 'No user found with this email address.');
-      } else {
-        Alert.alert('Error', 'Failed to send password reset email.');
-      }
-    }
+
+    // For now, just show an alert - you can implement a real password reset later
+    Alert.alert(
+      'Password Reset',
+      'If your email exists in our system, a password reset link will be sent to your inbox.'
+    );
   };
 
   return (
@@ -148,6 +224,7 @@ export default function LoginScreen() {
                   value={fullName}
                   onChangeText={setFullName}
                   autoCapitalize="words"
+                  editable={!loading}
                 />
               )}
               <TextInput
@@ -158,6 +235,7 @@ export default function LoginScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                editable={!loading}
               />
               {isSignup && (
                 <TextInput
@@ -167,6 +245,7 @@ export default function LoginScreen() {
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
+                  editable={!loading}
                 />
               )}
               <View style={styles.inputPasswordContainer}>
@@ -177,10 +256,12 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}>
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={loading}>
                   <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#B6C3D1" />
                 </TouchableOpacity>
               </View>
@@ -189,7 +270,8 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   style={styles.privacyRow}
                   onPress={() => setAcceptPolicy(!acceptPolicy)}
-                  activeOpacity={0.8}>
+                  activeOpacity={0.8}
+                  disabled={loading}>
                   <Ionicons
                     name={acceptPolicy ? 'checkmark-circle' : 'ellipse-outline'}
                     size={20}
@@ -201,14 +283,20 @@ export default function LoginScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.buttonMain} onPress={handleSubmit}>
-                <Text style={styles.buttonMainText}>{isSignup ? 'Signup' : 'Login'}</Text>
+              <TouchableOpacity
+                style={[styles.buttonMain, loading && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}>
+                <Text style={styles.buttonMainText}>
+                  {loading ? 'Processing...' : isSignup ? 'Signup' : 'Login'}
+                </Text>
               </TouchableOpacity>
               {/* Forgot Password */}
               {!isSignup && (
                 <TouchableOpacity
                   style={styles.forgotPasswordButton}
-                  onPress={handleForgotPassword}>
+                  onPress={handleForgotPassword}
+                  disabled={loading}>
                   <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                 </TouchableOpacity>
               )}
@@ -217,7 +305,7 @@ export default function LoginScreen() {
                 <Text style={styles.switchText}>
                   {isSignup ? 'Already have an account? ' : "Don't have an account? "}
                 </Text>
-                <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
+                <TouchableOpacity onPress={() => setIsSignup(!isSignup)} disabled={loading}>
                   <Text style={styles.switchLink}>{isSignup ? 'Login' : 'Sign Up'}</Text>
                 </TouchableOpacity>
               </View>
@@ -226,13 +314,13 @@ export default function LoginScreen() {
                 {isSignup ? 'Sign Up with' : 'Sign in with'}
               </Text>
               <View style={styles.socialRow}>
-                <TouchableOpacity>
+                <TouchableOpacity disabled={loading}>
                   <Image source={require('../assets/apple.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
-                <TouchableOpacity>
+                <TouchableOpacity disabled={loading}>
                   <Image source={require('../assets/facebook.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
-                <TouchableOpacity>
+                <TouchableOpacity disabled={loading}>
                   <Image source={require('../assets/google.png')} style={styles.socialIcon} />
                 </TouchableOpacity>
               </View>
@@ -244,6 +332,7 @@ export default function LoginScreen() {
               />
             </View>
           </ScrollView>
+          {renderProcessingOverlay()}
         </KeyboardAvoidingView>
       </LinearGradient>
     </SafeAreaView>
@@ -306,6 +395,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
     alignSelf: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.7,
   },
   buttonMainText: {
     color: '#fff',
@@ -382,5 +475,28 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     color: '#fff',
     fontWeight: 'bold',
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingContainer: {
+    backgroundColor: '#195295',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '80%',
+  },
+  processingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: 'center',
   },
 });

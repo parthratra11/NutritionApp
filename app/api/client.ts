@@ -1,6 +1,6 @@
 // API client for interacting with the FastAPI backend
 
-const API_BASE_URL = 'http://192.168.1.8:8000'; // Use the same IP address shown in the Metro logs
+const API_BASE_URL = 'http://192.168.1.4:8000'; // Use the same IP address shown in the Metro logs
 
 // Generic API request function
 async function apiRequest(endpoint: string, method: string = 'GET', data?: any) {
@@ -33,7 +33,7 @@ async function apiRequest(endpoint: string, method: string = 'GET', data?: any) 
     }
 
     if (!response.ok) {
-      throw new Error(responseData.detail || responseData.message || 'API request failed');
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
     return responseData;
@@ -53,8 +53,13 @@ export const userApi = {
     return apiRequest(`/users/${email}`);
   },
 
+  // Updated methods for address handling
+  getUserAddress: (email: string) => {
+    return apiRequest(`/address/user/${encodeURIComponent(email)}`);
+  },
+
   updateUserAddress: (email: string, addressData: any) => {
-    return apiRequest(`/users/${email}/address`, 'POST', addressData);
+    return apiRequest(`/address/user/${encodeURIComponent(email)}`, 'POST', addressData);
   },
 };
 
@@ -73,7 +78,6 @@ export const intakeFormApi = {
   },
 };
 
-// Goals API methods
 export const goalsApi = {
   createGoals: (email: string, goalsData: any) => {
     return apiRequest(`/goals?email=${email}`, 'POST', goalsData);

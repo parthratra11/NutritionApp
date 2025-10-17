@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -14,52 +20,90 @@ export default function MeasurementChoice() {
   const { user } = useAuth();
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Fetch intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
+
+          // If measurement system is already set, navigate to the next screen
+          if (data.measurement_system) {
+            navigation.navigate('WeightHeight', {
+              measurementSystem: data.measurement_system,
+            });
+          }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          console.error('Error loading form data:', error);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadFormData();
-  }, [user?.email]);
+  }, [user?.email, navigation]);
 
   const saveFormData = async (data: any) => {
     if (!user?.email) return;
 
+    setIsSaving(true);
+
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Convert camelCase to snake_case for backend
+      const updatedData = {
+        measurement_system: data.measurementSystem,
+        last_updated: new Date().toISOString(),
+      };
+
+      // Update the intake form in the SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), updatedData);
+
+      // Update local state
+      setFormData({
+        ...formData,
+        measurement_system: data.measurementSystem,
+      });
+
+      return true;
     } catch (error) {
       console.error('Error saving form data:', error);
+      return false;
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSelect = async (system: 'imperial' | 'metric') => {
-    await saveFormData({ measurementSystem: system });
-    navigation.navigate('WeightHeight', { measurementSystem: system });
+    const success = await saveFormData({ measurementSystem: system });
+    if (success) {
+      navigation.navigate('WeightHeight', { measurementSystem: system });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -70,12 +114,20 @@ export default function MeasurementChoice() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.measurementButton}
-            onPress={() => handleSelect('imperial')}>
-            <Text style={styles.buttonText}>Imperial</Text>
+            onPress={() => handleSelect('imperial')}
+            disabled={isSaving}>
+            <Text style={styles.buttonText}>
+              {isSaving && formData.measurement_system === 'imperial' ? 'Saving...' : 'Imperial'}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.measurementButton} onPress={() => handleSelect('metric')}>
-            <Text style={styles.buttonText}>Metric</Text>
+          <TouchableOpacity
+            style={styles.measurementButton}
+            onPress={() => handleSelect('metric')}
+            disabled={isSaving}>
+            <Text style={styles.buttonText}>
+              {isSaving && formData.measurement_system === 'metric' ? 'Saving...' : 'Metric'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -126,5 +178,15 @@ const styles = StyleSheet.create({
     fontSize: screenWidth * 0.036,
     fontWeight: '600',
     lineHeight: screenWidth * 0.041,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 16,
   },
 });

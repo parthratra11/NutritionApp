@@ -9,13 +9,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -29,25 +30,30 @@ export default function WeightHeightScreen({ route }) {
   const [age, setAge] = useState('');
   const [bodyFat, setBodyFat] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadFormData = async () => {
-      if (!user?.email) return;
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Fetch intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
+          // Use snake_case field names from backend
           setHeight(data.height || '');
           setWeight(data.weight || '');
           setAge(data.age || '');
-          setBodyFat(data.bodyFat || '');
+          setBodyFat(data.body_fat || ''); // Get body_fat directly from intake form
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
       } finally {
         setIsLoading(false);
       }
@@ -57,34 +63,42 @@ export default function WeightHeightScreen({ route }) {
   }, [user?.email]);
 
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
+    if (!user?.email) return false;
 
+    setIsSaving(true);
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Save all data including body_fat directly to the intake form
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        height: data.height,
+        weight: data.weight,
+        age: data.age,
+        body_fat: data.bodyFat, // Save body_fat directly to intake form
+        measurement_system: data.measurementSystem,
+        weight_height_completed: true,
+        last_updated: new Date().toISOString(),
+      });
+      return true;
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'There was an error saving your data. Please try again.', [
+        { text: 'OK' },
+      ]);
+      return false;
+    } finally {
+      setIsSaving(false);
     }
   };
 
   // Get measurement system from route params or form data
   const measurementSystem =
-    previousParams.measurementSystem || formData.measurementSystem || 'imperial';
+    previousParams.measurementSystem || formData.measurement_system || 'imperial';
 
   // Correct unit labels based on measurement system
   const heightUnit = measurementSystem === 'imperial' ? 'ft & in' : 'cm';
   const weightUnit = measurementSystem === 'imperial' ? 'lbs' : 'kg';
 
   const handleNext = async () => {
-    await saveFormData({
+    const success = await saveFormData({
       height,
       weight,
       age,
@@ -93,15 +107,28 @@ export default function WeightHeightScreen({ route }) {
       weightHeightCompleted: true,
     });
 
-    navigation.navigate('StrengthChoice', {
-      ...previousParams,
-      height,
-      weight,
-      age,
-      bodyFat,
-      measurementSystem,
-    });
+    if (success) {
+      navigation.navigate('StrengthChoice', {
+        ...previousParams,
+        height,
+        weight,
+        age,
+        bodyFat,
+        measurementSystem,
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -127,6 +154,7 @@ export default function WeightHeightScreen({ route }) {
                 placeholder={measurementSystem === 'imperial' ? '5\'10"' : '175'}
                 placeholderTextColor="rgba(255, 255, 255, 0.4)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
@@ -142,6 +170,7 @@ export default function WeightHeightScreen({ route }) {
                 placeholder={measurementSystem === 'imperial' ? '170' : '77'}
                 placeholderTextColor="rgba(255, 255, 255, 0.4)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
@@ -157,6 +186,7 @@ export default function WeightHeightScreen({ route }) {
                 placeholder="25"
                 placeholderTextColor="rgba(255, 255, 255, 0.4)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
@@ -169,11 +199,15 @@ export default function WeightHeightScreen({ route }) {
                 placeholder="15"
                 placeholderTextColor="rgba(255, 255, 255, 0.4)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>&gt;</Text>
+            <TouchableOpacity
+              style={[styles.nextButton, isSaving && styles.buttonDisabled]}
+              onPress={handleNext}
+              disabled={isSaving}>
+              <Text style={styles.nextButtonText}>{isSaving ? '...' : '>'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -233,11 +267,26 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: screenHeight * 0.04,
   },
+  buttonDisabled: {
+    backgroundColor: '#8B3330', // Darker shade when disabled
+    opacity: 0.7,
+  },
   nextButtonText: {
     color: '#FFFFFF',
     fontSize: screenWidth * 0.08,
     fontWeight: '800',
     fontFamily: 'Texta',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 16,
+    fontFamily: 'Texta',
   },
 });

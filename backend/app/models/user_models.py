@@ -23,13 +23,13 @@ class UserAddress(Base):
     __tablename__ = "user_addresses"
 
     address_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     house_number = Column(String(255))
     street = Column(String(255))
     city = Column(String(255))
     postal_code = Column(String(20))
     country = Column(String(255))
-    address_updated_at = Column(TIMESTAMP)
+    address_updated_at = Column(TIMESTAMP, server_default=func.now())
     
     # Relationships
     user = relationship("User", back_populates="address")

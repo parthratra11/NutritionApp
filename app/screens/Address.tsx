@@ -13,11 +13,11 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig.js';
+import { userApi, intakeFormApi } from '../api/client';
 
 export default function AddressScreen() {
   const { isDarkMode } = useTheme();
@@ -34,30 +34,81 @@ export default function AddressScreen() {
   // Check if user already has address information
   useEffect(() => {
     const checkExistingAddress = async () => {
-      if (!user?.email) return;
+      if (!user?.email) {
+        setCheckingAddress(false);
+        return;
+      }
 
       try {
-        const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const userDocSnap = await getDoc(userDocRef);
+        // Try to get address directly by user ID first (new method)
+        try {
+          const addressData = await userApi.getUserAddress(user.email.toLowerCase());
+          console.log('Address data from direct query:', addressData);
 
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
+          if (addressData && Array.isArray(addressData) && addressData.length > 0) {
+            // Use the first address
+            const address = addressData[0];
+            setHouseNumber(address.house_number || '');
+            setStreet(address.street || '');
+            setPostalCode(address.postal_code || '');
+            setCity(address.city || '');
+            setCountry(address.country || '');
 
-          // Load existing address data if available
-          if (data.houseNumber) setHouseNumber(data.houseNumber);
-          if (data.street) setStreet(data.street);
-          if (data.postalCode) setPostalCode(data.postalCode);
-          if (data.city) setCity(data.city);
-          if (data.country) setCountry(data.country);
+            console.log('Set address values from direct query:', {
+              houseNumber: address.house_number || '',
+              street: address.street || '',
+              postalCode: address.postal_code || '',
+              city: address.city || '',
+              country: address.country || '',
+            });
+            setCheckingAddress(false);
+            return;
+          }
+        } catch (addressError) {
+          console.log('Could not get address directly, falling back to intake form:', addressError);
+        }
 
-          // If user has completed payment, redirect to Reports
-          if (data.hasCompletedPayment) {
+        // Fallback: Fetch intake form data from SQL backend
+        const intakeFormData = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+
+        console.log('Received intake form data:', JSON.stringify(intakeFormData, null, 2));
+
+        if (intakeFormData) {
+          // Check for associated address data
+          if (
+            intakeFormData.address &&
+            Array.isArray(intakeFormData.address) &&
+            intakeFormData.address.length > 0
+          ) {
+            console.log(
+              'Found address data in intake form:',
+              JSON.stringify(intakeFormData.address[0], null, 2)
+            );
+
+            const addressData = intakeFormData.address[0];
+
+            // Load existing address data if available
+            setHouseNumber(addressData.house_number || '');
+            setStreet(addressData.street || '');
+            setPostalCode(addressData.postal_code || '');
+            setCity(addressData.city || '');
+            setCountry(addressData.country || '');
+          } else {
+            console.log('No address data found in response');
+          }
+
+          // If user has completed the form, redirect to Reports
+          if (intakeFormData.intake_form_completed) {
             navigation.navigate('Reports');
             return;
           }
         }
       } catch (error) {
         console.error('Error checking address:', error);
+        // Do not show error alert for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not retrieve your address information. Please try again.');
+        }
       } finally {
         setCheckingAddress(false);
       }
@@ -80,30 +131,22 @@ export default function AddressScreen() {
     setLoading(true);
 
     try {
-      const userDocRef = doc(db, 'intakeForms', user.email.toLowerCase());
-      const userDocSnap = await getDoc(userDocRef);
-
+      // Prepare address data in the format expected by the backend
       const addressData = {
-        houseNumber,
-        street,
-        postalCode,
-        city,
-        country,
-        email: user.email.toLowerCase(),
-        addressUpdatedAt: new Date(),
-        lastUpdated: new Date(),
+        house_number: houseNumber,
+        street: street,
+        postal_code: postalCode,
+        city: city,
+        country: country,
       };
 
-      if (userDocSnap.exists()) {
-        // Update existing document with address information
-        await setDoc(userDocRef, addressData, { merge: true });
-      } else {
-        // Create new document with address information
-        await setDoc(userDocRef, {
-          ...addressData,
-          isSignupOnly: true,
-        });
-      }
+      // Save address to SQL backend using the POST method
+      await userApi.updateUserAddress(user.email.toLowerCase(), addressData);
+
+      // Update intake form with timestamp
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        last_updated: new Date().toISOString(),
+      });
 
       Alert.alert('Success', 'Address information saved successfully!', [
         {
@@ -129,7 +172,8 @@ export default function AddressScreen() {
         <LinearGradient
           colors={['#081A2F', '#0D2A4C', '#195295']}
           style={[styles.gradient, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: '#fff', fontSize: 16 }}>Loading...</Text>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16, marginTop: 10 }}>Loading...</Text>
         </LinearGradient>
       </View>
     );
@@ -161,6 +205,7 @@ export default function AddressScreen() {
                   value={houseNumber}
                   onChangeText={setHouseNumber}
                   autoCapitalize="none"
+                  editable={!loading}
                 />
 
                 <TextInput
@@ -170,6 +215,7 @@ export default function AddressScreen() {
                   value={street}
                   onChangeText={setStreet}
                   autoCapitalize="words"
+                  editable={!loading}
                 />
 
                 <TextInput
@@ -179,6 +225,7 @@ export default function AddressScreen() {
                   value={postalCode}
                   onChangeText={setPostalCode}
                   autoCapitalize="characters"
+                  editable={!loading}
                 />
 
                 <TextInput
@@ -188,6 +235,7 @@ export default function AddressScreen() {
                   value={city}
                   onChangeText={setCity}
                   autoCapitalize="words"
+                  editable={!loading}
                 />
 
                 <TextInput
@@ -197,6 +245,7 @@ export default function AddressScreen() {
                   value={country}
                   onChangeText={setCountry}
                   autoCapitalize="words"
+                  editable={!loading}
                 />
 
                 <TouchableOpacity
