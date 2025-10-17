@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, TIMESTAMP, Float, Text, Enum, DECIMAL, JSON
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, TIMESTAMP, Float, Text, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -6,7 +6,7 @@ from app.database import Base
 
 class IntakeForm(Base):
     __tablename__ = "intake_forms"
-
+    
     form_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(String(255), ForeignKey("users.user_id"), unique=True)
     email = Column(String(255), unique=True)
@@ -20,6 +20,7 @@ class IntakeForm(Base):
     age = Column(String(10))
     weight = Column(String(10))
     height = Column(String(10))
+    body_fat = Column(String(20))  # Added body_fat column
     measurement_system = Column(Enum('metric', 'imperial', name='measurement_system'))
     weight_height_completed = Column(Boolean, default=False)
     
@@ -99,43 +100,35 @@ class IntakeForm(Base):
     
     # Meta fields
     intake_form_completed = Column(Boolean, default=False)
-    last_updated = Column(TIMESTAMP)
+    last_updated = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationships
+    # Relationships - match the names with schemas.py
     user = relationship("User", back_populates="intake_form")
-    strength_measurement = relationship("StrengthMeasurement", back_populates="intake_form", uselist=False)
-    genetics_data = relationship("Genetics", back_populates="intake_form", uselist=False)
-    dumbbell_info = relationship("DumbbellInfo", back_populates="intake_form", uselist=False)
+    strength_measurements = relationship("StrengthMeasurement", back_populates="intake_form")
+    genetics = relationship("Genetics", back_populates="intake_form")
+    dumbbell_info = relationship("DumbbellInfo", back_populates="intake_form")
     gym_equipment = relationship("GymEquipment", back_populates="intake_form")
     cardio_equipment = relationship("CardioEquipment", back_populates="intake_form")
-    address = relationship("Address", back_populates="intake_form", uselist=False)
+    address = relationship("Address", back_populates="intake_form")
     body_photos = relationship("BodyPhoto", back_populates="intake_form")
 
 
 class StrengthMeasurement(Base):
     __tablename__ = "strength_measurements"
-
-    measurement_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
     
-    # Squat
+    measurement_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
+    
+    # Measurements
     squat_weight = Column(String(20))
     squat_reps = Column(String(10))
-    
-    # Bench Press
     bench_press_weight = Column(String(20))
     bench_press_reps = Column(String(10))
-    
-    # Deadlift
     deadlift_weight = Column(String(20))
     deadlift_reps = Column(String(10))
-    
-    # Overhead Press
     overhead_press_weight = Column(String(20))
     overhead_press_reps = Column(String(10))
-    
-    # Chin Up
     chin_up_weight = Column(String(20))
     chin_up_reps = Column(String(10))
     
@@ -144,81 +137,81 @@ class StrengthMeasurement(Base):
     strength2_completed = Column(Boolean, default=False)
     
     # Timestamp
-    last_updated = Column(TIMESTAMP)
+    last_updated = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationship
-    intake_form = relationship("IntakeForm", back_populates="strength_measurement")
+    # Relationships
+    intake_form = relationship("IntakeForm", back_populates="strength_measurements")
 
 
 class Genetics(Base):
     __tablename__ = "genetics"
-
-    genetics_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
     
-    # Measurements
+    genetics_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
+    
+    # Genetics measurements (body_fat moved to intake_forms)
     wrist_circumference = Column(String(20))
     ankle_circumference = Column(String(20))
-    body_fat = Column(String(20))
+    # body_fat removed from here
     
-    # Status
+    # Completion status
     genetics_completed = Column(Boolean, default=False)
     
-    # Relationship
-    intake_form = relationship("IntakeForm", back_populates="genetics_data")
+    # Relationships
+    intake_form = relationship("IntakeForm", back_populates="genetics")
 
 
 class DumbbellInfo(Base):
     __tablename__ = "dumbbell_info"
-
+    
     dumbbell_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
     # Dumbbell data
     is_full_set = Column(Boolean)
     min_weight = Column(String(20))
     max_weight = Column(String(20))
     
-    # Relationship
+    # Relationships
     intake_form = relationship("IntakeForm", back_populates="dumbbell_info")
 
 
 class GymEquipment(Base):
     __tablename__ = "gym_equipment"
-
+    
     equipment_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
     # Equipment type
     equipment_type = Column(String(255))
     
-    # Relationship
+    # Relationships
     intake_form = relationship("IntakeForm", back_populates="gym_equipment")
 
 
 class CardioEquipment(Base):
     __tablename__ = "cardio_equipment"
-
+    
     equipment_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
     # Equipment type
     equipment_type = Column(String(255))
     
-    # Relationship
+    # Relationships
     intake_form = relationship("IntakeForm", back_populates="cardio_equipment")
 
 
 class Address(Base):
     __tablename__ = "addresses"
-
+    
     address_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
     # Address details
     house_number = Column(String(100))
@@ -228,22 +221,22 @@ class Address(Base):
     country = Column(String(100))
     
     # Last updated
-    address_updated_at = Column(TIMESTAMP)
+    address_updated_at = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationship
+    # Relationships
     intake_form = relationship("IntakeForm", back_populates="address")
 
 
 class BodyPhoto(Base):
     __tablename__ = "body_photos"
-
+    
     photo_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    form_id = Column(Integer, ForeignKey("intake_forms.form_id"))
-    user_id = Column(String(255), ForeignKey("users.user_id"))
+    form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
     # Photo URL
     photo_url = Column(String(255))
     upload_date = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationship
+    # Relationships
     intake_form = relationship("IntakeForm", back_populates="body_photos")
