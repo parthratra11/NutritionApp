@@ -1,6 +1,6 @@
 // API client for interacting with the FastAPI backend
 
-const API_BASE_URL = 'http://192.168.1.4:8000'; // Use the same IP address shown in the Metro logs
+const API_BASE_URL = 'http://192.168.87.162:8000'; // Use the same IP address shown in the Metro logs
 
 // Generic API request function
 async function apiRequest(endpoint: string, method: string = 'GET', data?: any) {
@@ -76,6 +76,12 @@ export const intakeFormApi = {
   updateIntakeForm: (email: string, formData: any) => {
     return apiRequest(`/intake/${email}`, 'PUT', formData);
   },
+
+  // Add this new method for strength measurements
+  saveStrengthMeasurements: (email: string, strengthData: any) => {
+    return apiRequest(`/intake/${email}/strength-measurements`, 'POST', strengthData);
+  },
+  
 };
 
 export const goalsApi = {

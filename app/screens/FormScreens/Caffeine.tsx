@@ -10,13 +10,14 @@ import {
   Platform,
   TextInput,
   Keyboard,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -28,11 +29,12 @@ export default function Caffeine({ route }) {
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [caffeine, setCaffeine] = useState('');
   const [menstrualInfo, setMenstrualInfo] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -41,19 +43,29 @@ export default function Caffeine({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
+          console.log('Loaded form data:', data);
 
           // Populate form fields with existing data
-          if (data.caffeine) setCaffeine(data.caffeine);
-          if (data.menstrualInfo) setMenstrualInfo(data.menstrualInfo);
+          if (data.caffeine) {
+            setCaffeine(data.caffeine);
+            console.log('Loaded caffeine value:', data.caffeine);
+          }
+          if (data.menstrual_info) {
+            setMenstrualInfo(data.menstrual_info);
+            console.log('Loaded menstrual info:', data.menstrual_info);
+          }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -62,43 +74,62 @@ export default function Caffeine({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
+  // Save form data to SQL backend
   const saveFormData = async (data: any) => {
-    if (!user?.email) return;
-
+    if (!user?.email) return false;
+    
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      console.log('Saving form data:', data);
+      
+      // Ensure data is properly formatted
+      const formattedData = {
+        caffeine: data.caffeine ? data.caffeine.toString().trim() : '',
+        menstrual_info: data.menstrual_info ? data.menstrual_info.toString().trim() : '',
+        caffeine_completed: true,
+        last_updated: new Date().toISOString(),
+      };
+
+      console.log('Formatted data being sent to API:', formattedData);
+      
+      // Update intake form in SQL backend
+      const response = await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), formattedData);
+      console.log('API response:', response);
+      
+      return true;
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
+      return false;
     }
   };
 
   const handleNext = async () => {
     // Dismiss keyboard if it's open
     Keyboard.dismiss();
+    
+    setIsSaving(true);
 
-    // Save data to Firestore before navigating
-    await saveFormData({
-      caffeine,
-      menstrualInfo,
-      caffeineCompleted: true,
-    });
+    try {
+      // Save data to SQL backend before navigating
+      const saveSuccess = await saveFormData({
+        caffeine,
+        menstrual_info: menstrualInfo,
+      });
 
-    // Navigate to next screen with updated params
-    navigation.navigate('Equipment1', {
-      ...previousParams,
-      caffeine,
-      menstrualInfo,
-    });
+      if (saveSuccess) {
+        // Navigate to next screen with updated params
+        navigation.navigate('Equipment1', {
+          ...previousParams,
+          caffeine,
+          menstrualInfo,
+        });
+      }
+    } catch (error) {
+      console.error('Error in handleNext:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -134,6 +165,7 @@ export default function Caffeine({ route }) {
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 value={caffeine}
                 onChangeText={setCaffeine}
+                keyboardType="default"
               />
 
               <Text style={styles.labelText}>[Women only]</Text>
@@ -145,7 +177,9 @@ export default function Caffeine({ route }) {
                 style={styles.input}
                 value={menstrualInfo}
                 onChangeText={setMenstrualInfo}
-                multiline
+                multiline={true}
+                placeholder="Type your answer here..."
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
 
               <Text style={styles.disclaimerText}>
@@ -154,8 +188,16 @@ export default function Caffeine({ route }) {
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>&gt;</Text>
+            <TouchableOpacity 
+              style={[styles.nextButton, isSaving && styles.disabledButton]} 
+              onPress={handleNext}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.nextButtonText}>&gt;</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -193,7 +235,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#8496A6',
     color: '#FFFFFF',
     fontSize: screenWidth * 0.04,
-    padding: 0,
+    padding: 10,
     paddingBottom: 8,
     textAlignVertical: 'bottom',
     height: 40,
@@ -221,6 +263,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     marginTop: screenHeight * 0.05,
+  },
+  disabledButton: {
+    backgroundColor: '#8B2B27',
+    opacity: 0.7,
   },
   nextButtonText: {
     color: '#FFFFFF',

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,16 +21,30 @@ export default function DedicationLevel({ route }) {
       if (!user?.email) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
-          setSelectedLevel(data.dedicationLevel || null);
+          // Map the enum values from the SQL database to our local IDs
+          let dedicationValue = null;
+          
+          if (data.dedication_level === 'minimum') {
+            dedicationValue = 'steady';
+          } else if (data.dedication_level === 'moderate') {
+            dedicationValue = 'balanced';
+          } else if (data.dedication_level === 'maximum') {
+            dedicationValue = 'maximum';
+          }
+          
+          setSelectedLevel(dedicationValue);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -44,18 +57,26 @@ export default function DedicationLevel({ route }) {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Map our local IDs to the SQL enum values
+      let dedicationValue = null;
+      
+      if (data.dedicationLevel === 'steady') {
+        dedicationValue = 'minimum';
+      } else if (data.dedicationLevel === 'balanced') {
+        dedicationValue = 'moderate';
+      } else if (data.dedicationLevel === 'maximum') {
+        dedicationValue = 'maximum';
+      }
+      
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        dedication_level: dedicationValue,
+        dedication_level_completed: data.dedicationLevelCompleted,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 

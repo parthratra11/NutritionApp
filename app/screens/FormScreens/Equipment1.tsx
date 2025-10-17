@@ -7,13 +7,13 @@ import {
   Dimensions,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -30,7 +30,7 @@ export default function Equipment1({ route }) {
   const [skinfoldCalipers, setSkinfoldCalipers] = useState('');
   const [hasMeasuringTape, setHasMeasuringTape] = useState(null);
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -39,22 +39,25 @@ export default function Equipment1({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
 
           // Populate form fields with existing data
-          if (data.fitnessTech) setFitnessTech(data.fitnessTech);
-          if (data.skinfoldCalipers) setSkinfoldCalipers(data.skinfoldCalipers);
-          if (data.hasMeasuringTape !== undefined && data.hasMeasuringTape !== null) {
-            setHasMeasuringTape(data.hasMeasuringTape);
+          if (data.fitness_tech) setFitnessTech(data.fitness_tech);
+          if (data.skinfold_calipers) setSkinfoldCalipers(data.skinfold_calipers);
+          if (data.has_measuring_tape !== undefined && data.has_measuring_tape !== null) {
+            setHasMeasuringTape(data.has_measuring_tape);
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -63,33 +66,29 @@ export default function Equipment1({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
+  // Save form data to SQL backend
   const saveFormData = async (data: any) => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
   const handleNext = async () => {
-    // Save data to Firestore before navigating
+    // Save data to SQL backend before navigating
     await saveFormData({
-      fitnessTech,
-      skinfoldCalipers,
-      hasMeasuringTape,
-      equipment1Completed: true,
+      fitness_tech: fitnessTech,
+      skinfold_calipers: skinfoldCalipers,
+      has_measuring_tape: hasMeasuringTape,
+      equipment1_completed: true,
     });
 
     // Navigate to next screen with updated params
@@ -157,24 +156,30 @@ export default function Equipment1({ route }) {
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.optionButton, hasMeasuringTape === true && styles.selectedButton]}
+                  style={[
+                    styles.optionButton, 
+                    hasMeasuringTape === true ? styles.selectedButton : null
+                  ]}
                   onPress={() => setHasMeasuringTape(true)}>
                   <Text
                     style={[
                       styles.optionButtonText,
-                      hasMeasuringTape === true && styles.selectedButtonText,
+                      hasMeasuringTape === true ? styles.selectedButtonText : null,
                     ]}>
                     Yes
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.optionButton, hasMeasuringTape === false && styles.selectedButton]}
+                  style={[
+                    styles.optionButton, 
+                    hasMeasuringTape === false ? styles.selectedButton : null
+                  ]}
                   onPress={() => setHasMeasuringTape(false)}>
                   <Text
                     style={[
                       styles.optionButtonText,
-                      hasMeasuringTape === false && styles.selectedButtonText,
+                      hasMeasuringTape === false ? styles.selectedButtonText : null,
                     ]}>
                     No
                   </Text>
