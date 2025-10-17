@@ -9,13 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -30,7 +30,7 @@ export default function TrainingTime({ route }) {
 
   const [trainingTimePreference, setTrainingTimePreference] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -39,20 +39,23 @@ export default function TrainingTime({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
 
           // Populate form field with existing data
-          if (data.trainingTimePreference) {
-            setTrainingTimePreference(data.trainingTimePreference);
+          if (data.training_time_preference) {
+            setTrainingTimePreference(data.training_time_preference);
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -61,31 +64,27 @@ export default function TrainingTime({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
+  // Save form data to SQL backend
   const saveFormData = async (data: any) => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
   const handleNext = async () => {
-    // Save data to Firestore before navigating
+    // Save data to SQL backend before navigating
     await saveFormData({
-      trainingTimePreference,
-      trainingTimeCompleted: true,
+      training_time_preference: trainingTimePreference,
+      training_time_completed: true,
     });
 
     // Navigate to next screen with updated params

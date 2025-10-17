@@ -7,13 +7,13 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -36,37 +36,45 @@ export default function Strength2({ route }) {
       if (!user?.email) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
-          setExerciseData({
-            benchPress: {
-              weight: data.benchPressWeight || '',
-              reps: data.benchPressReps || '',
-            },
-            backSquat: {
-              weight: data.squatWeight || '',
-              reps: data.squatReps || '',
-            },
-            chinUp: {
-              weight: data.chinUpWeight || '',
-              reps: data.chinUpReps || '',
-            },
-            deadlift: {
-              weight: data.deadliftWeight || '',
-              reps: data.deadliftReps || '',
-            },
-            overheadPress: {
-              weight: data.overheadPressWeight || '',
-              reps: data.overheadPressReps || '',
-            },
-          });
+          
+          // Check if we have strength measurements
+          if (data.strength_measurements && data.strength_measurements.length > 0) {
+            const strengthData = data.strength_measurements[0];
+            setExerciseData({
+              benchPress: {
+                weight: strengthData.bench_press_weight || '',
+                reps: strengthData.bench_press_reps || '',
+              },
+              backSquat: {
+                weight: strengthData.squat_weight || '',
+                reps: strengthData.squat_reps || '',
+              },
+              chinUp: {
+                weight: strengthData.chin_up_weight || '',
+                reps: strengthData.chin_up_reps || '',
+              },
+              deadlift: {
+                weight: strengthData.deadlift_weight || '',
+                reps: strengthData.deadlift_reps || '',
+              },
+              overheadPress: {
+                weight: strengthData.overhead_press_weight || '',
+                reps: strengthData.overhead_press_reps || '',
+              },
+            });
+          }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -74,25 +82,6 @@ export default function Strength2({ route }) {
 
     loadFormData();
   }, [user?.email]);
-
-  const saveFormData = async (data: any) => {
-    if (!user?.email) return;
-
-    try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.error('Error saving form data:', error);
-    }
-  };
 
   // Handle input change
   const handleInputChange = (exercise, field, value) => {
@@ -107,27 +96,39 @@ export default function Strength2({ route }) {
 
   // Handle next button press
   const handleNext = async () => {
-    // Convert exercise data to individual fields for database
-    const dataToSave = {
-      benchPressWeight: exerciseData.benchPress.weight,
-      benchPressReps: exerciseData.benchPress.reps,
-      squatWeight: exerciseData.backSquat.weight,
-      squatReps: exerciseData.backSquat.reps,
-      chinUpWeight: exerciseData.chinUp.weight,
-      chinUpReps: exerciseData.chinUp.reps,
-      deadliftWeight: exerciseData.deadlift.weight,
-      deadliftReps: exerciseData.deadlift.reps,
-      overheadPressWeight: exerciseData.overheadPress.weight,
-      overheadPressReps: exerciseData.overheadPress.reps,
-      strength2Completed: true,
-    };
+    if (!user?.email) return;
 
-    await saveFormData(dataToSave);
+    try {
+      // Update the strength2_completed flag in intake_forms table
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        strength2_completed: true,
+        last_updated: new Date().toISOString(),
+      });
+      
+      // Save strength measurements to the strength_measurements table
+      await intakeFormApi.saveStrengthMeasurements(user.email.toLowerCase(), {
+        squat_weight: exerciseData.backSquat.weight,
+        squat_reps: exerciseData.backSquat.reps,
+        bench_press_weight: exerciseData.benchPress.weight,
+        bench_press_reps: exerciseData.benchPress.reps,
+        deadlift_weight: exerciseData.deadlift.weight,
+        deadlift_reps: exerciseData.deadlift.reps,
+        overhead_press_weight: exerciseData.overheadPress.weight,
+        overhead_press_reps: exerciseData.overheadPress.reps,
+        chin_up_weight: exerciseData.chinUp.weight,
+        chin_up_reps: exerciseData.chinUp.reps,
+        strength2_completed: true,
+        last_updated: new Date().toISOString(),
+      });
 
-    navigation.navigate('Goals', {
-      ...previousParams,
-      exerciseData,
-    });
+      navigation.navigate('Goals', {
+        ...previousParams,
+        exerciseData,
+      });
+    } catch (error) {
+      console.error('Error saving strength measurements:', error);
+      Alert.alert('Error', 'Could not save your measurements. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -290,7 +291,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: screenHeight * 0.01,
   },
-
   input: {
     width: '80%', // Make the lines significantly shorter
     alignSelf: 'flex-start',

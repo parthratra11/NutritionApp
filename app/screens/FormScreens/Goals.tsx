@@ -9,13 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,11 +40,10 @@ export default function Goals({ route }) {
       if (!user?.email) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
           setGoals({
             goal1: data.goal1 || '',
@@ -55,6 +54,10 @@ export default function Goals({ route }) {
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -67,18 +70,14 @@ export default function Goals({ route }) {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
@@ -94,8 +93,8 @@ export default function Goals({ route }) {
       goal1: goals.goal1,
       goal2: goals.goal2,
       goal3: goals.goal3,
-      obstacle,
-      goalsCompleted: true,
+      obstacle: obstacle,
+      goals_completed: true, // Changed from camelCase to snake_case
     });
 
     navigation.navigate('OtherExercise', {

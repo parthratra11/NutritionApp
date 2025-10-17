@@ -9,14 +9,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import Slider from '@react-native-community/slider';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -34,23 +34,26 @@ export default function Strength1({ route }) {
       if (!user?.email) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
           // Convert text back to slider value for display
-          const savedCompetency = data.strengthCompetency;
+          const savedCompetency = data.strength_competency;
           if (savedCompetency === 'Novice') setCompetencyLevel(0.2);
           else if (savedCompetency === 'Intermediate') setCompetencyLevel(0.5);
           else if (savedCompetency === 'Advanced') setCompetencyLevel(0.8);
-          else setCompetencyLevel(data.strengthCompetencyValue || 0.5);
+          else setCompetencyLevel(data.strength_competency_value || 0.5);
 
-          setComments(data.strengthCompetencyComments || '');
+          setComments(data.strength_competency_comments || '');
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -63,18 +66,16 @@ export default function Strength1({ route }) {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        strength_competency: data.strength_competency,
+        strength_competency_value: data.strength_competency_value,
+        strength_competency_comments: data.strength_competency_comments,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
@@ -89,10 +90,9 @@ export default function Strength1({ route }) {
     const competencyText = getCompetencyText();
 
     await saveFormData({
-      strengthCompetency: competencyText, // Save text instead of number
-      strengthCompetencyValue: competencyLevel, // Keep numeric for reference
-      strengthCompetencyComments: comments,
-      strength1Completed: true,
+      strength_competency: competencyText, // Save text instead of number
+      strength_competency_value: competencyLevel, // Keep numeric for reference
+      strength_competency_comments: comments,
     });
 
     navigation.navigate('Strength2', {

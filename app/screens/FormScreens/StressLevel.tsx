@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -18,27 +17,33 @@ export default function StressLevel({ route }) {
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
 
+  // Updated stress levels with unique display IDs but consistent database value mappings
   const stressLevels = [
     {
-      id: 'stress_free',
+      displayId: 'stress_free',
+      databaseValue: 'low_stress', // Value stored in database
       text: 'Stress-free (e.g. on holiday)',
     },
     {
-      id: 'mild_stress',
+      displayId: 'mild_stress',
+      databaseValue: 'average_stress', // Both map to average_stress in database
       text: 'Only occasional/mild stress (e.g. student not during exam period)',
     },
     {
-      id: 'average_stress',
+      displayId: 'average_stress',
+      databaseValue: 'average_stress', // Both map to average_stress in database
       text: 'Average stress (e.g. full-time work with deadlines/commuting)',
     },
     {
-      id: 'high_stress',
+      displayId: 'high_stress',
+      databaseValue: 'high_stress',
       text: 'High stress (e.g. very high-paced work environment with great responsibility)',
     },
   ];
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -47,20 +52,33 @@ export default function StressLevel({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
 
           // Populate form field with existing data
-          if (data.stressLevel) {
-            setSelectedLevel(data.stressLevel);
+          if (data.stress_level) {
+            setSelectedLevel(data.stress_level);
+            console.log('Loaded stress level:', data.stress_level);
+            
+            // Find the matching index in our array
+            const matchingOptionIndex = stressLevels.findIndex(level => 
+              level.databaseValue === data.stress_level
+            );
+            
+            if (matchingOptionIndex >= 0) {
+              setSelectedIndex(matchingOptionIndex);
+            }
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -69,41 +87,48 @@ export default function StressLevel({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
+  // Save form data to SQL backend
   const saveFormData = async (data: any) => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      console.log('Saving stress level:', data.stress_level);
+      
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
-  const handleSelection = (levelId) => {
-    setSelectedLevel(levelId);
+  const handleSelection = (databaseValue, index) => {
+    setSelectedLevel(databaseValue);
+    setSelectedIndex(index);
   };
 
   const handleNext = async () => {
     if (selectedLevel) {
-      // Save data to Firestore before navigating
+      // Make sure the selected level matches one of the allowed enum values in your database
+      const validStressLevels = ['low_stress', 'average_stress', 'high_stress'];
+      
+      if (!validStressLevels.includes(selectedLevel)) {
+        console.error('Invalid stress level selected:', selectedLevel);
+        Alert.alert('Error', 'Please select a valid stress level.');
+        return;
+      }
+      
+      // Save data to SQL backend before navigating
       await saveFormData({
-        stressLevel: selectedLevel,
-        stressLevelCompleted: true,
+        stress_level: selectedLevel,
+        stress_level_completed: true,
       });
 
       // Navigate to next screen with updated params
       navigation.navigate('SleepForm', {
-        // Changed from 'SleepForm' to 'Sleep' based on your file structure
         ...previousParams,
         stressLevel: selectedLevel,
       });
@@ -129,16 +154,16 @@ export default function StressLevel({ route }) {
         contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.mainTitle}>
-            Which of the following options best describes your stress level ?(this does NOT include
+            Which of the following options best describes your stress level? (this does NOT include
             exercise)
           </Text>
 
           <View style={styles.optionsContainer}>
-            {stressLevels.map((level) => (
+            {stressLevels.map((level, index) => (
               <TouchableOpacity
-                key={level.id}
-                style={[styles.optionCard, selectedLevel === level.id && styles.selectedCard]}
-                onPress={() => handleSelection(level.id)}>
+                key={level.displayId}
+                style={[styles.optionCard, selectedIndex === index && styles.selectedCard]}
+                onPress={() => handleSelection(level.databaseValue, index)}>
                 <Text style={styles.optionText}>{level.text}</Text>
               </TouchableOpacity>
             ))}

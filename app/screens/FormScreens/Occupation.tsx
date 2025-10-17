@@ -10,13 +10,13 @@ import {
   Platform,
   TextInput,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -52,26 +52,29 @@ export default function Occupation({ route }) {
     };
   }, []);
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) return;
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
 
           // Populate form fields with existing data
           if (data.occupation) setOccupation(data.occupation);
           if (data.diet) setDiet(data.diet);
-          if (data.medicalConditions) setMedicalConditions(data.medicalConditions);
+          if (data.medical_conditions) setMedicalConditions(data.medical_conditions);
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -89,23 +92,19 @@ export default function Occupation({ route }) {
     }
   }, [keyboardVisible, activeInput]);
 
-  // Save form data to Firestore
+  // Save form data to SQL backend
   const saveFormData = async (data: any) => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
   };
 
@@ -113,12 +112,12 @@ export default function Occupation({ route }) {
     // Dismiss keyboard if visible
     Keyboard.dismiss();
 
-    // Save data to Firestore before navigating
+    // Save data to SQL backend before navigating
     await saveFormData({
       occupation,
       diet,
-      medicalConditions,
-      occupationCompleted: true,
+      medical_conditions: medicalConditions,
+      occupation_completed: true,
     });
 
     // Navigate to next screen with updated params

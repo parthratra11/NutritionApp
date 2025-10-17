@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function Sleep({ route }) {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const previousParams = route?.params || {};
-
+  const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
 
   const sleepOptions = [
@@ -27,18 +31,84 @@ export default function Sleep({ route }) {
     },
   ];
 
+  // Load existing form data from SQL backend
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
+          setFormData(data);
+
+          // Populate form field with existing data
+          if (data.sleep_quality) {
+            setSelectedOption(data.sleep_quality);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert('Error', 'Could not load your data. Please try again.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFormData();
+  }, [user?.email]);
+
+  // Save form data to SQL backend
+  const saveFormData = async (data: any) => {
+    if (!user?.email) return;
+
+    try {
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        ...data,
+        last_updated: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
+    }
+  };
+
   const handleSelection = (optionId) => {
     setSelectedOption(optionId);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedOption) {
+      // Save data to SQL backend before navigating
+      await saveFormData({
+        sleep_quality: selectedOption,
+        sleep_completed: true,
+      });
+
       navigation.navigate('Caffeine', {
         ...previousParams,
         sleepQuality: selectedOption,
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
@@ -126,5 +196,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Texta',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: screenWidth * 0.045,
   },
 });

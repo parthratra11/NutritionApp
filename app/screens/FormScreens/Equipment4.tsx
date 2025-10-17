@@ -7,13 +7,13 @@ import {
   Dimensions,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -28,7 +28,7 @@ export default function Equipment4({ route }) {
 
   const [additionalInfo, setAdditionalInfo] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -37,20 +37,23 @@ export default function Equipment4({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        
+        if (data) {
           setFormData(data);
 
           // Populate form field with existing data
-          if (data.additionalEquipmentInfo) {
-            setAdditionalInfo(data.additionalEquipmentInfo);
+          if (data.additional_equipment_info) {
+            setAdditionalInfo(data.additional_equipment_info);
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error alert for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          console.log('Non-404 error occurred');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -59,38 +62,26 @@ export default function Equipment4({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
-  const saveFormData = async (data: any) => {
+  const handleNext = async () => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
+      // Update intake form in SQL backend
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        additional_equipment_info: additionalInfo,
+        equipment4_completed: true,
+        last_updated: new Date().toISOString(),
+      });
+
+      // Navigate to next screen with updated params
+      navigation.navigate('Supplements', {
+        ...previousParams,
+        additionalEquipmentInfo: additionalInfo,
+      });
     } catch (error) {
       console.error('Error saving form data:', error);
+      Alert.alert('Error', 'Could not save your data. Please try again.');
     }
-  };
-
-  const handleNext = async () => {
-    // Save data to Firestore before navigating
-    await saveFormData({
-      additionalEquipmentInfo: additionalInfo,
-      equipment4Completed: true,
-    });
-
-    // Navigate to next screen with updated params
-    navigation.navigate('Supplements', {
-      ...previousParams,
-      additionalEquipmentInfo: additionalInfo,
-    });
   };
 
   if (isLoading) {
