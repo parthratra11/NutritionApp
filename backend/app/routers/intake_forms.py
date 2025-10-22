@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import intake_models, user_models
-from app.models.schemas import IntakeFormResponse, IntakeFormUpdate
+from app.models.schemas import IntakeFormResponse, IntakeFormUpdate, StrengthMeasurementsCreate, StrengthMeasurementsResponse
 
 router = APIRouter(
     prefix="/intake",
@@ -62,6 +62,64 @@ def update_intake_form(email: str, form_data: IntakeFormUpdate, db: Session = De
     except Exception as e:
         db.rollback()
         print(f"Error updating intake form: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/{email}/strength-measurements", response_model=StrengthMeasurementsResponse)
+def save_strength_measurements(email: str, strength_data: StrengthMeasurementsCreate, db: Session = Depends(get_db)):
+    """
+    Save strength measurements for a user
+    """
+    try:
+        # Find the user
+        user = db.query(user_models.User).filter(user_models.User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        # Find the intake form
+        intake_form = db.query(intake_models.IntakeForm).filter(
+            intake_models.IntakeForm.user_id == user.user_id
+        ).first()
+        
+        if not intake_form:
+            raise HTTPException(status_code=404, detail="Intake form not found")
+            
+        # Check if strength measurements already exist
+        existing_measurements = db.query(intake_models.StrengthMeasurement).filter(
+            intake_models.StrengthMeasurement.user_id == user.user_id
+        ).first()
+        
+        if existing_measurements:
+            # Update existing measurements
+            print("Updating existing strength measurements")
+            for key, value in strength_data.dict().items():
+                if hasattr(existing_measurements, key):
+                    setattr(existing_measurements, key, value)
+            
+            existing_measurements.last_updated = func.now()
+            measurement = existing_measurements
+        else:
+            # Create new strength measurements
+            print("Creating new strength measurements")
+            measurement = intake_models.StrengthMeasurement(
+                user_id=user.user_id,
+                form_id=intake_form.form_id,
+                **strength_data.dict(),
+                last_updated=func.now()
+            )
+            db.add(measurement)
+        
+        # Update strength2_completed in the intake form if needed
+        if strength_data.strength2_completed:
+            intake_form.strength2_completed = True
+            intake_form.last_updated = func.now()
+        
+        db.commit()
+        db.refresh(measurement)
+        
+        return measurement
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving strength measurements: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.post("/initialize/{email}")
@@ -149,3 +207,5 @@ def get_intake_form(email: str, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error getting form: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
+    
