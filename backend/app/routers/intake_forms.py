@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import intake_models, user_models
-from app.models.schemas import IntakeFormResponse, IntakeFormUpdate, StrengthMeasurementsCreate, StrengthMeasurementsResponse
+from app.models.schemas import IntakeFormResponse, IntakeFormUpdate, StrengthMeasurementsCreate, StrengthMeasurementsResponse, GeneticsUpdate, GeneticsResponse
 
 router = APIRouter(
     prefix="/intake",
@@ -348,5 +348,58 @@ def save_user_dumbbell_info(email: str, dumbbell_data: dict, db: Session = Depen
     except Exception as e:
         db.rollback()
         print(f"Error saving dumbbell info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Add this genetics endpoint if it doesn't exist
+
+@router.post("/{email}/genetics", response_model=GeneticsResponse)
+def save_genetics_data(email: str, genetics_data: GeneticsUpdate, db: Session = Depends(get_db)):
+    """
+    Save genetics data for a user
+    """
+    try:
+        # Find the user
+        user = db.query(user_models.User).filter(user_models.User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        # Find the intake form
+        intake_form = db.query(intake_models.IntakeForm).filter(
+            intake_models.IntakeForm.user_id == user.user_id
+        ).first()
+        
+        if not intake_form:
+            raise HTTPException(status_code=404, detail="Intake form not found")
+            
+        # Check if genetics data already exists
+        existing_genetics = db.query(intake_models.Genetics).filter(
+            intake_models.Genetics.user_id == user.user_id
+        ).first()
+        
+        if existing_genetics:
+            # Update existing genetics data
+            print(f"Updating existing genetics data for user {user.user_id}")
+            for key, value in genetics_data.dict(exclude_unset=True).items():
+                if hasattr(existing_genetics, key):
+                    setattr(existing_genetics, key, value)
+            genetics = existing_genetics
+        else:
+            # Create new genetics data
+            print(f"Creating new genetics data for user {user.user_id}")
+            genetics = intake_models.Genetics(
+                user_id=user.user_id,
+                form_id=intake_form.form_id,
+                **genetics_data.dict()
+            )
+            db.add(genetics)
+        
+        db.commit()
+        db.refresh(genetics)
+        
+        print(f"Saved genetics data: {genetics.wrist_circumference}, {genetics.ankle_circumference}")
+        return genetics
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving genetics data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
