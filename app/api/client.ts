@@ -82,6 +82,10 @@ export const intakeFormApi = {
     return apiRequest(`/intake/${email}/strength-measurements`, 'POST', strengthData);
   },
 
+  saveGeneticsData: (email: string, geneticsData: any) => {
+    return apiRequest(`/intake/${encodeURIComponent(email)}/genetics`, 'POST', geneticsData);
+  },
+
   saveUserCardioEquipment: async (email: string, equipmentList: string[]) => {
     await apiRequest(`/intake/${email}/cardio-equipment`, 'POST', {
       equipment_list: equipmentList,

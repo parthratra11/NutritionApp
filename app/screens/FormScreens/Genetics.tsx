@@ -9,13 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -27,11 +27,12 @@ export default function Genetics({ route }) {
   // Add form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [wristCircumference, setWristCircumference] = useState('');
   const [ankleCircumference, setAnkleCircumference] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -40,25 +41,32 @@ export default function Genetics({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Get intake form data from SQL backend
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
+        console.log('Received form data for genetics:', JSON.stringify(data, null, 2));
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
 
-          // Populate form fields with existing data
-          if (data.genetics) {
-            if (data.genetics.wristCircumference) {
-              setWristCircumference(data.genetics.wristCircumference);
-            }
-            if (data.genetics.ankleCircumference) {
-              setAnkleCircumference(data.genetics.ankleCircumference);
-            }
+          // Check for genetics data
+          if (data.genetics && Array.isArray(data.genetics) && data.genetics.length > 0) {
+            const geneticsData = data.genetics[0];
+            setWristCircumference(geneticsData.wrist_circumference || '');
+            setAnkleCircumference(geneticsData.ankle_circumference || '');
+            console.log('Loaded genetics data:', geneticsData);
+          } else {
+            console.log('No genetics data found in the response');
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert(
+            'Error',
+            'Could not load your genetics data. You can still enter measurements.'
+          );
+        }
       } finally {
         setIsLoading(false);
       }
@@ -67,44 +75,41 @@ export default function Genetics({ route }) {
     loadFormData();
   }, [user?.email]);
 
-  // Save form data to Firestore
-  const saveFormData = async (data: any) => {
+  const handleNext = async () => {
     if (!user?.email) return;
 
     try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
+      setIsSaving(true);
+
+      // Save genetics data to SQL backend
+      const geneticsData = {
+        wrist_circumference: wristCircumference,
+        ankle_circumference: ankleCircumference,
+        genetics_completed: true,
+      };
+
+      await intakeFormApi.saveGeneticsData(user.email.toLowerCase(), geneticsData);
+      console.log('Saved genetics data:', geneticsData);
+
+      // Also update the completion flag in intake_forms table
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        // genetics_completed: true, // This might be handled differently based on your DB schema
+      });
+
+      // Navigate to next screen with updated params
+      navigation.navigate('CurrentProgram', {
+        ...previousParams,
+        genetics: {
+          wristCircumference,
+          ankleCircumference,
         },
-        { merge: true }
-      );
+      });
     } catch (error) {
-      console.error('Error saving form data:', error);
+      console.error('Error saving genetics data:', error);
+      Alert.alert('Error', 'Could not save your genetics data. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-  };
-
-  const handleNext = async () => {
-    // Save data to Firestore before navigating
-    await saveFormData({
-      genetics: {
-        wristCircumference,
-        ankleCircumference,
-      },
-      geneticsCompleted: true,
-    });
-
-    // Navigate to next screen with updated params
-    navigation.navigate('CurrentProgram', {
-      ...previousParams,
-      genetics: {
-        wristCircumference,
-        ankleCircumference,
-      },
-    });
   };
 
   if (isLoading) {
@@ -140,6 +145,7 @@ export default function Genetics({ route }) {
                 placeholder=""
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
@@ -156,12 +162,16 @@ export default function Genetics({ route }) {
                 placeholder=""
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 keyboardType="numeric"
+                editable={!isSaving}
               />
             </View>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                <Text style={styles.nextButtonText}>&gt;</Text>
+              <TouchableOpacity
+                style={[styles.nextButton, isSaving && { opacity: 0.6 }]}
+                onPress={handleNext}
+                disabled={isSaving}>
+                <Text style={styles.nextButtonText}>{isSaving ? '...' : '>'}</Text>
               </TouchableOpacity>
             </View>
           </View>
