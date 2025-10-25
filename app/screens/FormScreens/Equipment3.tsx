@@ -9,13 +9,13 @@ import {
   Image,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -24,23 +24,24 @@ export default function Equipment3({ route }) {
   const { user } = useAuth();
   const previousParams = route?.params || {};
 
-  // Add form data state
+  // Form data state
   const [formData, setFormData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [selectedEquipment, setSelectedEquipment] = useState([]);
   const [showLegCurlModal, setShowLegCurlModal] = useState(false);
   const [legCurlType, setLegCurlType] = useState('');
 
-  // New state for dumbbell modal
+  // Dumbbell modal states
   const [showDumbbellModal, setShowDumbbellModal] = useState(false);
-  const [dumbbellModalStep, setDumbbellModalStep] = useState(1); // 1: Ask if full set, 2: Min/Max or specific weights
+  const [dumbbellModalStep, setDumbbellModalStep] = useState(1);
   const [isFullSet, setIsFullSet] = useState(null);
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState('');
   const [specificWeights, setSpecificWeights] = useState('');
 
-  // Load existing form data from Firestore
+  // Load existing form data from SQL backend
   useEffect(() => {
     const loadFormData = async () => {
       if (!user?.email) {
@@ -49,34 +50,37 @@ export default function Equipment3({ route }) {
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        const data = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (data) {
           setFormData(data);
 
-          // Populate form fields with existing data
-          if (data.gymEquipment && Array.isArray(data.gymEquipment)) {
-            setSelectedEquipment(data.gymEquipment);
+          // Load gym equipment
+          if (data.gym_equipment && Array.isArray(data.gym_equipment)) {
+            const existingEquipment = data.gym_equipment.map((item) => item.equipment_type);
+            setSelectedEquipment(existingEquipment);
+            console.log('Loaded existing gym equipment:', existingEquipment);
           }
 
-          if (data.legCurlType) {
-            setLegCurlType(data.legCurlType);
+          // Load leg curl type
+          if (data.leg_curl_type) {
+            setLegCurlType(data.leg_curl_type);
           }
 
-          if (data.dumbbellInfo) {
-            setIsFullSet(data.dumbbellInfo.isFullSet);
-            if (data.dumbbellInfo.isFullSet) {
-              setMinWeight(data.dumbbellInfo.minWeight);
-              setMaxWeight(data.dumbbellInfo.maxWeight);
-            } else {
-              setSpecificWeights(data.dumbbellInfo.specificWeights);
+          // Load dumbbell info
+          if (data.dumbbell_info && data.dumbbell_info.length > 0) {
+            const dumbbellData = data.dumbbell_info[0];
+            setIsFullSet(dumbbellData.is_full_set);
+            if (dumbbellData.is_full_set) {
+              setMinWeight(dumbbellData.min_weight || '');
+              setMaxWeight(dumbbellData.max_weight || '');
             }
+            console.log('Loaded existing dumbbell info:', dumbbellData);
           }
         }
       } catch (error) {
         console.error('Error loading form data:', error);
+        // Don't show error for 404 (form not found)
       } finally {
         setIsLoading(false);
       }
@@ -84,26 +88,6 @@ export default function Equipment3({ route }) {
 
     loadFormData();
   }, [user?.email]);
-
-  // Save form data to Firestore
-  const saveFormData = async (data: any) => {
-    if (!user?.email) return;
-
-    try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.error('Error saving form data:', error);
-    }
-  };
 
   const gymEquipment = [
     {
@@ -281,29 +265,58 @@ export default function Equipment3({ route }) {
   };
 
   const handleNext = async () => {
-    // Prepare dumbbell information
-    const dumbbellInfo =
-      isFullSet !== null
-        ? isFullSet
-          ? { isFullSet: true, minWeight: minWeight, maxWeight: maxWeight }
-          : { isFullSet: false, specificWeights: specificWeights }
-        : null;
+    if (!user?.email) return;
 
-    // Save data to Firestore before navigating
-    await saveFormData({
-      gymEquipment: selectedEquipment,
-      legCurlType: legCurlType,
-      dumbbellInfo: dumbbellInfo,
-      equipment3Completed: true,
-    });
+    try {
+      setIsSaving(true);
 
-    // Navigate to next screen with updated params
-    navigation.navigate('Equipment4', {
-      ...previousParams,
-      gymEquipment: selectedEquipment,
-      legCurlType: legCurlType,
-      dumbbellInfo: dumbbellInfo,
-    });
+      // Update equipment3_completed flag in intake_forms table
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        equipment3_completed: true,
+      });
+
+      // Save gym equipment
+      if (selectedEquipment.length > 0) {
+        await intakeFormApi.saveUserGymEquipment(user.email.toLowerCase(), {
+          equipment_list: selectedEquipment,
+          leg_curl_type: legCurlType || null,
+        });
+        console.log('Saved gym equipment:', selectedEquipment);
+      }
+
+      // Save dumbbell info if dumbbell_set is selected
+      if (selectedEquipment.includes('dumbbell_set') && isFullSet !== null) {
+        const dumbbellData = {
+          is_full_set: isFullSet,
+          min_weight: isFullSet ? minWeight : null,
+          max_weight: isFullSet ? maxWeight : null,
+        };
+
+        await intakeFormApi.saveUserDumbbellInfo(user.email.toLowerCase(), dumbbellData);
+        console.log('Saved dumbbell info:', dumbbellData);
+      }
+
+      // Navigate to next screen
+      navigation.navigate('Equipment4', {
+        ...previousParams,
+        gymEquipment: selectedEquipment,
+        legCurlType: legCurlType,
+        dumbbellInfo:
+          isFullSet !== null
+            ? {
+                isFullSet: isFullSet,
+                minWeight: minWeight,
+                maxWeight: maxWeight,
+                specificWeights: specificWeights,
+              }
+            : null,
+      });
+    } catch (error) {
+      console.error('Error saving gym equipment:', error);
+      Alert.alert('Error', 'Could not save your equipment. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Get all equipment except the last two items
@@ -470,8 +483,11 @@ export default function Equipment3({ route }) {
             </TouchableOpacity>
 
             {/* Next button */}
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>&gt;</Text>
+            <TouchableOpacity
+              style={[styles.nextButton, isSaving && { opacity: 0.6 }]}
+              onPress={handleNext}
+              disabled={isSaving}>
+              <Text style={styles.nextButtonText}>{isSaving ? '...' : '>'}</Text>
             </TouchableOpacity>
 
             {/* Last item */}
@@ -750,7 +766,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: screenHeight * 0.02,
   },
-  // Add new styles for loading state
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
