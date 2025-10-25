@@ -87,6 +87,14 @@ export const intakeFormApi = {
       equipment_list: equipmentList,
     });
   },
+
+  saveUserGymEquipment: (email: string, equipmentData: any) => {
+    return apiRequest(`/intake/${encodeURIComponent(email)}/gym-equipment`, 'POST', equipmentData);
+  },
+
+  saveUserDumbbellInfo: (email: string, dumbbellData: any) => {
+    return apiRequest(`/intake/${encodeURIComponent(email)}/dumbbell-info`, 'POST', dumbbellData);
+  },
 };
 
 export const goalsApi = {
