@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressBar from '../../components/ProgressBar';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { intakeFormApi } from '../../api/client'; // Make sure this import is correct
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -14,69 +21,50 @@ export default function Equipment2({ route }) {
   const { user } = useAuth();
   const previousParams = route?.params || {};
 
-  // Add form data state
-  const [formData, setFormData] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(true);
-
   const [selectedEquipment, setSelectedEquipment] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const cardioEquipment = [
     { id: 'treadmill', name: 'Treadmill' },
     { id: 'rower', name: 'Rower' },
-    { id: 'crosstrainer', name: 'Cross- Trainer' },
-    { id: 'skippingrope', name: 'Skipping Rope' },
+    { id: 'crosstrainer', name: 'Cross-Trainer' },
+    { id: 'skipping_rope', name: 'Skipping Rope' },
   ];
 
-  // Load existing form data from Firestore
   useEffect(() => {
-    const loadFormData = async () => {
+    const loadCardioEquipment = async () => {
       if (!user?.email) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'intakeForms', user.email.toLowerCase());
-        const docSnap = await getDoc(docRef);
+        // Load existing form data including cardio equipment
+        const formData = await intakeFormApi.getIntakeForm(user.email.toLowerCase());
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setFormData(data);
-
-          // Populate form field with existing data
-          if (data.cardioEquipment && Array.isArray(data.cardioEquipment)) {
-            setSelectedEquipment(data.cardioEquipment);
-          }
+        if (formData && formData.cardio_equipment && Array.isArray(formData.cardio_equipment)) {
+          const existingEquipment = formData.cardio_equipment.map((item) =>
+            typeof item === 'string' ? item : item.equipment_type
+          );
+          setSelectedEquipment(existingEquipment);
+          console.log('Loaded existing cardio equipment:', existingEquipment);
         }
       } catch (error) {
-        console.error('Error loading form data:', error);
+        console.error('Error loading cardio equipment:', error);
+        // Don't show error for 404 (form not found)
+        if (!(error instanceof Error && error.message.includes('404'))) {
+          Alert.alert(
+            'Error',
+            'Could not load your equipment data. You can still make selections.'
+          );
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadFormData();
+    loadCardioEquipment();
   }, [user?.email]);
-
-  // Save form data to Firestore
-  const saveFormData = async (data: any) => {
-    if (!user?.email) return;
-
-    try {
-      await setDoc(
-        doc(db, 'intakeForms', user.email.toLowerCase()),
-        {
-          ...formData,
-          ...data,
-          email: user.email.toLowerCase(),
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.error('Error saving form data:', error);
-    }
-  };
 
   const toggleEquipment = (equipmentId) => {
     if (selectedEquipment.includes(equipmentId)) {
@@ -87,17 +75,32 @@ export default function Equipment2({ route }) {
   };
 
   const handleNext = async () => {
-    // Save data to Firestore before navigating
-    await saveFormData({
-      cardioEquipment: selectedEquipment,
-      equipment2Completed: true,
-    });
+    if (!user?.email) return;
 
-    // Navigate to next screen with updated params
-    navigation.navigate('Equipment3', {
-      ...previousParams,
-      cardioEquipment: selectedEquipment,
-    });
+    try {
+      setIsLoading(true);
+
+      // Update the equipment2_completed flag in intake_forms table
+      await intakeFormApi.updateIntakeForm(user.email.toLowerCase(), {
+        equipment2_completed: true,
+      });
+
+      // Save selected cardio equipment to cardio_equipment table
+      if (selectedEquipment.length > 0) {
+        await intakeFormApi.saveUserCardioEquipment(user.email.toLowerCase(), selectedEquipment);
+        console.log('Saved cardio equipment:', selectedEquipment);
+      }
+
+      navigation.navigate('Equipment3', {
+        ...previousParams,
+        cardioEquipment: selectedEquipment,
+      });
+    } catch (error) {
+      console.error('Error saving cardio equipment:', error);
+      Alert.alert('Error', 'Could not save your equipment. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -119,11 +122,11 @@ export default function Equipment2({ route }) {
         contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.contentContainer}>
           <Text style={styles.questionText}>
-            Do you have access to any cardio equipment at home ?
+            Do you have access to any cardio equipment at home?
           </Text>
 
           <View style={styles.equipmentGrid}>
-            {cardioEquipment.map((equipment, index) => (
+            {cardioEquipment.map((equipment) => (
               <TouchableOpacity
                 key={equipment.id}
                 style={[
@@ -136,8 +139,11 @@ export default function Equipment2({ route }) {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>&gt;</Text>
+          <TouchableOpacity
+            style={[styles.nextButton, isLoading && { opacity: 0.6 }]}
+            onPress={handleNext}
+            disabled={isLoading}>
+            <Text style={styles.nextButtonText}>{isLoading ? '...' : '>'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     marginBottom: screenHeight * 0.1,
   },
   equipmentCard: {
-    width: '47%', // Just under half to account for the space between
+    width: '47%',
     height: screenWidth * 0.35,
     backgroundColor: '#081A2F',
     borderRadius: 20,
@@ -198,7 +204,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: screenHeight * 0.17,
     left: '50%',
-    transform: [{ translateX: -screenWidth * 0.125 }], // Half of the button width
+    transform: [{ translateX: -screenWidth * 0.125 }],
   },
   nextButtonText: {
     color: '#FFFFFF',

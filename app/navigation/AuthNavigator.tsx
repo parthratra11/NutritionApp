@@ -127,6 +127,7 @@ export default function AuthNavigator() {
         // Protected screens
         <>
           {/* Initial route for new users */}
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
 
