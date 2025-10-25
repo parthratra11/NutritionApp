@@ -164,6 +164,11 @@ export default function AddressScreen() {
     }
   };
 
+  // Add backToLogin handler
+  const handleBackToLogin = () => {
+    navigation.navigate('Login');
+  };
+
   // Show loading while checking existing address
   if (checkingAddress) {
     return (
@@ -254,6 +259,14 @@ export default function AddressScreen() {
                   disabled={loading}>
                   <Text style={styles.buttonMainText}>{loading ? 'Saving...' : 'Continue'}</Text>
                 </TouchableOpacity>
+
+                {/* New button to go back to Login */}
+                <TouchableOpacity
+                  style={[styles.backButton, loading && styles.buttonDisabled]}
+                  onPress={handleBackToLogin}
+                  disabled={loading}>
+                  <Text style={styles.backButtonText}>Back to Login</Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -318,5 +331,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+  // Styles for the new Back to Login button
+  backButton: {
+    width: 300,
+    height: 44,
+    backgroundColor: 'transparent',
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
+    marginTop: 12,
+    alignSelf: 'center',
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

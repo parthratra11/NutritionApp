@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.sql import func
 from typing import List, Optional
 from sqlalchemy.exc import IntegrityError
@@ -179,6 +179,44 @@ def get_intake_form(email: str, db: Session = Depends(get_db)):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        # Find the intake form and eagerly load relationships
+        intake_form = db.query(intake_models.IntakeForm).options(
+            selectinload(intake_models.IntakeForm.cardio_equipment),
+            selectinload(intake_models.IntakeForm.gym_equipment),
+            selectinload(intake_models.IntakeForm.dumbbell_info),
+            selectinload(intake_models.IntakeForm.genetics),
+            selectinload(intake_models.IntakeForm.strength_measurements),
+            selectinload(intake_models.IntakeForm.address),
+            selectinload(intake_models.IntakeForm.body_photos),
+        ).filter(
+            intake_models.IntakeForm.user_id == user.user_id
+        ).first()
+        
+        if not intake_form:
+            raise HTTPException(status_code=404, detail="Intake form not found")
+        
+        # Debug: Check cardio equipment
+        cardio_count = len(intake_form.cardio_equipment) if intake_form.cardio_equipment else 0
+        print(f"Found {cardio_count} cardio equipment items for user {user.user_id}")
+        for eq in (intake_form.cardio_equipment or []):
+            print(f"  - {eq.equipment_type}")
+        
+        return intake_form
+    except Exception as e:
+        print(f"Error getting form: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/{email}/cardio-equipment")
+def save_user_cardio_equipment(email: str, equipment_data: dict, db: Session = Depends(get_db)):
+    """
+    Save user's cardio equipment selections
+    """
+    try:
+        # Find the user
+        user = db.query(user_models.User).filter(user_models.User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
         # Find the intake form
         intake_form = db.query(intake_models.IntakeForm).filter(
             intake_models.IntakeForm.user_id == user.user_id
@@ -186,26 +224,31 @@ def get_intake_form(email: str, db: Session = Depends(get_db)):
         
         if not intake_form:
             raise HTTPException(status_code=404, detail="Intake form not found")
+
+        # Get equipment list from request data
+        equipment_list = equipment_data.get("equipment_list", [])
+        print(f"Saving cardio equipment for user {user.user_id}: {equipment_list}")
+        # Delete existing cardio equipment for this user
+        db.query(intake_models.CardioEquipment).filter(
+            intake_models.CardioEquipment.user_id == user.user_id
+        ).delete(synchronize_session=False)
         
-        # Debug: Check if genetics data exists
-        genetics_data = db.query(intake_models.Genetics).filter(
-            intake_models.Genetics.user_id == user.user_id
-        ).all()
+        # Add new cardio equipment entries
+        for equipment_type in equipment_list:
+            if equipment_type:  # Only add non-empty equipment types
+                cardio_eq = intake_models.CardioEquipment(
+                    form_id=intake_form.form_id,
+                    user_id=user.user_id,
+                    equipment_type=equipment_type
+                )
+                db.add(cardio_eq)
+                print(f"Adding cardio equipment: {equipment_type}")
+                
+        db.commit()
         
-        print(f"Found {len(genetics_data)} genetics records for user {user.user_id}")
-        for g in genetics_data:
-            print(f"  - Genetics ID: {g.genetics_id}, wrist: {g.wrist_circumference}, ankle: {g.ankle_circumference}, completed: {g.genetics_completed}")
-        
-        # Debug: Check relationships loaded
-        print(f"Relationships loaded? genetics: {len(intake_form.genetics) if hasattr(intake_form, 'genetics') and intake_form.genetics is not None else 'None'}")
-        
-        # Debug: Explicitly load the genetics relationship
-        db.refresh(intake_form)
-        
-        # Return the intake form with all relationships
-        return intake_form
+        return {"message": f"Successfully saved {len(equipment_list)} cardio equipment items"}
     except Exception as e:
-        print(f"Error getting form: {str(e)}")
+        db.rollback()
+        print(f"Error saving cardio equipment: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-    
-    
+
