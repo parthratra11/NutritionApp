@@ -102,6 +102,9 @@ class IntakeForm(Base):
     intake_form_completed = Column(Boolean, default=False)
     last_updated = Column(TIMESTAMP, server_default=func.now())
     
+    # Sleep quality
+    sleep_quality = Column(String(50))  # <-- Add this line
+    
     # Relationships - match the names with schemas.py
     user = relationship("User", back_populates="intake_form")
     strength_measurements = relationship("StrengthMeasurement", back_populates="intake_form")
@@ -165,7 +168,7 @@ class Genetics(Base):
 class DumbbellInfo(Base):
     __tablename__ = "dumbbell_info"
     
-    dumbbell_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    dumbbell_id = Column(Integer, primary_key=True, autoincrement=True)
     form_id = Column(Integer, ForeignKey("intake_forms.form_id"), nullable=True)
     user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     
@@ -173,6 +176,7 @@ class DumbbellInfo(Base):
     is_full_set = Column(Boolean)
     min_weight = Column(String(20))
     max_weight = Column(String(20))
+    specific_weights = Column(Text)  # <-- Add this field
     
     # Relationships
     intake_form = relationship("IntakeForm", back_populates="dumbbell_info")
