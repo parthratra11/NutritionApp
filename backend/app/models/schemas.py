@@ -95,6 +95,7 @@ class DumbbellInfoResponse(BaseModel):
     is_full_set: Optional[bool] = None
     min_weight: Optional[str] = None
     max_weight: Optional[str] = None
+    specific_weights: Optional[str]  # <-- Add this line
 
     class Config:
         from_attributes = True
@@ -276,6 +277,7 @@ class IntakeFormUpdate(BaseModel):
     
     # Meta fields
     last_updated: Optional[datetime] = None
+    sleep_quality: Optional[str] = None  # <-- Add this line
 
 class IntakeFormResponse(BaseModel):
     form_id: int
@@ -371,6 +373,7 @@ class IntakeFormResponse(BaseModel):
     # Meta fields
     intake_form_completed: bool = False
     last_updated: Optional[datetime] = None
+    sleep_quality: Optional[str] = None  # <-- Add this line
     
     # Related data
     strength_measurements: List[StrengthMeasurementsResponse] = []

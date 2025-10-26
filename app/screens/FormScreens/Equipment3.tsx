@@ -290,6 +290,7 @@ export default function Equipment3({ route }) {
           is_full_set: isFullSet,
           min_weight: isFullSet ? minWeight : null,
           max_weight: isFullSet ? maxWeight : null,
+          specific_weights: !isFullSet ? specificWeights : null, // Store free weights if not full set
         };
 
         await intakeFormApi.saveUserDumbbellInfo(user.email.toLowerCase(), dumbbellData);

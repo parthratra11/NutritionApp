@@ -270,37 +270,29 @@ def save_user_gym_equipment(email: str, equipment_data: dict, db: Session = Depe
         
         if not intake_form:
             raise HTTPException(status_code=404, detail="Intake form not found")
-
-        # Get equipment list from request data
+        
         equipment_list = equipment_data.get("equipment_list", [])
-        leg_curl_type = equipment_data.get("leg_curl_type", None)
-        
-        print(f"Saving gym equipment for user {user.user_id}: {equipment_list}")
-        print(f"Leg curl type: {leg_curl_type}")
-        
-        # Delete existing gym equipment for this user
-        db.query(intake_models.GymEquipment).filter(
-            intake_models.GymEquipment.user_id == user.user_id
-        ).delete(synchronize_session=False)
-        
-        # Add new gym equipment entries
-        for equipment_type in equipment_list:
-            if equipment_type:  # Only add non-empty equipment types
-                gym_eq = intake_models.GymEquipment(
-                    form_id=intake_form.form_id,
-                    user_id=user.user_id,
-                    equipment_type=equipment_type
-                )
-                db.add(gym_eq)
-                print(f"Adding gym equipment: {equipment_type}")
-        
-        # Update leg_curl_type in intake_forms table if provided
+        leg_curl_type = equipment_data.get("leg_curl_type")
+
+        # Save leg curl type in intake_forms
         if leg_curl_type:
             intake_form.leg_curl_type = leg_curl_type
-            
+            db.commit()
+
+        # Delete previous gym equipment
+        db.query(intake_models.GymEquipment).filter(
+            intake_models.GymEquipment.user_id == user.user_id
+        ).delete()
+        # Insert new equipment
+        for equipment_type in equipment_list:
+            new_equipment = intake_models.GymEquipment(
+                form_id=intake_form.form_id,
+                user_id=user.user_id,
+                equipment_type=equipment_type
+            )
+            db.add(new_equipment)
         db.commit()
-        
-        return {"message": f"Successfully saved {len(equipment_list)} gym equipment items"}
+        return {"success": True}
     except Exception as e:
         db.rollback()
         print(f"Error saving gym equipment: {str(e)}")
@@ -325,26 +317,24 @@ def save_user_dumbbell_info(email: str, dumbbell_data: dict, db: Session = Depen
         if not intake_form:
             raise HTTPException(status_code=404, detail="Intake form not found")
 
-        print(f"Saving dumbbell info for user {user.user_id}: {dumbbell_data}")
-        
-        # Delete existing dumbbell info for this user
+        # Delete previous dumbbell info
         db.query(intake_models.DumbbellInfo).filter(
             intake_models.DumbbellInfo.user_id == user.user_id
-        ).delete(synchronize_session=False)
-        
-        # Add new dumbbell info
-        dumbbell_info = intake_models.DumbbellInfo(
+        ).delete()
+
+        # Insert new dumbbell info
+        new_dumbbell = intake_models.DumbbellInfo(
             form_id=intake_form.form_id,
             user_id=user.user_id,
             is_full_set=dumbbell_data.get("is_full_set"),
             min_weight=dumbbell_data.get("min_weight"),
-            max_weight=dumbbell_data.get("max_weight")
+            max_weight=dumbbell_data.get("max_weight"),
+            specific_weights=dumbbell_data.get("specific_weights"),  # <-- Store free weights
         )
-        db.add(dumbbell_info)
-        
+        db.add(new_dumbbell)
         db.commit()
-        
-        return {"message": "Successfully saved dumbbell information"}
+
+        return {"success": True}
     except Exception as e:
         db.rollback()
         print(f"Error saving dumbbell info: {str(e)}")
