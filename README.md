@@ -1,4 +1,3 @@
-````markdown
 # NutritionApp
 
 NutritionApp is a full-stack nutrition tracking application consisting of a client app, an admin dashboard (website), and a backend server. The project allows users to track nutrition-related data while providing an admin interface for management and analytics.
